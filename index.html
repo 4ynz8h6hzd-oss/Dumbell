@@ -1481,20 +1481,40 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
       });
     } catch (e) {}
   }
-  async function lockWake(on) {     /* 쉬는 동안 화면 꺼짐 방지 */
+  async function lockWake() {       /* 앱이 화면에 떠 있는 동안 항상 화면 꺼짐 방지 (꺼지면 브라우저가 자동 해제, 다시 보이면 재요청) */
     try {
-      if (on && !wake && navigator.wakeLock && !document.hidden) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }
-      else if (!on && wake) { const w = wake; wake = null; await w.release(); }
+      if (!wake && navigator.wakeLock && !document.hidden) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }
     } catch (e) { wake = null; }
+  }
+  ['pointerdown', 'touchend', 'click'].forEach(t => document.addEventListener(t, () => { if (!wake) lockWake(); }, { passive: true }));
+
+  /* 새 버전 자동 반영: 홈 화면 앱은 옛 화면을 계속 띄우므로, 열 때·다시 볼 때 서버의 index.html과 비교해 바뀌었으면 새로고침 */
+  const codeSig = d => [...d.querySelectorAll('script,style')].map(n => n.textContent).join('\u0001');
+  let updChecking = false, updLast = 0;
+  async function checkUpdate() {
+    if (updChecking || Date.now() - updLast < 15000 || !navigator.onLine) return;
+    updChecking = true; updLast = Date.now();
+    try {
+      const res = await fetch(location.pathname + '?_=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return;
+      const txt = await res.text();
+      const fresh = codeSig(new DOMParser().parseFromString(txt, 'text/html'));
+      if (!fresh || fresh === codeSig(document)) return;
+      let h = 0; for (let i = 0; i < fresh.length; i++) h = (h * 31 + fresh.charCodeAt(i)) | 0;
+      const tag = (h >>> 0).toString(36);
+      try { if (sessionStorage.getItem('dumbbell-upd') === tag) return; sessionStorage.setItem('dumbbell-upd', tag); } catch (e) {}
+      saveLocal(); saveRun();
+      location.replace(location.pathname + '?v=' + tag);
+    } catch (e) {} finally { updChecking = false; }
   }
   const saveRun = () => lsSet(RUNK, rest ? JSON.stringify(rest) : '');
   function startRest(sec) {
     if (!(sec > 0)) { stopRest(); return; }
     audio();
     rest = { end: Date.now() + sec * 1000, total: sec * 1000 }; restRang = false;
-    saveRun(); scheduleBeep(); lockWake(true); drawRest();
+    saveRun(); scheduleBeep(); drawRest();
   }
-  function stopRest() { clearTimeout(restTick); closeRMenu(); if (!rest && $('water').hidden) return; rest = null; saveRun(); cancelBeep(); lockWake(false); drawRest(); render(); }
+  function stopRest() { clearTimeout(restTick); closeRMenu(); if (!rest && $('water').hidden) return; rest = null; saveRun(); cancelBeep(); drawRest(); render(); }
   function adjRest(d) {
     if (!rest) return;
     const left = rest.end - Date.now(); if (left <= 0) return;
@@ -1523,7 +1543,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     const left = rest.end - Date.now();
     if (left <= -OVER_MAX) { stopRest(); return; }
     const ended = left <= 0, s = restSec();
-    if (ended && !restRang) { restRang = true; closeRMenu(); if (!document.hidden) { buzz([200, 100, 200]); restart($('kGo'), 'pop'); } lockWake(false); }
+    if (ended && !restRang) { restRang = true; closeRMenu(); if (!document.hidden) { buzz([200, 100, 200]); restart($('kGo'), 'pop'); } }
     B.classList.toggle('rest-on', !ended); B.classList.toggle('rest-end', ended);
     const h = ended ? 100 : Math.min(100, Math.max(0, (1 - left / rest.total) * 100));
     w.hidden = false; w.classList.toggle('end', ended); w.classList.toggle('hi', h > 85);
@@ -1563,13 +1583,14 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   }));
   document.addEventListener('visibilitychange', () => {
     if (document.hidden || !rest) return;
-    if (rest.end <= Date.now()) cancelBeep(); else { audio(); scheduleBeep(); lockWake(true); }
+    if (rest.end <= Date.now()) cancelBeep(); else { audio(); scheduleBeep(); }
     drawRest();
   });
 
   /* ---------- boot ---------- */
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) { if (syncTimer) sync(); return; }
+    lockWake(); checkUpdate();
     if (data.dayDate !== today()) { ensureDay(); hideDone(); prefill(); render(); }
     queueSync(300);
   });
@@ -1578,7 +1599,11 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   if (!(data.idx >= 0 && data.idx < ORDER.length)) data.idx = 0;
   prefill();
   render();
-  drawRest(); if (rest && rest.end > Date.now()) lockWake(true);
+  drawRest(); lockWake();
+  window.addEventListener('pageshow', e => { if (e.persisted) { lockWake(); checkUpdate(); } });
+  window.addEventListener('focus', () => { lockWake(); checkUpdate(); });
+  setTimeout(checkUpdate, 1500);
+  if (/[?&]v=/.test(location.search)) history.replaceState(null, '', location.pathname);
   queueSync(500);
 }
 </script>
