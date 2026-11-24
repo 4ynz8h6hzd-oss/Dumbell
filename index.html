@@ -210,6 +210,11 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .btn{min-height:48px;border-radius:14px;border:0;font-size:16px;font-weight:600;background:var(--plate)}
 .btn.pri{background:var(--blue);color:#fff}.btn.del{grid-column:1/-1;background:#FDECEA;color:#B0241A}.btn.wide{grid-column:1/-1}
+.why[role=button]{cursor:pointer}.why .more{color:var(--blue);white-space:nowrap}
+.steps{margin:6px 0 12px;padding:0;list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:10px}
+.steps li{counter-increment:st;display:grid;grid-template-columns:22px 1fr;column-gap:8px;font-size:13px;line-height:1.5;color:var(--sub)}
+.steps li::before{content:counter(st);grid-row:span 2;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--bg);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.steps b{color:var(--ink);font-size:13px}
 .trend-more{margin:0;font-size:12px;line-height:1.6;color:var(--sub)}
 .link{border:0;background:transparent;color:var(--blue);font-size:14px;min-height:44px}
 .sync{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:14px;background:var(--plate)}
@@ -412,7 +417,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     <section class="hero" id="hero" aria-label="이번 세트">
       <div class="nums" id="nums"></div>
       <p class="delta" id="delta"></p>
-      <p class="why" id="why"></p>
+      <p class="why" id="why" role="button" tabindex="0" aria-label="판단 근거 보기"></p>
       <p class="rule" id="rule"></p>
     </section>
 
@@ -492,6 +497,13 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   </div>
 </dialog>
 
+<dialog id="whyDlg" aria-labelledby="whyT">
+  <div class="dlg">
+    <h2 id="whyT">판단 근거</h2>
+    <div id="whyBody"></div>
+    <button type="button" class="btn wide" id="whyClose">닫기</button>
+  </div>
+</dialog>
 <dialog id="trendDlg" aria-labelledby="trendT">
   <div class="dlg">
     <h2 id="trendT">8주 추세</h2>
@@ -516,6 +528,9 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   'use strict';
   const KEY = 'dumbbell-custom-v1';
   const MIN_W = 3, MAX_W = 24, SETS = 3;
+  /* back-off (2·3세트): 세트당 추정10RM 손실 L(t) = L120 × g(t)/g(120), g(t) = G_FLOOR + e^(−t/TAU), t = 실제 휴식(초)
+     type: c = 복합(무게 유지), i = 고립(MMC: 무게 낮추고 1세트 횟수 이상), f = 초경량(무게 고정) */
+  const L_PRIOR = 0.05, L_MAX = 0.25, TAU = 60, G_FLOOR = 0.3, BO_RMAX = 20, DAY_FLOOR = 0.94, DAY_SYS = 0.5;
   const RATE = 0.02, REC_H = 48, REC_PEN = 0.02, BREAK_D = 14, DELOAD = 0.97, RMIN = 5, RMAX = 12, RMAX_LIGHT = 15;
   const WINDOW_DAYS = 56, EVAL_N = 6, THRESH = 0.5, FAST = 4, DONE_MS = 1600;
 
@@ -523,17 +538,17 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   const EX = {
     frog:    { name: '프로그 펌프', short: '프로그 펌프', bw: true },
     chintuck:{ name: '친턱', short: '친턱', bw: true },
-    sumo:    { name: '덤벨 스모 스쿼트', short: '스모 스쿼트', start: 20 },
-    rdl:     { name: '루마니안 데드리프트', short: '루마니안 데드', start: 23 },
-    lateral: { name: '레터럴 레이즈', short: '레터럴 레이즈', start: 8 },
-    rcurl:   { name: '리버스 컬', short: '리버스 컬', start: 12 },
-    row:     { name: '벤트오버 로우', short: '벤트오버 로우', start: 15 },
-    crunch:  { name: '크런치', short: '크런치', start: 3 },
-    rfly:    { name: '리버스 플라이', short: '리버스 플라이', start: 10 },
-    wrist:   { name: '리스트 롤러', short: '리스트 롤러', start: 5 },
-    curl:    { name: '바이셉 컬', short: '바이셉 컬', start: 8 },
+    sumo:    { name: '덤벨 스모 스쿼트', short: '스모 스쿼트', start: 20, type: 'c' },
+    rdl:     { name: '루마니안 데드리프트', short: '루마니안 데드', start: 23, type: 'c' },
+    lateral: { name: '레터럴 레이즈', short: '레터럴 레이즈', start: 8, type: 'i' },
+    rcurl:   { name: '리버스 컬', short: '리버스 컬', start: 12, type: 'i' },
+    row:     { name: '벤트오버 로우', short: '벤트오버 로우', start: 15, type: 'c' },
+    crunch:  { name: '크런치', short: '크런치', start: 3, type: 'f' },
+    rfly:    { name: '리버스 플라이', short: '리버스 플라이', start: 10, type: 'i' },
+    wrist:   { name: '리스트 롤러', short: '리스트 롤러', start: 5, type: 'f' },
+    curl:    { name: '바이셉 컬', short: '바이셉 컬', start: 8, type: 'i' },
     neck:    { name: '넥 컬', short: '넥 컬', bw: true },
-    l2h:     { name: '로우 투 하이 플라이', short: '로우 투 하이', start: 4 }
+    l2h:     { name: '로우 투 하이 플라이', short: '로우 투 하이', start: 4, type: 'i' }
   };
   /* L2 v2 기하 픽토그램 (48 격자, class="a" = 쓰는 근육) */
   const ICONS = {"frog": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M16 39.5L28 39.5A3.5 3.5 0 0 0 28 32.5L16 32.5A3.5 3.5 0 0 0 16 39.5Z\"/><path fill=\"currentColor\" d=\"M5.5 44.5L42.5 44.5A1.5 1.5 0 0 0 42.5 41.5L5.5 41.5A1.5 1.5 0 0 0 5.5 44.5ZM13.5 36A4.5 4.5 0 1 0 4.5 36A4.5 4.5 0 1 0 13.5 36ZM18.47 38.47L30.47 26.47A3.5 3.5 0 0 0 25.53 21.53L13.53 33.53A3.5 3.5 0 0 0 18.47 38.47ZM26.23 25.77L38.23 37.77A2.5 2.5 0 0 0 41.77 34.23L29.77 22.23A2.5 2.5 0 0 0 26.23 25.77ZM40 33.5L32 33.5A2.5 2.5 0 0 0 32 38.5L40 38.5A2.5 2.5 0 0 0 40 33.5Z\"/><path class=\"a\" d=\"M33.5 24A5.5 5.5 0 1 0 22.5 24A5.5 5.5 0 1 0 33.5 24Z\"/>", "chintuck": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M33.5 8.5A4.5 4.5 0 1 0 24.5 8.5A4.5 4.5 0 1 0 33.5 8.5Z\"/><path fill=\"currentColor\" d=\"M21.5 8.5A4.5 4.5 0 1 0 12.5 8.5A4.5 4.5 0 1 0 21.5 8.5ZM20.5 22L20.5 28A3.5 3.5 0 0 0 27.5 28L27.5 22A3.5 3.5 0 0 0 20.5 22ZM21.5 28L21.5 40A2.5 2.5 0 0 0 26.5 40L26.5 28A2.5 2.5 0 0 0 21.5 28ZM38 18.25L30 18.25A1.75 1.75 0 0 0 30 21.75L38 21.75A1.75 1.75 0 0 0 38 18.25ZM28.76 21.24L31.24 23.71A1.75 1.75 0 0 0 33.71 21.24L31.24 18.76A1.75 1.75 0 0 0 28.76 21.24ZM31.24 21.24L33.71 18.76A1.75 1.75 0 0 0 31.24 16.29L28.76 18.76A1.75 1.75 0 0 0 31.24 21.24Z\"/><path class=\"a\" d=\"M27.5 19L27.5 15A3.5 3.5 0 0 0 20.5 15L20.5 19A3.5 3.5 0 0 0 27.5 19Z\"/>", "sumo": "<path fill=\"currentColor\" d=\"M5.5 44.5L42.5 44.5A1.5 1.5 0 0 0 42.5 41.5L5.5 41.5A1.5 1.5 0 0 0 5.5 44.5ZM28.5 8.5A4.5 4.5 0 1 0 19.5 8.5A4.5 4.5 0 1 0 28.5 8.5ZM20.5 17L20.5 20A3.5 3.5 0 0 0 27.5 20L27.5 17A3.5 3.5 0 0 0 20.5 17ZM20 23.5L28 23.5A3.5 3.5 0 0 0 28 16.5L20 16.5A3.5 3.5 0 0 0 20 23.5ZM9.5 28L9.5 36A2.5 2.5 0 0 0 14.5 36L14.5 28A2.5 2.5 0 0 0 9.5 28ZM33.5 28L33.5 36A2.5 2.5 0 0 0 38.5 36L38.5 28A2.5 2.5 0 0 0 33.5 28ZM21.5 20L21.5 26A2.5 2.5 0 0 0 26.5 26L26.5 20A2.5 2.5 0 0 0 21.5 20ZM26.5 25L21.5 25A1.5 1.5 0 0 0 20 26.5L20 27.5A1.5 1.5 0 0 0 21.5 29L26.5 29A1.5 1.5 0 0 0 28 27.5L28 26.5A1.5 1.5 0 0 0 26.5 25ZM26.5 33L21.5 33A1.5 1.5 0 0 0 20 34.5L20 35.5A1.5 1.5 0 0 0 21.5 37L26.5 37A1.5 1.5 0 0 0 28 35.5L28 34.5A1.5 1.5 0 0 0 26.5 33ZM24.5 28.5L23.5 28.5A1 1 0 0 0 22.5 29.5L22.5 32.5A1 1 0 0 0 23.5 33.5L24.5 33.5A1 1 0 0 0 25.5 32.5L25.5 29.5A1 1 0 0 0 24.5 28.5ZM39.75 14L39.75 6A1.75 1.75 0 0 0 36.25 6L36.25 14A1.75 1.75 0 0 0 39.75 14ZM36.76 4.76L34.29 7.24A1.75 1.75 0 0 0 36.76 9.71L39.24 7.24A1.75 1.75 0 0 0 36.76 4.76ZM36.76 7.24L39.24 9.71A1.75 1.75 0 0 0 41.71 7.24L39.24 4.76A1.75 1.75 0 0 0 36.76 7.24Z\"/><path class=\"a\" d=\"M18.23 18.23L10.23 26.23A2.5 2.5 0 0 0 13.77 29.77L21.77 21.77A2.5 2.5 0 0 0 18.23 18.23ZM26.23 21.77L34.23 29.77A2.5 2.5 0 0 0 37.77 26.23L29.77 18.23A2.5 2.5 0 0 0 26.23 21.77Z\"/>", "rdl": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M19.5 24L19.5 16A3.5 3.5 0 0 0 12.5 16L12.5 24A3.5 3.5 0 0 0 19.5 24ZM20.5 8.5A4.5 4.5 0 1 0 11.5 8.5A4.5 4.5 0 1 0 20.5 8.5Z\"/><path fill=\"currentColor\" d=\"M5.5 44.5L42.5 44.5A1.5 1.5 0 0 0 42.5 41.5L5.5 41.5A1.5 1.5 0 0 0 5.5 44.5ZM39.5 23A4.5 4.5 0 1 0 30.5 23A4.5 4.5 0 1 0 39.5 23ZM16 27.5L28 27.5A3.5 3.5 0 0 0 28 20.5L16 20.5A3.5 3.5 0 0 0 16 27.5ZM13.5 32L13.5 36A2.5 2.5 0 0 0 18.5 36L18.5 32A2.5 2.5 0 0 0 13.5 32ZM25.5 24L25.5 34A2.5 2.5 0 0 0 30.5 34L30.5 24A2.5 2.5 0 0 0 25.5 24ZM22 33.5L22 38.5A1.5 1.5 0 0 0 23.5 40L24.5 40A1.5 1.5 0 0 0 26 38.5L26 33.5A1.5 1.5 0 0 0 24.5 32L23.5 32A1.5 1.5 0 0 0 22 33.5ZM30 33.5L30 38.5A1.5 1.5 0 0 0 31.5 40L32.5 40A1.5 1.5 0 0 0 34 38.5L34 33.5A1.5 1.5 0 0 0 32.5 32L31.5 32A1.5 1.5 0 0 0 30 33.5ZM25.5 35.5L25.5 36.5A1 1 0 0 0 26.5 37.5L29.5 37.5A1 1 0 0 0 30.5 36.5L30.5 35.5A1 1 0 0 0 29.5 34.5L26.5 34.5A1 1 0 0 0 25.5 35.5Z\"/><path class=\"a\" d=\"M13.5 23L13.5 32A2.5 2.5 0 0 0 18.5 32L18.5 23A2.5 2.5 0 0 0 13.5 23Z\"/>", "lateral": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M13.5 20L13.5 32A2.5 2.5 0 0 0 18.5 32L18.5 20A2.5 2.5 0 0 0 13.5 20ZM29.5 20L29.5 32A2.5 2.5 0 0 0 34.5 32L34.5 20A2.5 2.5 0 0 0 29.5 20Z\"/><path fill=\"currentColor\" d=\"M28.5 8.5A4.5 4.5 0 1 0 19.5 8.5A4.5 4.5 0 1 0 28.5 8.5ZM20.5 17L20.5 28A3.5 3.5 0 0 0 27.5 28L27.5 17A3.5 3.5 0 0 0 20.5 17ZM18.5 28L18.5 40A2.5 2.5 0 0 0 23.5 40L23.5 28A2.5 2.5 0 0 0 18.5 28ZM24.5 28L24.5 40A2.5 2.5 0 0 0 29.5 40L29.5 28A2.5 2.5 0 0 0 24.5 28ZM12 22.5L36 22.5A2.5 2.5 0 0 0 36 17.5L12 17.5A2.5 2.5 0 0 0 12 22.5ZM10.5 14L5.5 14A1.5 1.5 0 0 0 4 15.5L4 16.5A1.5 1.5 0 0 0 5.5 18L10.5 18A1.5 1.5 0 0 0 12 16.5L12 15.5A1.5 1.5 0 0 0 10.5 14ZM10.5 22L5.5 22A1.5 1.5 0 0 0 4 23.5L4 24.5A1.5 1.5 0 0 0 5.5 26L10.5 26A1.5 1.5 0 0 0 12 24.5L12 23.5A1.5 1.5 0 0 0 10.5 22ZM8.5 17.5L7.5 17.5A1 1 0 0 0 6.5 18.5L6.5 21.5A1 1 0 0 0 7.5 22.5L8.5 22.5A1 1 0 0 0 9.5 21.5L9.5 18.5A1 1 0 0 0 8.5 17.5ZM42.5 14L37.5 14A1.5 1.5 0 0 0 36 15.5L36 16.5A1.5 1.5 0 0 0 37.5 18L42.5 18A1.5 1.5 0 0 0 44 16.5L44 15.5A1.5 1.5 0 0 0 42.5 14ZM42.5 22L37.5 22A1.5 1.5 0 0 0 36 23.5L36 24.5A1.5 1.5 0 0 0 37.5 26L42.5 26A1.5 1.5 0 0 0 44 24.5L44 23.5A1.5 1.5 0 0 0 42.5 22ZM40.5 17.5L39.5 17.5A1 1 0 0 0 38.5 18.5L38.5 21.5A1 1 0 0 0 39.5 22.5L40.5 22.5A1 1 0 0 0 41.5 21.5L41.5 18.5A1 1 0 0 0 40.5 17.5Z\"/><path class=\"a\" d=\"M16 23.5L21 23.5A3.5 3.5 0 0 0 21 16.5L16 16.5A3.5 3.5 0 0 0 16 23.5ZM27 23.5L32 23.5A3.5 3.5 0 0 0 32 16.5L27 16.5A3.5 3.5 0 0 0 27 23.5Z\"/>", "rcurl": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M17.5 28L17.5 38A2.5 2.5 0 0 0 22.5 38L22.5 28A2.5 2.5 0 0 0 17.5 28Z\"/><path fill=\"currentColor\" d=\"M20.5 8.5A4.5 4.5 0 1 0 11.5 8.5A4.5 4.5 0 1 0 20.5 8.5ZM12.5 17L12.5 28A3.5 3.5 0 0 0 19.5 28L19.5 17A3.5 3.5 0 0 0 12.5 17ZM13.5 28L13.5 40A2.5 2.5 0 0 0 18.5 40L18.5 28A2.5 2.5 0 0 0 13.5 28ZM17.5 16L17.5 28A2.5 2.5 0 0 0 22.5 28L22.5 16A2.5 2.5 0 0 0 17.5 16ZM35.5 25A3.5 3.5 0 0 0 28.5 25ZM34.5 27L29.5 27A1.5 1.5 0 0 0 28 28.5L28 29.5A1.5 1.5 0 0 0 29.5 31L34.5 31A1.5 1.5 0 0 0 36 29.5L36 28.5A1.5 1.5 0 0 0 34.5 27ZM34.5 35L29.5 35A1.5 1.5 0 0 0 28 36.5L28 37.5A1.5 1.5 0 0 0 29.5 39L34.5 39A1.5 1.5 0 0 0 36 37.5L36 36.5A1.5 1.5 0 0 0 34.5 35ZM32.5 30.5L31.5 30.5A1 1 0 0 0 30.5 31.5L30.5 34.5A1 1 0 0 0 31.5 35.5L32.5 35.5A1 1 0 0 0 33.5 34.5L33.5 31.5A1 1 0 0 0 32.5 30.5Z\"/><path class=\"a\" d=\"M20 30.5L32 30.5A2.5 2.5 0 0 0 32 25.5L20 25.5A2.5 2.5 0 0 0 20 30.5Z\"/>", "row": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M29.5 24L29.5 36A2.5 2.5 0 0 0 34.5 36L34.5 24A2.5 2.5 0 0 0 29.5 24Z\"/><path fill=\"currentColor\" d=\"M21.5 16L21.5 28A2.5 2.5 0 0 0 26.5 28L26.5 16A2.5 2.5 0 0 0 21.5 16ZM18 28.5L18 33.5A1.5 1.5 0 0 0 19.5 35L20.5 35A1.5 1.5 0 0 0 22 33.5L22 28.5A1.5 1.5 0 0 0 20.5 27L19.5 27A1.5 1.5 0 0 0 18 28.5ZM26 28.5L26 33.5A1.5 1.5 0 0 0 27.5 35L28.5 35A1.5 1.5 0 0 0 30 33.5L30 28.5A1.5 1.5 0 0 0 28.5 27L27.5 27A1.5 1.5 0 0 0 26 28.5ZM21.5 30.5L21.5 31.5A1 1 0 0 0 22.5 32.5L25.5 32.5A1 1 0 0 0 26.5 31.5L26.5 30.5A1 1 0 0 0 25.5 29.5L22.5 29.5A1 1 0 0 0 21.5 30.5Z\"/><path fill=\"currentColor\" d=\"M43.5 22A4.5 4.5 0 1 0 34.5 22A4.5 4.5 0 1 0 43.5 22ZM12 27.5L32 27.5A3.5 3.5 0 0 0 32 20.5L12 20.5A3.5 3.5 0 0 0 12 27.5ZM9.5 24L9.5 40A2.5 2.5 0 0 0 14.5 40L14.5 24A2.5 2.5 0 0 0 9.5 24ZM33.77 22.23L25.77 14.23A2.5 2.5 0 0 0 22.23 17.77L30.23 25.77A2.5 2.5 0 0 0 33.77 22.23Z\"/><path class=\"a\" d=\"M12 24.5L32 24.5A2 2 0 0 0 32 20.5L12 20.5A2 2 0 0 0 12 24.5Z\"/>", "crunch": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M24 32.5L16 32.5A3.5 3.5 0 0 0 16 39.5L24 39.5A3.5 3.5 0 0 0 24 32.5ZM13.5 36A4.5 4.5 0 1 0 4.5 36A4.5 4.5 0 1 0 13.5 36Z\"/><path fill=\"currentColor\" d=\"M5.5 44.5L42.5 44.5A1.5 1.5 0 0 0 42.5 41.5L5.5 41.5A1.5 1.5 0 0 0 5.5 44.5ZM15.5 23A4.5 4.5 0 1 0 6.5 23A4.5 4.5 0 1 0 15.5 23ZM25.77 37.77L33.77 29.77A2.5 2.5 0 0 0 30.23 26.23L22.23 34.23A2.5 2.5 0 0 0 25.77 37.77ZM30.23 29.77L38.23 37.77A2.5 2.5 0 0 0 41.77 34.23L33.77 26.23A2.5 2.5 0 0 0 30.23 29.77ZM17.99 28.47L21.53 32.01A1.5 1.5 0 0 0 23.65 32.01L24.35 31.3A1.5 1.5 0 0 0 24.35 29.18L20.82 25.65A1.5 1.5 0 0 0 18.7 25.65L17.99 26.35A1.5 1.5 0 0 0 17.99 28.47ZM23.65 22.82L27.18 26.35A1.5 1.5 0 0 0 29.3 26.35L30.01 25.65A1.5 1.5 0 0 0 30.01 23.53L26.47 19.99A1.5 1.5 0 0 0 24.35 19.99L23.65 20.7A1.5 1.5 0 0 0 23.65 22.82ZM21.88 27.41L22.59 28.12A1 1 0 0 0 24 28.12L26.12 26A1 1 0 0 0 26.12 24.59L25.41 23.88A1 1 0 0 0 24 23.88L21.88 26A1 1 0 0 0 21.88 27.41Z\"/><path class=\"a\" d=\"M26.47 33.53L18.47 25.53A3.5 3.5 0 0 0 13.53 30.47L21.53 38.47A3.5 3.5 0 0 0 26.47 33.53Z\"/>", "rfly": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M13.5 20L13.5 28A2.5 2.5 0 0 0 18.5 28L18.5 20A2.5 2.5 0 0 0 13.5 20ZM29.5 20L29.5 28A2.5 2.5 0 0 0 34.5 28L34.5 20A2.5 2.5 0 0 0 29.5 20Z\"/><path fill=\"currentColor\" d=\"M28.5 9A4.5 4.5 0 1 0 19.5 9A4.5 4.5 0 1 0 28.5 9ZM18 30L18 32A4 4 0 0 0 22 36L26 36A4 4 0 0 0 30 32L30 30A4 4 0 0 0 26 26L22 26A4 4 0 0 0 18 30ZM8 22.5L40 22.5A2.5 2.5 0 0 0 40 17.5L8 17.5A2.5 2.5 0 0 0 8 22.5ZM10.5 14L5.5 14A1.5 1.5 0 0 0 4 15.5L4 16.5A1.5 1.5 0 0 0 5.5 18L10.5 18A1.5 1.5 0 0 0 12 16.5L12 15.5A1.5 1.5 0 0 0 10.5 14ZM10.5 22L5.5 22A1.5 1.5 0 0 0 4 23.5L4 24.5A1.5 1.5 0 0 0 5.5 26L10.5 26A1.5 1.5 0 0 0 12 24.5L12 23.5A1.5 1.5 0 0 0 10.5 22ZM8.5 17.5L7.5 17.5A1 1 0 0 0 6.5 18.5L6.5 21.5A1 1 0 0 0 7.5 22.5L8.5 22.5A1 1 0 0 0 9.5 21.5L9.5 18.5A1 1 0 0 0 8.5 17.5ZM42.5 14L37.5 14A1.5 1.5 0 0 0 36 15.5L36 16.5A1.5 1.5 0 0 0 37.5 18L42.5 18A1.5 1.5 0 0 0 44 16.5L44 15.5A1.5 1.5 0 0 0 42.5 14ZM42.5 22L37.5 22A1.5 1.5 0 0 0 36 23.5L36 24.5A1.5 1.5 0 0 0 37.5 26L42.5 26A1.5 1.5 0 0 0 44 24.5L44 23.5A1.5 1.5 0 0 0 42.5 22ZM40.5 17.5L39.5 17.5A1 1 0 0 0 38.5 18.5L38.5 21.5A1 1 0 0 0 39.5 22.5L40.5 22.5A1 1 0 0 0 41.5 21.5L41.5 18.5A1 1 0 0 0 40.5 17.5Z\"/><path class=\"a\" d=\"M16 19L16 24A3 3 0 0 0 19 27L29 27A3 3 0 0 0 32 24L32 19A3 3 0 0 0 29 16L19 16A3 3 0 0 0 16 19Z\"/>", "wrist": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M30 35.5L30 40.5A1.5 1.5 0 0 0 31.5 42L32.5 42A1.5 1.5 0 0 0 34 40.5L34 35.5A1.5 1.5 0 0 0 32.5 34L31.5 34A1.5 1.5 0 0 0 30 35.5ZM38 35.5L38 40.5A1.5 1.5 0 0 0 39.5 42L40.5 42A1.5 1.5 0 0 0 42 40.5L42 35.5A1.5 1.5 0 0 0 40.5 34L39.5 34A1.5 1.5 0 0 0 38 35.5ZM33.5 37.5L33.5 38.5A1 1 0 0 0 34.5 39.5L37.5 39.5A1 1 0 0 0 38.5 38.5L38.5 37.5A1 1 0 0 0 37.5 36.5L34.5 36.5A1 1 0 0 0 33.5 37.5ZM34.5 20L34.5 34A1.5 1.5 0 0 0 37.5 34L37.5 20A1.5 1.5 0 0 0 34.5 20Z\"/><path fill=\"currentColor\" d=\"M16.5 8.5A4.5 4.5 0 1 0 7.5 8.5A4.5 4.5 0 1 0 16.5 8.5ZM8.5 17L8.5 28A3.5 3.5 0 0 0 15.5 28L15.5 17A3.5 3.5 0 0 0 8.5 17ZM9.5 28L9.5 40A2.5 2.5 0 0 0 14.5 40L14.5 28A2.5 2.5 0 0 0 9.5 28ZM12 18.5L20 18.5A2.5 2.5 0 0 0 20 13.5L12 13.5A2.5 2.5 0 0 0 12 18.5ZM39.5 16A3.5 3.5 0 1 0 32.5 16A3.5 3.5 0 1 0 39.5 16ZM34.5 20L34.5 24A1.5 1.5 0 0 0 37.5 24L37.5 20A1.5 1.5 0 0 0 34.5 20ZM30 25.5L30 30.5A1.5 1.5 0 0 0 31.5 32L32.5 32A1.5 1.5 0 0 0 34 30.5L34 25.5A1.5 1.5 0 0 0 32.5 24L31.5 24A1.5 1.5 0 0 0 30 25.5ZM38 25.5L38 30.5A1.5 1.5 0 0 0 39.5 32L40.5 32A1.5 1.5 0 0 0 42 30.5L42 25.5A1.5 1.5 0 0 0 40.5 24L39.5 24A1.5 1.5 0 0 0 38 25.5ZM33.5 27.5L33.5 28.5A1 1 0 0 0 34.5 29.5L37.5 29.5A1 1 0 0 0 38.5 28.5L38.5 27.5A1 1 0 0 0 37.5 26.5L34.5 26.5A1 1 0 0 0 33.5 27.5Z\"/><path class=\"a\" d=\"M20 18.5L30 18.5A2.5 2.5 0 0 0 30 13.5L20 13.5A2.5 2.5 0 0 0 20 18.5Z\"/>", "curl": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M17.5 28L17.5 38A2.5 2.5 0 0 0 22.5 38L22.5 28A2.5 2.5 0 0 0 17.5 28Z\"/><path fill=\"currentColor\" d=\"M20.5 8.5A4.5 4.5 0 1 0 11.5 8.5A4.5 4.5 0 1 0 20.5 8.5ZM12.5 17L12.5 28A3.5 3.5 0 0 0 19.5 28L19.5 17A3.5 3.5 0 0 0 12.5 17ZM13.5 28L13.5 40A2.5 2.5 0 0 0 18.5 40L18.5 28A2.5 2.5 0 0 0 13.5 28ZM21.77 29.77L29.77 21.77A2.5 2.5 0 0 0 26.23 18.23L18.23 26.23A2.5 2.5 0 0 0 21.77 29.77ZM24.5 20A3.5 3.5 0 0 0 31.5 20ZM30.5 6L25.5 6A1.5 1.5 0 0 0 24 7.5L24 8.5A1.5 1.5 0 0 0 25.5 10L30.5 10A1.5 1.5 0 0 0 32 8.5L32 7.5A1.5 1.5 0 0 0 30.5 6ZM30.5 14L25.5 14A1.5 1.5 0 0 0 24 15.5L24 16.5A1.5 1.5 0 0 0 25.5 18L30.5 18A1.5 1.5 0 0 0 32 16.5L32 15.5A1.5 1.5 0 0 0 30.5 14ZM28.5 9.5L27.5 9.5A1 1 0 0 0 26.5 10.5L26.5 13.5A1 1 0 0 0 27.5 14.5L28.5 14.5A1 1 0 0 0 29.5 13.5L29.5 10.5A1 1 0 0 0 28.5 9.5Z\"/><path class=\"a\" d=\"M17 16L17 28A3 3 0 0 0 23 28L23 16A3 3 0 0 0 17 16Z\"/>", "neck": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M13.5 36A4.5 4.5 0 1 0 4.5 36A4.5 4.5 0 1 0 13.5 36Z\"/><path fill=\"currentColor\" d=\"M5.5 44.5L42.5 44.5A1.5 1.5 0 0 0 42.5 41.5L5.5 41.5A1.5 1.5 0 0 0 5.5 44.5ZM13.5 27A4.5 4.5 0 1 0 4.5 27A4.5 4.5 0 1 0 13.5 27ZM16 39.5L28 39.5A3.5 3.5 0 0 0 28 32.5L16 32.5A3.5 3.5 0 0 0 16 39.5ZM28 38.5L40 38.5A2.5 2.5 0 0 0 40 33.5L28 33.5A2.5 2.5 0 0 0 28 38.5Z\"/><path class=\"a\" d=\"M18.91 34.06L15.91 29.56A3.5 3.5 0 0 0 10.09 33.44L13.09 37.94A3.5 3.5 0 0 0 18.91 34.06Z\"/>", "l2h": "<path fill=\"currentColor\" opacity=\"0.25\" d=\"M18.23 18.23L10.23 26.23A2.5 2.5 0 0 0 13.77 29.77L21.77 21.77A2.5 2.5 0 0 0 18.23 18.23ZM26.23 21.77L34.23 29.77A2.5 2.5 0 0 0 37.77 26.23L29.77 18.23A2.5 2.5 0 0 0 26.23 21.77Z\"/><path fill=\"currentColor\" d=\"M28.5 8.5A4.5 4.5 0 1 0 19.5 8.5A4.5 4.5 0 1 0 28.5 8.5ZM20.5 17L20.5 28A3.5 3.5 0 0 0 27.5 28L27.5 17A3.5 3.5 0 0 0 20.5 17ZM18.5 28L18.5 40A2.5 2.5 0 0 0 23.5 40L23.5 28A2.5 2.5 0 0 0 18.5 28ZM24.5 28L24.5 40A2.5 2.5 0 0 0 29.5 40L29.5 28A2.5 2.5 0 0 0 24.5 28ZM21.77 18.23L13.77 10.23A2.5 2.5 0 0 0 10.23 13.77L18.23 21.77A2.5 2.5 0 0 0 21.77 18.23ZM29.77 21.77L37.77 13.77A2.5 2.5 0 0 0 34.23 10.23L26.23 18.23A2.5 2.5 0 0 0 29.77 21.77ZM8.53 4.99L4.99 8.53A1.5 1.5 0 0 0 4.99 10.65L5.7 11.35A1.5 1.5 0 0 0 7.82 11.35L11.35 7.82A1.5 1.5 0 0 0 11.35 5.7L10.65 4.99A1.5 1.5 0 0 0 8.53 4.99ZM14.18 10.65L10.65 14.18A1.5 1.5 0 0 0 10.65 16.3L11.35 17.01A1.5 1.5 0 0 0 13.47 17.01L17.01 13.47A1.5 1.5 0 0 0 17.01 11.35L16.3 10.65A1.5 1.5 0 0 0 14.18 10.65ZM9.59 8.88L8.88 9.59A1 1 0 0 0 8.88 11L11 13.12A1 1 0 0 0 12.41 13.12L13.12 12.41A1 1 0 0 0 13.12 11L11 8.88A1 1 0 0 0 9.59 8.88ZM30.99 13.47L34.53 17.01A1.5 1.5 0 0 0 36.65 17.01L37.35 16.3A1.5 1.5 0 0 0 37.35 14.18L33.82 10.65A1.5 1.5 0 0 0 31.7 10.65L30.99 11.35A1.5 1.5 0 0 0 30.99 13.47ZM36.65 7.82L40.18 11.35A1.5 1.5 0 0 0 42.3 11.35L43.01 10.65A1.5 1.5 0 0 0 43.01 8.53L39.47 4.99A1.5 1.5 0 0 0 37.35 4.99L36.65 5.7A1.5 1.5 0 0 0 36.65 7.82ZM34.88 12.41L35.59 13.12A1 1 0 0 0 37 13.12L39.12 11A1 1 0 0 0 39.12 9.59L38.41 8.88A1 1 0 0 0 37 8.88L34.88 11A1 1 0 0 0 34.88 12.41Z\"/><path class=\"a\" d=\"M19 24L29 24A3.5 3.5 0 0 0 29 17L19 17A3.5 3.5 0 0 0 19 24Z\"/>"};
@@ -612,6 +627,31 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   const median = (a) => { const b = a.slice().sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; };
   const agoTxt = (h) => (h < 1 ? '방금' : h < 72 ? Math.round(h) + '시간 전' : Math.round(h / 24) + '일 전');
 
+  /* ---------- day fatigue: today's shortfall vs expectation (P) carries into later exercises ---------- */
+  const MUSCLE = { frog: ['둔근'], chintuck: ['목'], sumo: ['대퇴사두', '둔근', '내전근'], rdl: ['햄스트링', '둔근', '척추기립근', '악력'],
+    lateral: ['측면 어깨'], rcurl: ['이두', '전완', '악력'], row: ['등', '후면 어깨', '이두', '악력'], crunch: ['복근'], rfly: ['후면 어깨', '등'],
+    wrist: ['전완', '악력'], curl: ['이두', '전완'], neck: ['목'], l2h: ['가슴', '전면 어깨'] };
+  function dayFatigue(ex) {
+    const list = [];
+    ORDER.forEach((e) => {
+      if (e === ex || isBw(e)) return;
+      const xs = todaySets(e).filter((s) => typeof s.P === 'number' && s.P > 0);
+      if (!xs.length) return;
+      const dev = xs.reduce((a, s) => a + Math.min(0, e10(s.w, s.r) / s.P - 1), 0) / xs.length;
+      list.push({ e, dev, ov: (MUSCLE[e] || []).filter((m) => (MUSCLE[ex] || []).includes(m)) });
+    });
+    const ovl = list.filter((x) => x.ov.length), worst = ovl.length ? ovl.reduce((a, x) => (x.dev < a.dev ? x : a)) : null;
+    const loc = worst ? worst.dev : 0, sys = list.length ? DAY_SYS * list.reduce((a, x) => a + x.dev, 0) / list.length : 0;
+    let f = Math.max(DAY_FLOOR, 1 + Math.min(loc, sys));
+    if (f > 0.99) f = 1;
+    let txt;
+    if (!list.length) txt = '오늘 앞서 한 무게 운동이 아직 없어서 조정 없음';
+    else if (f === 1) txt = Math.min(loc, sys) < -1e-4 ? '오늘 앞선 운동 피로 ' + sgn(100 * Math.min(loc, sys)) + '% · 1% 미만이라 조정 없음' : '오늘 앞선 ' + list.length + '개 운동이 예상대로라서 조정 없음';
+    else if (worst && loc <= sys) txt = EX[worst.e].short + '(같은 근육: ' + worst.ov.join('·') + ')에서 예상보다 ' + sgn(100 * loc) + '% → 목표 ' + sgn(100 * (f - 1)) + '%';
+    else txt = '오늘 앞선 ' + list.length + '개 운동이 평균 ' + sgn(100 * sys / DAY_SYS) + '% (다른 근육이라 절반만 반영) → 목표 ' + sgn(100 * (f - 1)) + '%';
+    return { f, txt };
+  }
+
   function suggest(ex, nowMs) {
     const now = nowMs || Date.now(), ss = sessions(ex, true);
     if (isBw(ex)) {
@@ -643,7 +683,8 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     else if (fDrop || fLoad) { mode = 'fatigue'; g = 0; }
     else if (miss(0)) { mode = 'easy'; g /= 2; }
     const pen = mode === 'break' || hrs >= REC_H ? 0 : REC_PEN * (1 - Math.max(0, hrs) / REC_H);
-    const goal = P * (1 + g - pen);
+    const day = dayFatigue(ex);
+    const goal = P * (1 + g - pen) * day.f;
     const cands = steps(last.w, mode === 'deload' || mode === 'break' ? 0 : last.r, goal), pick = cands[0];
     const step = pct(pick.e, last.e);
     let kind, delta;
@@ -663,12 +704,76 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
       (mode === 'break' || mode === 'deload' ? ' → 3% 낮춤' : ' → 이 레벨 ' + lvlDays.toFixed(1) + '일째, 주 ' + RATE * 100 + '% 속도' + (mode === 'easy' ? '의 절반' : '') + ' ' + sgn(g * 100) + '%') +
       (mode === 'fatigue' ? ' → 피로 신호로 0%' : '') +
       (pen > 0 ? ' → 회복 ' + Math.round(hrs) + '/' + REC_H + '시간 −' + (pen * 100).toFixed(1) + '%' : '') +
+      (day.f < 1 ? ' → 오늘 피로 ' + sgn(100 * (day.f - 1)) + '%' : '') +
       ' → 목표 ' + f1(goal) + 'kg → ' + (up ? pick.w + '×' + pick.r + ' (' + sgn(step) + '%)' : '다음 진도의 75%에 못 미쳐서 ' + pick.w + '×' + pick.r + ' 유지');
     const others = cands.slice(1, 4).map((c) => c.w + '×' + c.r + ' ' + sgn(pct(c.e, last.e)) + '%');
     const lastLine = '지난 세션: ' + last.all.map((s) => s.w + '×' + s.r).join(' · ');
-    return { kind, w: pick.w, r: pick.r, T: pick.e, goal, step, mode, delta, why, note, prev: last, ago: agoTxt(hrs),
+    const expl = [
+      ['기준', '지난 세션(' + md(last.date) + ', ' + agoTxt(hrs) + ') 첫 세트 ' + last.w + 'kg × ' + last.r + '회 = 추정 10RM ' + f1(last.e) + 'kg'],
+      ['진도', mode === 'break' ? Math.round(hrs / 24) + '일 만이라 3% 낮춰서 다시 시작' : mode === 'deload' ? '2번 연속 목표 미달 → 3% 낮춰서 다시'
+        : mode === 'fatigue' ? (fDrop ? '지난번 세트 간 횟수 감소가 평소보다 큼' : '최근 7일 운동량이 평소의 ' + loadX.toFixed(1) + '배') + ' → 이번엔 0%'
+        : '이 레벨 ' + lvlDays.toFixed(1) + '일째 × 주 ' + RATE * 100 + '% 속도' + (mode === 'easy' ? '의 절반(지난번 목표 미달)' : '') + ' → ' + sgn(g * 100) + '%'],
+      ['회복', mode === 'break' ? '—' : hrs >= REC_H ? '마지막 세트 후 ' + Math.round(hrs) + '시간 · ' + REC_H + '시간 회복 완료' : '마지막 세트 후 ' + Math.round(hrs) + '/' + REC_H + '시간 · 덜 회복된 만큼 −' + (pen * 100).toFixed(1) + '%'],
+      ['오늘 피로', day.txt],
+      ['결정', '목표 추정 10RM ' + f1(goal) + 'kg → ' + (up ? '가장 가까운 진도 ' + pick.w + 'kg × ' + pick.r + '회 (' + sgn(step) + '%)' : '다음 진도의 75%에 못 미쳐서 ' + pick.w + 'kg × ' + pick.r + '회 유지') +
+        (others.length ? ' · 다른 후보 ' + others.join(', ') : '')]
+    ];
+    return { kind, w: pick.w, r: pick.r, T: pick.e, goal, step, mode, delta, why, note, prev: last, ago: agoTxt(hrs), expl, title: '1세트 (탑세트)',
       last: [lastLine, others.length ? '다른 후보: ' + others.join(', ') : ''].filter(Boolean).join('  ·  ') };
   }
+
+  /* ---------- back-off sets (2·3세트): 직전 세트 실제 결과 + 실제 휴식 시간으로 매번 다시 계산 ---------- */
+  const gRest = (t) => G_FLOOR + Math.exp(-Math.max(0, t) / TAU);
+  const lossAt = (L120, t) => Math.min(L_MAX, L120 * gRest(t) / gRest(120));
+  const repsAt = (C, W) => Math.round(40 * C / W - 30);   /* 반올림: 내림이면 추천대로 할수록 학습 피로가 커지는 하향 루프가 생김 */
+  const secTxt = (sec) => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ':' + pad2(sec % 60); };
+  const planRest = () => { try { return rest ? rest.total / 1000 : restCfg.set || 90; } catch (e) { return 90; } };
+  /* learned per-set loss of estimated 10RM, normalised to 120 s rest (최근 EVAL_N 세션, 기본값 쪽으로 수축) */
+  function fatigue(ex) {
+    const obs = [];
+    sessions(ex, true).slice(0, EVAL_N).forEach((s) => {
+      for (let j = 1; j < s.sets.length; j++) {
+        const a = s.sets[j - 1], b = s.sets[j], t = (b.ts - a.ts) / 1000;
+        if (!(t > 20) || t > 900) continue;
+        const L = 1 - e10(b.w, b.r) / e10(a.w, a.r);
+        obs.push(Math.min(L_MAX, Math.max(0, L * gRest(120) / gRest(t))));
+      }
+    });
+    const n = obs.length;
+    return { L: ((n ? n * median(obs) : 0) + 2 * L_PRIOR) / (n + 2), n };
+  }
+  function backoff(ex, ts, now) {
+    const top = ts[0], last = ts[ts.length - 1], k = ts.length + 1, type = EX[ex].type || 'f', rst = planRest();
+    const el = (now - last.ts) / 1000, tUse = Math.max(el, rst);
+    const { L, n } = fatigue(ex);
+    const capAt = (t) => e10(last.w, last.r) * (1 - lossAt(L, t));
+    const need = type === 'i' ? top.r : RMIN;
+    const pick = (C) => {
+      let W = type === 'i' ? Math.min(top.w, last.w) : last.w;
+      while (W > MIN_W && repsAt(C, W) < need) W--;
+      return { w: W, r: Math.max(1, Math.min(BO_RMAX, repsAt(C, W))) };
+    };
+    const p = pick(capAt(tUse)), early = el < rst ? pick(capAt(el)) : null;
+    const kind = p.w < last.w || p.r < last.r ? 'down' : p.r > last.r ? 'up' : 'hold';
+    const delta = (p.w < last.w ? (last.w - p.w) + 'kg 내리고 ' + p.r + '회' : '같은 무게로 ' + p.r + '회') + (type === 'i' ? ' · 천천히, 수축에 집중' : '');
+    const le = e10(last.w, last.r), vs = typeof last.P === 'number' && last.P > 0 ? pct(le, last.P) : null;
+    const rec = 100 * (1 - lossAt(L, tUse));
+    const expl = [
+      ['직전 세트', (k - 1) + '세트 ' + last.w + 'kg × ' + last.r + '회 = 추정 10RM ' + f1(le) + 'kg' + (vs === null ? '' : ' · 예상 대비 ' + sgn(vs) + '%' + (vs < -1 ? ' (피로가 예상보다 큼)' : vs > 1 ? ' (예상보다 좋음)' : ' (예상대로)'))],
+      ['세트당 피로', f1(100 * L) + '% (2분 휴식 기준) · ' + (n ? '이 운동 최근 기록 ' + n + '개로 학습' : '기록이 없어 기본값')],
+      ['휴식', '지금 ' + secTxt(el) + ' / 계획 ' + secTxt(rst) + ' · ' + secTxt(tUse) + ' 쉬면 직전 세트의 ' + f1(rec) + '%까지 회복' + (early ? ' · 지금 시작하면 ' + f1(100 * (1 - lossAt(L, el))) + '% → ' + early.w + '×' + early.r : '')],
+      ['방식', type === 'i' ? '고립 운동 → 무게를 낮춰 1세트 횟수(' + top.r + '회) 이상 · 천천히, 근육 수축에 집중 (MMC)' : type === 'c' ? '복합 운동 → 무게 유지, 횟수가 ' + RMIN + '회 아래로 떨어질 때만 1kg 내림' : '초경량 운동 → 무게 유지, 횟수만 조정'],
+      ['결정', '예상 추정 10RM ' + f1(capAt(tUse)) + 'kg에서 가능한 횟수 → ' + p.w + 'kg × ' + p.r + '회 · 더 되면 1회 남을 때까지 하세요. 실제 결과로 다음 세트와 다음 운동이 다시 계산돼요']
+    ];
+    const why = '직전 ' + last.w + '×' + last.r + (vs !== null && Math.abs(vs) > 1 ? ' (예상 ' + sgn(vs) + '%)' : '') + ' → 휴식 ' + secTxt(tUse) + ' 뒤 ' + f1(rec) + '% → ' + p.w + '×' + p.r;
+    const note = early && (early.w !== p.w || early.r !== p.r) ? '지금 시작하면 ' + early.w + '×' + early.r + ' · 휴식을 채우면 ' + p.w + '×' + p.r : '';
+    return { kind, w: p.w, r: p.r, step: pct(e10(p.w, p.r), le), delta, why, note, expl, title: k + '세트 (백오프)', bo: true, cap: capAt(el), last: '' };
+  }
+  function suggestNow(ex) {
+    const ts = todaySets(ex);
+    return isBw(ex) || !ts.length || ts.length >= SETS ? suggest(ex) : backoff(ex, ts, Date.now());
+  }
+  const explHtml = (sg) => '<ol class="steps">' + sg.expl.map((x) => '<li><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></li>').join('') + '</ol>';
 
   /* ---------- trend (estimated 10RM) ---------- */
   function trend(ex) {
@@ -788,8 +893,9 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   function prefill() {
     const ex = curEx(), ts = todaySets(ex);
     if (isBw(ex)) { cur.w = 0; cur.r = 0; return; }
-    if (ts.length) { const l = ts[ts.length - 1]; cur.w = l.w; cur.r = l.r; return; }
-    const sg = suggest(ex); cur.w = sg.w; cur.r = clampR(sg.r);
+    cur.auto = true;
+    if (ts.length >= SETS) { const l = ts[ts.length - 1]; cur.w = l.w; cur.r = l.r; return; }
+    const sg = suggestNow(ex); cur.w = sg.w; cur.r = clampR(sg.r);
   }
   function goIdx(i, dir) {
     if (i < 0 || i >= ORDER.length) { restart($('hero'), 'edge'); buzz([15, 40, 15]); sfx('edge'); return; }
@@ -812,7 +918,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
       wIn = $('wIn'); rIn = $('rIn');
       [wIn, rIn].forEach((el) => {
         el.addEventListener('focus', () => el.select());
-        el.addEventListener('input', () => { fitW(el); fitNums(); });
+        el.addEventListener('input', () => { cur.auto = false; fitW(el); fitNums(); });
         el.addEventListener('keydown', (e) => { if (e.key === 'Enter') el.blur(); });
         el.addEventListener('blur', () => { commitInputs(); render(); });
       });
@@ -834,7 +940,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     $('setBars').innerHTML = sb;
     $('setTxt').textContent = n >= SETS ? '3세트 끝' : '세트 ' + (n + 1) + ' / ' + SETS;
 
-    const sg = suggest(ex);
+    const sg = suggestNow(ex);
     renderNums(ex, bw, sg, n);
     const dl = $('delta');
     dl.className = 'delta ' + sg.kind;
@@ -844,9 +950,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     if (bw) { $('why').textContent = sg.why; $('rule').textContent = sg.last; }
     else {
       dl.innerHTML += '<em class="pct">' + (Math.abs(sg.step) < 0.05 ? '유지' : sgn(sg.step) + '%') + '</em>';
-      const pv = sg.prev;
-      $('why').innerHTML = pv ? '지난번 ' + md(pv.date) + ' <span class="ago">' + sg.ago + '</span> · ' + pv.w + 'kg × ' + pv.r + '회' : '';
-      $('rule').textContent = sg.note || '';
+      renderWhy(sg);
     }
     void ts;
 
@@ -881,9 +985,33 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   }
 
   /* why today's suggestion: full reasoning, kept off the main screen */
+  /* main-screen reason line (tap → numbered steps); also refreshed every second while resting */
+  let whySg = null;
+  function renderWhy(sg) {
+    whySg = sg;
+    const pv = sg.prev;
+    $('why').innerHTML = (sg.bo ? esc(sg.why) : pv ? '지난번 ' + md(pv.date) + ' <span class="ago">' + sg.ago + '</span> · ' + pv.w + 'kg × ' + pv.r + '회' : esc(sg.why)) +
+      (sg.expl ? ' <span class="more">판단 근거 ›</span>' : '');
+    $('rule').textContent = sg.note || '';
+  }
+  function openWhy() {
+    const sg = whySg; if (!sg || !sg.expl) return;
+    $('whyT').textContent = EX[curEx()].short + ' · ' + sg.title;
+    $('whyBody').innerHTML = explHtml(sg) +
+      '<p class="trend-more">추정 10RM = 무게 × (30 + 횟수) ÷ 40 · 1세트는 다음 세션 진도의 기준, 2·3세트는 직전 세트 실제 결과와 실제 휴식 시간으로 매번 다시 계산 · 오늘 예상보다 못 한 만큼 같은 근육 운동은 100%, 다른 운동은 50% 반영(최대 −6%)</p>';
+    $('whyDlg').showModal();
+  }
+  setInterval(() => {
+    const ex = curEx(), n = doneCount(ex);
+    if (showingDone || isBw(ex) || !n || n >= SETS || document.hidden) return;
+    const sg = suggestNow(ex);
+    renderWhy(sg);
+    if (cur.auto && (cur.w !== sg.w || cur.r !== sg.r)) { const a = cur.w !== sg.w ? 'w' : 'r'; cur.w = sg.w; cur.r = sg.r; syncInputs(a); fitNums(); }
+  }, 1000);
   function sgDetail(ex) {
     if (isBw(ex)) return '';
     const sg = suggest(ex);
+    if (sg.expl) return '<div class="sgx"><b>오늘 1세트 추천 ' + sg.w + 'kg × ' + sg.r + '회는 이렇게 나왔어요</b>' + explHtml(sg) + '</div>';
     return '<div class="sgx"><b>오늘 추천 ' + sg.w + 'kg × ' + sg.r + '회는 이렇게 나왔어요</b><p>' + esc(sg.why) + '</p>' + (sg.last ? '<p>' + esc(sg.last) + '</p>' : '') +
       '<p>주 ' + RATE * 100 + '% 속도 기준 · 지난 운동 후 ' + REC_H + '시간 안 됐으면 덜 회복된 만큼 목표를 살짝 낮추고, 세트마다 횟수가 평소보다 많이 줄었거나 최근 7일 운동량이 평소의 1.5배를 넘으면 이번엔 유지해요.</p></div>';
   }
@@ -970,6 +1098,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   function step(act) {
     if (showingDone || isBw(curEx())) return false;
     const isW = act[0] === 'w', before = isW ? cur.w : cur.r;
+    cur.auto = false;
     if (act === 'w+') cur.w = clampW(cur.w + 1);
     if (act === 'w-') cur.w = clampW(cur.w - 1);
     if (act === 'r+') cur.r = clampR(cur.r + 1);
@@ -1003,14 +1132,15 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     if (showingDone) { advance(); return; }
     if (n >= SETS) { if (allDone()) openList(); else goIdx(nextIncomplete(data.idx), 'next'); return; }
     commitInputs();
-    const sg = bw ? null : suggest(ex);
+    const sg = bw ? null : suggestNow(ex);
     const s = { id: uid(), ex, date: today(), ts: Date.now(), w: bw ? 0 : cur.w, r: bw ? 0 : cur.r };
-    if (!bw && n === 0) s.T = Math.round(sg.T * 1000) / 1000;
+    if (!bw && n === 0) s.T = s.P = Math.round(sg.T * 1000) / 1000;
+    if (!bw && n > 0 && sg.cap) s.P = Math.round(e10(s.w, Math.max(1, repsAt(sg.cap, s.w))) * 1000) / 1000;
     data.sets.push(s); persist();
     restart($('kGo'), 'pop'); buzz(30);
     if (n + 1 < SETS) startRest(restCfg.set); else if (nextIncomplete(data.idx) >= 0) startRest(restCfg.ex); else stopRest();
     if (n + 1 === SETS) { render(); showDone(ex, sg); return; }
-    sfx(n === 0 ? 'set1' : 'set2'); render();
+    sfx(n === 0 ? 'set1' : 'set2'); prefill(); render();
     toast((n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
   });
   $('kPrev').addEventListener('click', () => goIdx(data.idx - 1, 'prev'));
@@ -1023,6 +1153,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     data.idx = ORDER.indexOf(s.ex);
     persist();
     if (!isBw(s.ex)) { cur.w = s.w; cur.r = s.r; } else { cur.w = 0; cur.r = 0; }
+    cur.auto = false;
     render(); buzz(10); sfx('undo'); toast('되돌렸어요 · ' + EX[s.ex].short + ' ' + fmtSet(s));
   });
   $('kList').addEventListener('click', openList);
@@ -1037,8 +1168,9 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
       const prev = sessions(ex, true)[0];
       const base = prev ? e10(prev.sets[0].w, prev.sets[0].r) : EX[ex].start;
       const got = e10(ts[0].w, ts[0].r);
-      ok = got >= sg.T - 1e-9;
-      cmp = '추정 10RM ' + f1(base) + ' → ' + f1(got) + 'kg (' + sgn(pct(got, base)) + '%) · ' + (ok ? '목표 달성 ✓' : '목표 ' + f1(sg.T) + 'kg에 조금 못 미침 → 다음엔 천천히');
+      const T0 = typeof ts[0].T === 'number' ? ts[0].T : sg.T;
+      ok = !(T0 > got + 1e-9);
+      cmp = '추정 10RM ' + f1(base) + ' → ' + f1(got) + 'kg (' + sgn(pct(got, base)) + '%) · ' + (ok ? '목표 달성 ✓' : '목표 ' + f1(T0) + 'kg에 조금 못 미침 → 다음엔 천천히');
     }
     const ni = nextIncomplete(data.idx);
     let nextHtml;
@@ -1106,6 +1238,9 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     $('trendDlg').showModal();
   }
   $('trend').addEventListener('click', openTrend);
+  $('why').addEventListener('click', openWhy);
+  $('why').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openWhy(); } });
+  $('whyClose').addEventListener('click', () => $('whyDlg').close());
   $('rTrend').addEventListener('click', openTrend);
   $('lpTrend').addEventListener('click', (e) => {
     if (!e.target.closest('#ltBtn')) return;
@@ -1214,7 +1349,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     const head = {
       app: 'dumbbell-set-log', updated: new Date().toISOString(),
       timeZone: (Intl.DateTimeFormat().resolvedOptions().timeZone || ''),
-      note: '세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, u=수정 시각. 추정10RM = w×(30+r)÷40',
+      note: '세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, P=그 세트의 예상 추정10RM(오늘 피로 판단용), u=수정 시각. 추정10RM = w×(30+r)÷40',
       exercises: Object.fromEntries(ORDER.map((e) => [e, EX[e].name + (isBw(e) ? ' (맨몸)' : ' (시작 10RM ' + EX[e].start + 'kg)')])),
       order: ORDER
     };
