@@ -63,16 +63,17 @@ button{cursor:pointer}
 .trend b{font-size:12px;font-weight:700;white-space:nowrap}
 .tk-up{color:var(--greenTxt)}.tk-fast{color:#0A4FA3}.tk-flat{color:#7A5600}.tk-down{color:#B0241A}.tk-hold{color:var(--sub)}
 .vstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-.vstats div{background:var(--plate);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.vstats.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.vstats div{background:var(--plate);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;container-type:inline-size}
 .vstats span{font-size:11px;color:var(--sub);white-space:nowrap}
-.vstats b{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.vstats b{font-size:min(17px,18cqi);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .vscale{display:flex;flex-direction:column;gap:3px}
 .vbar{position:relative;display:flex;height:8px;border-radius:4px;overflow:visible}
 .vbar i{height:100%;opacity:.22}.vbar i.on{opacity:.9}
 .vbar i:first-child{border-radius:4px 0 0 4px}.vbar i:last-of-type{border-radius:0 4px 4px 0}
 .z-down{background:#C4281C}.z-flat{background:#B07A00}.z-up{background:#248A3D}.z-fast{background:#0A66D1}
 .vbar em{position:absolute;top:-4px;width:4px;height:16px;margin-left:-2px;border-radius:2px;background:var(--ink);box-shadow:0 0 0 2px var(--bg)}
-.vlab{display:flex;font-size:10px;color:var(--mute)}.vlab span{text-align:center;font-weight:600}
+.vlab{display:flex;font-size:10px;color:var(--mute)}.vlab span{text-align:center;font-weight:600;white-space:nowrap;letter-spacing:-.02em}
 .trend svg{flex:1;height:24px}
 .trend span{font-size:12px;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
 
@@ -641,12 +642,12 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   }
   const COL = { fast: '#0A66D1', up: '#248A3D', flat: '#B07A00', down: '#C4281C', hold: '#8E8E93' };
   /* status block: verdict sentence + 3 numbers + speed scale */
-  function verdictHtml(t) {
+  function verdictHtml(t, compact) {
     const ev = t.ev;
     let h = '<p class="why">' + esc(ev.msg) + '</p>';
     if (!ev.stats) return h;
-    h += '<div class="vstats">' + ev.stats.map((x) => '<div><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>').join('') + '</div>';
-    const lo = -3, hi = 10, pos = (v) => ((Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * 100).toFixed(1);
+    h += '<div class="vstats' + (compact ? ' two' : '') + '">' + (compact ? [ev.stats[0], ev.stats[2]] : ev.stats).map((x) => '<div><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>').join('') + '</div>';
+    const lo = -3, hi = 10, pos = (v) => Math.min(98.5, Math.max(1.5, (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * 100)).toFixed(1);
     const z = [['down', lo, -THRESH, '하락'], ['flat', -THRESH, THRESH, '정체'], ['up', THRESH, FAST, '향상'], ['fast', FAST, hi, '빠름']];
     h += '<div class="vscale" aria-hidden="true"><div class="vbar">' + z.map((q) => '<i class="z-' + q[0] + (q[0] === ev.kind ? ' on' : '') + '" style="width:' + ((q[2] - q[1]) / (hi - lo) * 100).toFixed(1) + '%"></i>').join('') +
       '<em style="left:' + pos(ev.wk) + '%"></em></div><div class="vlab">' + z.map((q) => '<span class="' + (q[0] === ev.kind ? 'tk-' + q[0] : '') + '" style="width:' + ((q[2] - q[1]) / (hi - lo) * 100).toFixed(1) + '%">' + q[3] + '</span>').join('') + '</div></div>';
@@ -809,7 +810,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     $('exList').innerHTML = rowsHtml();
     const ex = curEx();
     $('lpTrend').innerHTML = '<div class="t1"><b class="tk-' + t.ev.kind + '">' + esc(EX[ex].short) + ' · ' + esc(t.ev.label) + '</b><span>' + (t.bw ? '' : '추정 10RM') + '</span></div>' +
-      verdictHtml(t) + chart(t, true);
+      verdictHtml(t, true) + chart(t, true);
   }
   function rowsHtml() {
     return ORDER.map((e, i) => {
