@@ -152,12 +152,21 @@ button{cursor:pointer}
 .lp-trend .t1 span{font-size:12px;color:var(--sub)}
 .lp-trend svg{display:block}
 .lp-trend[hidden],.rtrend[hidden]{display:none!important}
-/* A/D: 완료 운동 접기 줄 */
-.xsum{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;border:0;border-bottom:.5px solid var(--line);background:transparent;padding:0 4px;text-align:left;font-size:13px;font-weight:600;color:var(--greenTxt)}
-.xsum span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.xsum small{font-size:12px;font-weight:600;color:var(--mute);white-space:nowrap}
 .chv{flex:none;color:var(--mute);transition:transform .2s}
 [aria-expanded="true"]>.chv,[aria-expanded="true"] .chv{transform:rotate(180deg)}
+/* 진행 현황: 목록 위 요약 + 줄마다 주 속도 */
+.lp-pace{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;font-weight:600;color:var(--sub);font-variant-numeric:tabular-nums}
+.lp-pace .pg{color:var(--ink)}
+.lp-pace span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.lp-pace i{width:8px;height:8px;border-radius:2px}
+.lp-pace .z{opacity:.4}
+.pc-fast i{background:#0A66D1}.pc-up i{background:#248A3D}.pc-flat i{background:#B07A00}.pc-down i{background:#C4281C}.pc-hold i{background:#C7C7CC}
+.pageL .xrow{grid-template-columns:18px 24px minmax(0,1fr) 48px auto}
+.xrow b.pc{font-size:12px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.xrow b.pc.tk-hold{font-weight:500;color:var(--faint)}
+.xrow.ok b.pc{opacity:.75}
+.cal{margin:0;display:flex;flex-direction:column;gap:2px;font-size:12px;line-height:1.45;color:var(--sub);font-variant-numeric:tabular-nums}
+.cal b{color:var(--ink)}.cal em{font-style:normal;font-weight:700}
 /* C: 접히는 추세 줄 */
 .lt-line{display:flex;flex-direction:column;gap:4px;width:100%;border:0;background:transparent;padding:0;text-align:left}
 .lt-line .r1{display:flex;align-items:center;gap:8px;width:100%}
@@ -391,6 +400,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     <div class="lp-head"><h2>오늘 운동</h2><span id="lpCount"></span></div>
     <button type="button" class="pill" id="histOpenL" style="align-self:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19h16M5 15l4-5 4 3 6-7"/></svg>지난 기록 · 그래프</button>
     <div class="bars daybars" id="lpBars" aria-hidden="true" style="width:100%"></div>
+    <div class="lp-pace" id="lpPace"></div>
     <div class="exlist" id="exList"></div>
     <div class="lp-trend" id="lpTrend"></div>
   </aside>
@@ -571,7 +581,6 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   /* 미리보기용 안 선택: ?v=1|2|3 */
   const LV = [1, 2, 3].includes(Number(new URLSearchParams(location.search).get('v'))) ? Number(new URLSearchParams(location.search).get('v')) : 1;
   document.documentElement.dataset.lv = LV;
-  let foldOpen = false;
   let trendOpen = (() => { try { const v = localStorage.getItem('dumbbell-lt-open'); return v ? v === '1' : LV === 2; } catch (e) { return LV === 2; } })();
   const CHEV_D = '<svg class="chv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
@@ -704,7 +713,25 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
         stats: [['월 속도', m30.length >= 2 && lp.x - m30[0].x >= 14 ? sgn(mo) + '%' : '— (2주부터)'], ['주 속도', sgn(wk) + '%']],
         sum: n + '세션 ' + days + '일간 추정 10RM ' + f1(first.y) + '→' + f1(lp.y) + 'kg, 주당 ' + sgn(wk) + '%, ' + msg };
     }
+    /* 표준화 점검: 시작 기준 → 첫 기록 → 지금, 목표 경로(주 RATE)와 비교 */
+    if (pts.length >= 2) {
+      const p0 = pts[0], pz = pts[pts.length - 1], d = pz.x - p0.x, exp = p0.y * (1 + RATE * d / 7);
+      ev.cal = { start: EX[ex].start, first: p0.y, now: pz.y, days: d, exp, over: (pz.y / exp - 1) * 100, gain: (pz.y / p0.y - 1) * 100 };
+    }
     return { pts, ev, bw: false };
+  }
+  /* 오버슈트 한 줄: 목표 경로 대비 얼마나 앞서/뒤처졌나 */
+  function calLine(ev) {
+    const c = ev.cal; if (!c) return '';
+    const o = c.over, tag = o >= 3 ? '목표 경로보다 ' + sgn(o) + '% 앞섬 · 시작 기준이 가벼웠어요' : o <= -3 ? '목표 경로보다 ' + sgn(o) + '% 뒤처짐' : '목표 경로대로 가는 중';
+    return '<span class="cal"><span>시작 기준 ' + c.start + 'kg → 첫 기록 ' + f1(c.first) + ' → 지금 <b>' + f1(c.now) + '</b> · 목표 경로 ' + f1(c.exp) + '</span><em class="' + (o >= 3 ? 'tk-fast' : o <= -3 ? 'tk-down' : 'tk-up') + '">' + tag + '</em></span>';
+  }
+  /* 오늘 운동 전체의 진행 현황 */
+  function paceSummary() {
+    const cnt = { fast: 0, up: 0, flat: 0, down: 0, hold: 0 };
+    ORDER.forEach((e) => { if (!isBw(e)) cnt[trend(e).ev.kind]++; });
+    const L = { fast: '빠름', up: '향상', flat: '정체', down: '하락', hold: '보류' };
+    return '<span class="pg">목표 주 ' + RATE * 100 + '%</span>' + ['fast', 'up', 'flat', 'down', 'hold'].map((k) => '<span class="pc-' + k + (cnt[k] ? '' : ' z') + '"><i></i>' + L[k] + ' ' + cnt[k] + '</span>').join('');
   }
   const COL = { fast: '#0A66D1', up: '#248A3D', flat: '#B07A00', down: '#C4281C', hold: '#8E8E93' };
   /* status block: verdict sentence + 3 numbers + speed scale */
@@ -879,10 +906,11 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     /* C: 한 줄로 접히는 추세 (1안 가로·2안) */
     $('lpTrend').innerHTML = '<button type="button" class="lt-line" id="ltBtn" aria-expanded="' + trendOpen + '"><span class="r1"><b class="tk-' + ev.kind + '">' + head + '</b>' + CHEV_D + '</span>' +
       '<span class="r2">' + (t.bw ? '' : chart(t, false)) + '<span>' + esc(ev.short) + '</span></span></button>' +
-      (trendOpen ? '<div class="lt-body">' + verdictHtml(t) + chart(t, true) + '</div>' : '');
+      (trendOpen ? '<div class="lt-body">' + calLine(ev) + verdictHtml(t) + chart(t, true) + '</div>' : '');
+    $('lpPace').innerHTML = paceSummary();
     /* B: 오른쪽 카드 (1안 세로) */
     $('rTrend').innerHTML = '<span class="r1"><b class="tk-' + ev.kind + '">' + head + '</b><span>자세히 ›</span></span>' +
-      '<span class="r2">' + (ev.stats ? '<span class="st"><div><small>주 속도</small><b>' + esc(wk) + '</b></div><div><small>월 속도</small><b>' + esc(mo.replace(' (2주부터)', '')) + '</b></div></span>' : '<span class="st"><div><small>추세</small><b>' + esc(ev.short) + '</b></div></span>') + (t.bw ? '' : chart(t, false)) + '</span>';
+      '<span class="r2">' + (ev.stats ? '<span class="st"><div><small>주 속도</small><b>' + esc(wk) + '</b></div><div><small>월 속도</small><b>' + esc(mo.replace(' (2주부터)', '')) + '</b></div></span>' : '<span class="st"><div><small>추세</small><b>' + esc(ev.short) + '</b></div></span>') + (t.bw ? '' : chart(t, false)) + '</span>' + calLine(ev);
     $('rTrend').setAttribute('aria-label', ev.label + ', ' + ev.sum + ', 자세히 보기');
     requestAnimationFrame(scrollCur);
   }
@@ -894,31 +922,29 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     if (cr.top >= lr.top && bot <= lr.bottom) return;
     L.scrollTop += (cr.top - lr.top) - Math.max(0, (lr.height - (bot - cr.top)) / 2);
   }
-  function rowHtml(e, i) {
+  function rowHtml(e, i, left) {
     const c = doneCount(e), here = i === data.idx;
+    let pc = '';
+    if (left) { if (isBw(e)) pc = '<b class="pc"></b>'; else { const ev = trend(e).ev; pc = '<b class="pc tk-' + ev.kind + '">' + (ev.wk === undefined ? '—' : sgn(ev.wk) + '%') + '</b>'; } }
     let tail;
-    if (c >= SETS) tail = '3/3 ✓';
-    else if (here) tail = c + '/3 지금';
+    if (c >= SETS) tail = left ? '✓' : '3/3 ✓';
+    else if (here) tail = left ? (c ? c + '/3' : '지금') : c + '/3 지금';
     else if (c > 0) tail = c + '/3';
     else if (isBw(e)) tail = '맨몸';
     else { const s = suggest(e); tail = s.w + '×' + s.r + (s.kind === 'up' ? ' ↑' : ''); }
-    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= SETS ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= SETS ? 'done' : '') + '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em></button>';
+    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= SETS ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= SETS ? 'done' : '') + '<span>' + esc(left ? EX[e].short : EX[e].name) + '</span>' + pc + '<em>' + tail + '</em></button>';
   }
   function rowsHtml(left, t) {
-    if (!left) return ORDER.map(rowHtml).join('');
-    /* D: 끝난 운동은 한 줄로 접기 */
-    const done = ORDER.map((e, i) => i).filter((i) => i !== data.idx && doneCount(ORDER[i]) >= SETS);
-    const fold = done.length >= 2;
-    let h = fold ? '<button type="button" class="xsum" data-act="done" aria-expanded="' + foldOpen + '"><span>✓ 끝낸 운동 ' + done.length + '개</span><small>' + (foldOpen ? '접기' : '펼치기') + '</small>' + CHEV_D + '</button>' : '';
+    if (!left) return ORDER.map((e, i) => rowHtml(e, i, false)).join('');
+    let h = '';
     ORDER.forEach((e, i) => {
-      if (fold && !foldOpen && done.includes(i)) return;
       const here = i === data.idx;
-      let r = rowHtml(e, i);
+      let r = rowHtml(e, i, true);
       if (here && LV === 3 && t) {
         const ev = t.ev;
         r = r.replace('class="xrow cur', 'class="xrow cur acc');
         r += '<div class="xacc"><div class="r1"><b class="tk-' + ev.kind + '">' + esc(ev.label) + '</b><span>' + (ev.stats ? '주 ' + esc(ev.stats[1][1]) + ' · 월 ' + esc(ev.stats[0][1].replace(' (2주부터)', '')) : esc(ev.short)) + '</span></div>' +
-          (t.bw ? '' : chart(t, true)) + '<button type="button" class="more" data-act="trend">자세히 ›</button></div>';
+          calLine(ev) + (t.bw ? '' : chart(t, true)) + '<button type="button" class="more" data-act="trend">자세히 ›</button></div>';
       }
       h += r;
     });
@@ -1099,7 +1125,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   function openTrend() {
     const ex = curEx(), t = trend(ex);
     $('trendT').textContent = EX[ex].short + ' · 8주 추세';
-    $('trendBody').innerHTML = '<p class="delta tk-' + t.ev.kind + '">' + esc(t.ev.label) + '</p>' + verdictHtml(t) + chart(t, true) + sgDetail(ex) +
+    $('trendBody').innerHTML = '<p class="delta tk-' + t.ev.kind + '">' + esc(t.ev.label) + '</p>' + calLine(t.ev) + verdictHtml(t) + chart(t, true) + sgDetail(ex) +
       (t.bw ? '' : '<p class="trend-more">추정 10RM = 그날 첫 세트 무게 × (30 + 횟수) ÷ 40<br>판정: 최근 ' + EVAL_N + '세션 추세선(점선) 기울기 · 주당 +' + FAST + '% 이상 빠름(기준 보정 중), +' + THRESH + '% 이상 향상, −' + THRESH + '% 미만 하락, 그 사이 정체' +
         (t.pts.length ? '<br>최근: ' + t.pts.slice(-4).map((p) => md(p.date) + ' ' + p.w + '×' + p.r + '=' + f1(p.y)).join(' · ') : '') + '</p>');
     $('trendDlg').showModal();
@@ -1137,7 +1163,6 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   });
   $('exList').addEventListener('click', (e) => {
     const a = e.target.closest('[data-act]');
-    if (a && a.dataset.act === 'done') { foldOpen = !foldOpen; renderLeft(trend(curEx())); return; }
     if (a && a.dataset.act === 'trend') { openTrend(); return; }
     jump(e, false);
   });
