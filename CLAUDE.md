@@ -1,0 +1,8 @@
+# Dumbell
+
+- 앱: 루트 `index.html` 한 파일(빌드 없음). `main` 브랜치 / (root)로 GitHub Pages 배포 → https://4ynz8h6hzd-oss.github.io/Dumbell/
+- 수정 요청 시: `index.html` 수정 → `main`에 푸시하면 바로 배포.
+- 운동 기록: 앱이 GitHub 토큰으로 `data` 브랜치의 `data.json`에 자동 커밋(세트 1개 = 1줄).
+  기록 분석 요청 시 `git fetch origin data && git show FETCH_HEAD:data.json` 로 읽기.
+  필드: ex(운동 키), date, ts(완료 시각 epoch ms, 사용자 시간대는 timeZone), w(kg), r(회), T(첫 세트 목표 추정10RM), u(수정 시각). `deleted`는 삭제된 세트 id.
+  추정10RM = w×(30+r)÷40. `data` 브랜치는 Pages 빌드를 유발하지 않도록 main과 분리.

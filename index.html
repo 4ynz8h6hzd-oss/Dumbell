@@ -156,6 +156,15 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .btn.pri{background:var(--blue);color:#fff}.btn.del{grid-column:1/-1;background:#FDECEA;color:#B0241A}.btn.wide{grid-column:1/-1}
 .trend-more{margin:0;font-size:12px;line-height:1.6;color:var(--sub)}
 .link{border:0;background:transparent;color:var(--blue);font-size:14px;min-height:44px}
+.sync{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:14px;background:var(--plate)}
+.sync-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.sync-h b{font-size:15px}.sync-h span{font-size:12px;color:var(--sub);text-align:right}
+.sync-h span.err{color:#B0241A;font-weight:600}
+.sync-f{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.sync-f input{height:44px;border:0;border-radius:12px;background:#fff;padding:0 12px;font-size:15px}
+.sync-f .btn{min-height:44px;padding:0 16px}
+.sync-a{display:flex;justify-content:space-between}
+.sync-a[hidden],.sync-f[hidden]{display:none}
 
 /* folded outer screen / short screens */
 @media (max-height:700px){.ctx h1{font-size:24px}.rule{display:none}:root{--pad:min(204px,56vw)}}
@@ -276,9 +285,18 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
     <div class="sub">운동을 누르면 바로 이동해요.</div>
     <div id="listBody" class="exlist"></div>
     <div id="listFoot" style="display:flex;flex-direction:column;align-items:center"></div>
+    <div class="sync">
+      <div class="sync-h"><b>GitHub 자동 저장</b><span id="syncStat"></span></div>
+      <div class="sync-f" id="syncForm">
+        <input type="password" id="tokIn" placeholder="GitHub 토큰 붙여넣기" autocomplete="off" aria-label="GitHub 토큰">
+        <button type="button" class="btn pri" id="tokSave">연결</button>
+      </div>
+      <div class="sync-a" id="syncAct" hidden>
+        <button type="button" class="link" id="syncNow">지금 저장</button>
+        <button type="button" class="link" id="tokOff">연결 해제</button>
+      </div>
+    </div>
     <div class="btns">
-      <button type="button" class="btn pri wide" id="aiCopy">AI 분석용 기록 복사</button>
-      <button type="button" class="btn wide" id="aiShare" hidden>AI 앱으로 공유</button>
       <button type="button" class="btn" id="bkSave">백업 저장</button>
       <button type="button" class="btn" id="bkLoad">백업 불러오기</button>
     </div>
@@ -330,7 +348,8 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   /* ---------- storage ---------- */
   let mem = null;
   const load = () => { try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {} return mem; };
-  const persist = () => { mem = data; try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} };
+  const saveLocal = () => { mem = data; try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} };
+  const persist = () => { saveLocal(); queueSync(); };
   let data = load();
   if (!data || !Array.isArray(data.sets)) data = { sets: [], dayDate: '', idx: 0 };
   data.sets = data.sets.filter((s) => EX[s.ex]);
@@ -684,7 +703,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   $('kUndo').addEventListener('click', () => {
     const all = todaySets(); if (!all.length) return;
     const s = all[all.length - 1];
-    data.sets = data.sets.filter((x) => x.id !== s.id);
+    data.sets = data.sets.filter((x) => x.id !== s.id); tomb(s.id);
     hideDone();
     data.idx = ORDER.indexOf(s.ex);
     persist();
@@ -778,6 +797,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
     $('listBody').innerHTML = rowsHtml();
     const hasSample = data.sets.some((s) => s.sample);
     $('listFoot').innerHTML = !data.sets.length ? '<button type="button" class="link" id="seedBtn">예시 데이터로 둘러보기</button>' : hasSample ? '<button type="button" class="link" id="unseedBtn">예시 데이터 지우기</button>' : '';
+    showSync(syncing ? '저장 중…' : '');
     $('list').showModal();
   }
   $('listClose').addEventListener('click', () => $('list').close());
@@ -816,64 +836,113 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   $('eCancel').addEventListener('click', () => $('edit').close());
   $('eSave').addEventListener('click', () => {
     if (!editing) return;
-    editing.w = clampW($('eW').value); editing.r = clampR($('eR').value);
+    editing.w = clampW($('eW').value); editing.r = clampR($('eR').value); editing.u = Date.now();
     persist(); $('edit').close(); render(); toast('세트를 수정했어요');
   });
   $('eDel').addEventListener('click', () => {
     if (!editing) return;
-    data.sets = data.sets.filter((x) => x !== editing);
+    data.sets = data.sets.filter((x) => x !== editing); tomb(editing.id);
     persist(); $('edit').close(); prefill(); render(); toast('세트를 삭제했어요');
   });
   $('edit').addEventListener('close', () => { editing = null; });
 
-  /* ---------- AI 분석용 내보내기 / 백업 ---------- */
-  function recordSets() {
-    const real = data.sets.filter((s) => !s.sample);
-    return real.length ? real : data.sets;
+  /* ---------- GitHub 자동 저장 (data 브랜치의 data.json) ---------- */
+  const GH = { owner: '4ynz8h6hzd-oss', repo: 'Dumbell', branch: 'data', path: 'data.json' };
+  const TOKK = 'dumbbell-gh-token', SYNCK = 'dumbbell-gh-sync';
+  const lsGet = (k) => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+  const lsSet = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} };
+  let syncTimer = null, syncing = false, syncAgain = false, syncErr = '', syncAt = lsGet(SYNCK);
+  const ghApi = (method, body, raw) => fetch('https://api.github.com/repos/' + GH.owner + '/' + GH.repo + '/contents/' + GH.path + (method === 'GET' ? '?ref=' + GH.branch + '&t=' + Date.now() : ''), {
+    method, cache: 'no-store',
+    headers: Object.assign({ Authorization: 'Bearer ' + lsGet(TOKK), Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, body ? { 'Content-Type': 'application/json' } : {}),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const b64e = (str) => { const u = new TextEncoder().encode(str); let x = ''; for (let i = 0; i < u.length; i += 0x8000) x += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(x); };
+  const b64d = (str) => new TextDecoder().decode(Uint8Array.from(atob(str.replace(/\s/g, '')), (c) => c.charCodeAt(0)));
+  async function ghPull() {
+    const r = await ghApi('GET');
+    if (r.status === 404) return { sha: null, doc: null };
+    if (!r.ok) throw r.status;
+    const j = await r.json();
+    let txt = j.content ? b64d(j.content) : '';
+    if (!txt) { const r2 = await ghApi('GET', null, true); if (!r2.ok) throw r2.status; txt = await r2.text(); }
+    return { sha: j.sha, doc: txt.trim() ? JSON.parse(txt) : null };
   }
-  function aiText() {
-    const sets = recordSets();
-    if (!sets.length) return '';
-    const by = {};
-    sets.forEach((s) => { ((by[s.date] = by[s.date] || {})[s.ex] = by[s.date][s.ex] || []).push(s); });
-    const dates = Object.keys(by).sort();
-    const lines = [];
-    lines.push('아래는 내 덤벨 운동 기록이야. 분석해줘:');
-    lines.push('1) 운동별 최근 추세(향상/정체/하락)  2) 정체되거나 떨어진 운동과 이유 추정  3) 다음 세션 추천 무게×횟수  4) 전체 운동 빈도·꾸준함 평가');
-    lines.push('');
-    lines.push('규칙: 세트당 3세트, 덤벨 3~24kg(1kg 단위). 추정 10RM = 그날 첫 세트 무게×(30+횟수)÷40. 앱은 매 세션 추정 10RM +2%를 목표로 제안함. 맨몸 운동은 완료 여부만 기록.');
-    lines.push('기록 기간: ' + dates[0] + ' ~ ' + dates[dates.length - 1] + ' · ' + dates.length + '일 · ' + sets.length + '세트');
-    lines.push('');
-    lines.push('[운동별 8주 요약]');
-    ORDER.forEach((ex) => {
-      const t = trend(ex), n = sessions(ex, false).length;
-      if (!n) return;
-      lines.push('- ' + EX[ex].name + (isBw(ex) ? '' : ' (시작 10RM ' + EX[ex].start + 'kg)') + ': ' + t.ev.label + ' · ' + t.ev.sum + ' · 전체 ' + n + '세션');
-    });
-    lines.push('');
-    lines.push('[날짜별 기록] 날짜 | 운동: 세트들(무게×횟수)');
-    dates.forEach((d) => {
-      const parts = ORDER.filter((ex) => by[d][ex]).map((ex) => EX[ex].short + ' ' + by[d][ex].sort((a, b) => a.ts - b.ts).map(fmtSet).join(','));
-      lines.push(d + ' | ' + parts.join(' / '));
-    });
-    return lines.join('\n');
+  const realSets = () => data.sets.filter((x) => !x.sample).sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1));
+  const setsKey = (arr, del) => JSON.stringify([arr, del]);
+  function mergeRemote(doc) {
+    if (!doc) return false;
+    const del = new Set([].concat(data.deleted || [], doc.deleted || []));
+    const before = setsKey(realSets(), (data.deleted || []).slice().sort());
+    const map = new Map();
+    const put = (x) => {
+      if (!x || !EX[x.ex] || x.sample || del.has(x.id)) return;
+      const o = map.get(x.id);
+      if (!o || (x.u || x.ts) > (o.u || o.ts)) map.set(x.id, x);
+    };
+    data.sets.filter((x) => !x.sample).forEach(put);
+    (Array.isArray(doc.sets) ? doc.sets : []).forEach(put);
+    data.sets = [...map.values(), ...data.sets.filter((x) => x.sample)];
+    data.deleted = [...del].sort();
+    saveLocal();
+    return before !== setsKey(realSets(), data.deleted);
   }
-  async function copyText(txt) {
-    try { await navigator.clipboard.writeText(txt); return true; } catch (e) {}
+  function docText() {
+    const head = {
+      app: 'dumbbell-set-log', updated: new Date().toISOString(),
+      timeZone: (Intl.DateTimeFormat().resolvedOptions().timeZone || ''),
+      note: '세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, u=수정 시각. 추정10RM = w×(30+r)÷40',
+      exercises: Object.fromEntries(ORDER.map((e) => [e, EX[e].name + (isBw(e) ? ' (맨몸)' : ' (시작 10RM ' + EX[e].start + 'kg)')])),
+      order: ORDER
+    };
+    const sets = realSets();
+    return '{\n' + Object.keys(head).map((k) => '  ' + JSON.stringify(k) + ': ' + JSON.stringify(head[k])).join(',\n') +
+      ',\n  "sets": [' + (sets.length ? '\n' + sets.map((x) => '    ' + JSON.stringify(x)).join(',\n') + '\n  ' : '') + '],\n  "deleted": ' + JSON.stringify(data.deleted || []) + '\n}\n';
+  }
+  async function sync() {
+    if (!lsGet(TOKK)) return;
+    if (syncing) { syncAgain = true; return; }
+    clearTimeout(syncTimer); syncTimer = null; syncing = true; syncErr = ''; showSync('저장 중…');
     try {
-      const ta = document.createElement('textarea'); ta.value = txt; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
-      document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
-    } catch (e) { return false; }
+      for (let tries = 0; ; tries++) {
+        const { sha, doc } = await ghPull();
+        if (mergeRemote(doc) && !showingDone) render();
+        const remoteKey = doc ? setsKey((doc.sets || []).slice().sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1)), (doc.deleted || []).slice().sort()) : null;
+        if (remoteKey === setsKey(realSets(), data.deleted || [])) break;
+        const n = realSets().length;
+        const r = await ghApi('PUT', { message: '운동 기록 ' + today() + ' · 총 ' + n + '세트', content: b64e(docText()), branch: GH.branch, ...(sha ? { sha } : {}) });
+        if (r.ok) break;
+        if ((r.status === 409 || r.status === 422) && tries < 2) continue;
+        throw r.status;
+      }
+      syncAt = new Date().toISOString(); lsSet(SYNCK, syncAt);
+    } catch (e) {
+      syncErr = e === 401 || e === 403 ? '토큰을 확인해 주세요' : e === 404 ? '저장소/브랜치를 찾지 못했어요' : '저장 실패 · 다음에 다시 시도해요';
+      if (e === 401 || e === 403) toast('GitHub 저장 실패: ' + syncErr);
+    }
+    syncing = false; showSync();
+    if (syncAgain) { syncAgain = false; queueSync(0); }
   }
-  $('aiShare').hidden = !navigator.share;
-  $('aiCopy').addEventListener('click', async () => {
-    const txt = aiText(); if (!txt) { toast('아직 기록이 없어요'); return; }
-    toast((await copyText(txt)) ? '복사했어요 · Claude나 ChatGPT에 붙여넣으세요' : '복사하지 못했어요');
+  function queueSync(ms) { if (!lsGet(TOKK)) return; clearTimeout(syncTimer); syncTimer = setTimeout(sync, ms == null ? 1500 : ms); }
+  function tomb(id) { data.deleted = data.deleted || []; if (!data.deleted.includes(id)) data.deleted.push(id); }
+  function showSync(busy) {
+    const on = !!lsGet(TOKK), st = $('syncStat');
+    $('syncForm').hidden = on; $('syncAct').hidden = !on;
+    st.className = syncErr ? 'err' : '';
+    if (!on) st.textContent = '연결 안 됨';
+    else if (busy) st.textContent = busy;
+    else if (syncErr) st.textContent = syncErr;
+    else if (syncAt) { const d = new Date(syncAt); st.textContent = '마지막 저장 ' + md(dstr(d)) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+    else st.textContent = '연결됨';
+  }
+  $('tokSave').addEventListener('click', () => {
+    const v = $('tokIn').value.trim(); if (!v) return;
+    lsSet(TOKK, v); $('tokIn').value = ''; syncErr = ''; showSync(); sync();
   });
-  $('aiShare').addEventListener('click', async () => {
-    const txt = aiText(); if (!txt) { toast('아직 기록이 없어요'); return; }
-    try { await navigator.share({ title: '덤벨 운동 기록', text: txt }); } catch (e) {}
-  });
+  $('syncNow').addEventListener('click', () => sync());
+  $('tokOff').addEventListener('click', () => { lsSet(TOKK, ''); lsSet(SYNCK, ''); syncAt = ''; syncErr = ''; showSync(); toast('GitHub 연결을 해제했어요'); });
+
+  /* ---------- 백업 파일 ---------- */
   $('bkSave').addEventListener('click', () => {
     if (!data.sets.length) { toast('아직 기록이 없어요'); return; }
     const blob = new Blob([JSON.stringify({ app: KEY, exported: new Date().toISOString(), sets: data.sets })], { type: 'application/json' });
@@ -929,12 +998,17 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   }
 
   /* ---------- boot ---------- */
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && data.dayDate !== today()) { ensureDay(); hideDone(); prefill(); render(); } });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (syncTimer) sync(); return; }
+    if (data.dayDate !== today()) { ensureDay(); hideDone(); prefill(); render(); }
+    queueSync(300);
+  });
   window.addEventListener('resize', () => { render(); });
   ensureDay();
   if (!(data.idx >= 0 && data.idx < ORDER.length)) data.idx = 0;
   prefill();
   render();
+  queueSync(500);
 }
 </script>
 </body>
