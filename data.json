@@ -1,6 +1,6 @@
 {
   "app": "dumbbell-set-log",
-  "updated": "2026-11-24T12:31:13.722Z",
+  "updated": "2026-11-24T13:15:48.092Z",
   "timeZone": "Asia/Seoul",
   "note": "세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, u=수정 시각. 추정10RM = w×(30+r)÷40",
   "exercises": {"frog":"프로그 펌프 (맨몸)","chintuck":"친턱 (맨몸)","sumo":"덤벨 스모 스쿼트 (시작 10RM 20kg)","rdl":"루마니안 데드리프트 (시작 10RM 23kg)","lateral":"레터럴 레이즈 (시작 10RM 8kg)","rcurl":"리버스 컬 (시작 10RM 12kg)","row":"벤트오버 로우 (시작 10RM 15kg)","crunch":"크런치 (시작 10RM 3kg)","rfly":"리버스 플라이 (시작 10RM 10kg)","wrist":"리스트 롤러 (시작 10RM 5kg)","curl":"바이셉 컬 (시작 10RM 8kg)","neck":"넥 컬 (맨몸)","l2h":"로우 투 하이 플라이 (시작 10RM 4kg)"},
@@ -122,7 +122,8 @@
     {"id":"vsim-neck-2026-11-22-2","ex":"neck","date":"2026-11-22","ts":1795346240000,"w":0,"r":0,"u":1795346240000},
     {"id":"vsim-l2h-2026-11-22-0","ex":"l2h","date":"2026-11-22","ts":1795346400000,"w":4,"r":13,"T":4.284,"u":1795346400000},
     {"id":"vsim-l2h-2026-11-22-1","ex":"l2h","date":"2026-11-22","ts":1795346520000,"w":4,"r":12,"u":1795346520000},
-    {"id":"vsim-l2h-2026-11-22-2","ex":"l2h","date":"2026-11-22","ts":1795346640000,"w":4,"r":11,"u":1795346640000}
+    {"id":"vsim-l2h-2026-11-22-2","ex":"l2h","date":"2026-11-22","ts":1795346640000,"w":4,"r":11,"u":1795346640000},
+    {"id":"mwupwp3rhvw9q","ex":"curl","date":"2026-11-24","ts":1795526146071,"w":8,"r":13,"T":8.6}
   ],
   "deleted": ["mwuidt3y2se36","mwuijcplb5172","mwuj5brdqp018","mwuj5nufz3jpy","mwuj5u69kyual","mwuj5x99zvqbd","mwuj5zz1cc3c9","mwukpl5sc4c5n","mwukplar9cjnm","mwukplfxmn7g2","mwukppfgmy4if","mwuksrmh8vp7w","mwukt0tivhqj9","mwukt3pcfpvau","mwul3p78bzpqb","mwum9drrnajxn","mwum9rg9d5szr"]
 }
