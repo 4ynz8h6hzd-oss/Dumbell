@@ -625,7 +625,12 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
       e.forEach((p) => { num += (p.x - mx) * (p.y - my); den += (p.x - mx) ** 2; });
       const slope = den ? num / den : 0, wk = slope * 7 / my * 100;
       const kind = wk >= FAST ? 'fast' : wk >= THRESH ? 'up' : (wk < -THRESH ? 'down' : 'flat');
-      const first = e[0], lp = e[n - 1], days = Math.round(lp.x - first.x), dkg = lp.y - first.y;
+      const first = e[0], lp = e[n - 1], days = Math.round(lp.x - first.x);
+      /* monthly: trend line over the last 30 days of sessions, scaled to 30 days */
+      const m30 = pts.filter((p) => lp.x - p.x <= 30);
+      let mo = wk * 30 / 7;
+      if (m30.length >= 2) { let ax = 0, ay = 0, nu = 0, de = 0; m30.forEach((p) => { ax += p.x; ay += p.y; }); ax /= m30.length; ay /= m30.length;
+        m30.forEach((p) => { nu += (p.x - ax) * (p.y - ay); de += (p.x - ax) ** 2; }); if (de) mo = nu / de * 30 / ay * 100; }
       const msg = {
         fast: '보통 속도(주 1~3%)보다 빨라요. 시작 10RM이 가볍게 잡혀 실력을 따라잡는 중이에요. 2~3주면 안정돼요.',
         up: '건강한 속도(주 1~3%)로 꾸준히 늘고 있어요.',
@@ -635,18 +640,18 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
       ev = { kind, label: { fast: '빠른 상승 · 기준 맞추는 중', up: '향상 중', flat: '정체', down: '하락' }[kind], slope, mx, my, wk,
         short: f1(lp.y) + 'kg · 주 ' + sgn(wk) + '%',
         msg,
-        stats: [['지금 10RM', f1(lp.y) + 'kg'], [days + '일 변화', (dkg >= 0 ? '+' : '−') + f1(Math.abs(dkg)) + 'kg'], ['주당 속도', sgn(wk) + '%']],
+        stats: [['월 속도', m30.length >= 2 && lp.x - m30[0].x >= 14 ? sgn(mo) + '%' : '— (2주부터)'], ['주 속도', sgn(wk) + '%']],
         sum: n + '세션 ' + days + '일간 추정 10RM ' + f1(first.y) + '→' + f1(lp.y) + 'kg, 주당 ' + sgn(wk) + '%, ' + msg };
     }
     return { pts, ev, bw: false };
   }
   const COL = { fast: '#0A66D1', up: '#248A3D', flat: '#B07A00', down: '#C4281C', hold: '#8E8E93' };
   /* status block: verdict sentence + 3 numbers + speed scale */
-  function verdictHtml(t, compact) {
+  function verdictHtml(t) {
     const ev = t.ev;
     let h = '<p class="why">' + esc(ev.msg) + '</p>';
     if (!ev.stats) return h;
-    h += '<div class="vstats' + (compact ? ' two' : '') + '">' + (compact ? [ev.stats[0], ev.stats[2]] : ev.stats).map((x) => '<div><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>').join('') + '</div>';
+    h += '<div class="vstats two">' + ev.stats.map((x) => '<div><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>').join('') + '</div>';
     const lo = -3, hi = 10, pos = (v) => Math.min(98.5, Math.max(1.5, (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * 100)).toFixed(1);
     const z = [['down', lo, -THRESH, '하락'], ['flat', -THRESH, THRESH, '정체'], ['up', THRESH, FAST, '향상'], ['fast', FAST, hi, '빠름']];
     h += '<div class="vscale" aria-hidden="true"><div class="vbar">' + z.map((q) => '<i class="z-' + q[0] + (q[0] === ev.kind ? ' on' : '') + '" style="width:' + ((q[2] - q[1]) / (hi - lo) * 100).toFixed(1) + '%"></i>').join('') +
@@ -810,7 +815,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     $('exList').innerHTML = rowsHtml();
     const ex = curEx();
     $('lpTrend').innerHTML = '<div class="t1"><b class="tk-' + t.ev.kind + '">' + esc(EX[ex].short) + ' · ' + esc(t.ev.label) + '</b><span>' + (t.bw ? '' : '추정 10RM') + '</span></div>' +
-      verdictHtml(t, true) + chart(t, true);
+      verdictHtml(t) + chart(t, true);
   }
   function rowsHtml() {
     return ORDER.map((e, i) => {
