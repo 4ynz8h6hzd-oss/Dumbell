@@ -190,14 +190,6 @@ button{cursor:pointer}
 .rtrend .st small{font-size:11px;color:var(--sub);white-space:nowrap}
 .rtrend .st b{font-size:18px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .rtrend .r2 svg{flex:1;height:44px}
-/* 3안: 지금 운동 밑에 붙는 추세 */
-.xrow.cur.acc{border-radius:12px 12px 0 0}
-.xacc{display:flex;flex-direction:column;gap:6px;margin:0 0 6px;padding:4px 10px 10px 36px;border-radius:0 0 12px 12px;background:var(--plate)}
-.xacc .r1{display:flex;align-items:baseline;gap:8px}
-.xacc .r1 b{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.xacc .r1 span{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
-.xacc svg.big{height:78px!important}
-.xacc .more{align-self:flex-start;border:0;background:transparent;padding:2px 0;font-size:12px;font-weight:700;color:var(--blue)}
 
 /* toast */
 .toast{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translate(-50%,calc(-100% - 60px));visibility:hidden;transition:transform .25s ease,visibility 0s .25s;z-index:10;background:rgba(28,28,30,.95);color:#fff;border-radius:14px;padding:10px 14px;font-size:14px;font-weight:600;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
@@ -348,12 +340,11 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .pageR .ctx .daypos,.pageR .ctx .daybars{display:none}
   .ctx{padding-top:6px}
   .lp-trend svg.big{height:150px}
-  [data-lv="3"] .lp-trend{display:none}
 }
-/* 1안: 세로로 긴 펼친 화면은 추세를 오른쪽 빈자리로 */
+/* 세로로 긴 펼친 화면은 추세를 오른쪽 빈자리로 */
 @media (min-width:560px) and (min-height:860px){
-  [data-lv="1"] .rtrend{display:flex}
-  [data-lv="1"] .lp-trend{display:none}
+  .rtrend{display:flex}
+  .lp-trend{display:none}
 }
 /* 펼친 가로 화면: 엄지 패드가 잘리지 않게 세트 칸을 패드 왼쪽으로 */
 @media (min-width:560px) and (min-height:480px) and (max-height:760px){
@@ -581,10 +572,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   const fmtSet = (s) => (isBw(s.ex) ? '완료' : s.w + '×' + s.r);
   const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
   const wide = () => window.matchMedia('(min-width:560px) and (min-height:480px)').matches;
-  /* 미리보기용 안 선택: ?v=1|2|3 */
-  const LV = [1, 2, 3].includes(Number(new URLSearchParams(location.search).get('v'))) ? Number(new URLSearchParams(location.search).get('v')) : 1;
-  document.documentElement.dataset.lv = LV;
-  let trendOpen = (() => { try { const v = localStorage.getItem('dumbbell-lt-open'); return v ? v === '1' : LV === 2; } catch (e) { return LV === 2; } })();
+  let trendOpen = (() => { try { const v = localStorage.getItem('dumbbell-lt-open'); return v === '1'; } catch (e) { return false; } })();
   const CHEV_D = '<svg class="chv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
   const todaySets = (ex) => { const t = today(); return data.sets.filter((s) => s.date === t && (!ex || s.ex === ex)).sort((a, b) => a.ts - b.ts); };
@@ -905,7 +893,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     if (!wide()) return;
     const ex = curEx(), ev = t.ev, head = esc(EX[ex].short) + ' · ' + esc(ev.label);
     const wk = ev.stats ? ev.stats[1][1] : '', mo = ev.stats ? ev.stats[0][1] : '';
-    $('exList').innerHTML = rowsHtml(true, t);
+    $('exList').innerHTML = rowsHtml(true);
     /* C: 한 줄로 접히는 추세 (1안 가로·2안) */
     $('lpTrend').innerHTML = '<button type="button" class="lt-line" id="ltBtn" aria-expanded="' + trendOpen + '"><span class="r1"><b class="tk-' + ev.kind + '">' + head + '</b>' + CHEV_D + '</span>' +
       '<span class="r2">' + (t.bw ? '' : chart(t, false)) + '<span>' + esc(ev.short) + '</span></span></button>' +
@@ -920,8 +908,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   /* A: 지금 운동이 목록에 늘 보이게 */
   function scrollCur() {
     const L = $('exList'), c = L.querySelector('.xrow.cur'); if (!c) return;
-    const acc = L.querySelector('.xacc'), lr = L.getBoundingClientRect(), cr = c.getBoundingClientRect();
-    const bot = acc ? acc.getBoundingClientRect().bottom : cr.bottom;
+    const lr = L.getBoundingClientRect(), cr = c.getBoundingClientRect(), bot = cr.bottom;
     if (cr.top >= lr.top && bot <= lr.bottom) return;
     L.scrollTop += (cr.top - lr.top) - Math.max(0, (lr.height - (bot - cr.top)) / 2);
   }
@@ -937,22 +924,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     else { const s = suggest(e); tail = s.w + '×' + s.r + (s.kind === 'up' ? ' ↑' : ''); }
     return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= SETS ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= SETS ? 'done' : '') + (left ? '<span class="nm"><span>' + esc(EX[e].name) + '</span><span class="meta">' + pc + '<em>' + tail + '</em></span></span>' : '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em>') + '</button>';
   }
-  function rowsHtml(left, t) {
-    if (!left) return ORDER.map((e, i) => rowHtml(e, i, false)).join('');
-    let h = '';
-    ORDER.forEach((e, i) => {
-      const here = i === data.idx;
-      let r = rowHtml(e, i, true);
-      if (here && LV === 3 && t) {
-        const ev = t.ev;
-        r = r.replace('class="xrow cur', 'class="xrow cur acc');
-        r += '<div class="xacc"><div class="r1"><b class="tk-' + ev.kind + '">' + esc(ev.label) + '</b><span>' + (ev.stats ? '주 ' + esc(ev.stats[1][1]) + ' · 월 ' + esc(ev.stats[0][1].replace(' (2주부터)', '')) : esc(ev.short)) + '</span></div>' +
-          calLine(ev) + (t.bw ? '' : chart(t, true)) + '<button type="button" class="more" data-act="trend">자세히 ›</button></div>';
-      }
-      h += r;
-    });
-    return h;
-  }
+  function rowsHtml(left) { return ORDER.map((e, i) => rowHtml(e, i, left)).join(''); }
 
   function renderGo() {
     const g = $('kGo'), n = doneCount(curEx());
@@ -1164,11 +1136,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     if (e.target.id === 'seedBtn') { seed(); $('list').close(); }
     if (e.target.id === 'unseedBtn') { data.sets = data.sets.filter((s) => !s.sample); persist(); prefill(); render(); $('list').close(); }
   });
-  $('exList').addEventListener('click', (e) => {
-    const a = e.target.closest('[data-act]');
-    if (a && a.dataset.act === 'trend') { openTrend(); return; }
-    jump(e, false);
-  });
+  $('exList').addEventListener('click', (e) => jump(e, false));
 
   /* ---------- edit dialog ---------- */
   let editing = null;
