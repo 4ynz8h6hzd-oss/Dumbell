@@ -166,6 +166,80 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .sync-a{display:flex;justify-content:space-between}
 .sync-a[hidden],.sync-f[hidden]{display:none}
 
+/* history (read-only) */
+.pill{flex:none;display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 12px;border:0;border-radius:17px;background:#EAF2FD;color:var(--blue);font-size:13px;font-weight:700;white-space:nowrap}
+.lh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#hist{width:100%;max-width:640px;height:100%;max-height:none;margin:0 auto;border-radius:0;box-shadow:none;background:var(--bg);overflow:hidden}
+#hist[open]{display:flex;flex-direction:column}
+#hist::backdrop{background:var(--bg)}
+.hh{flex:none;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;flex-direction:column;gap:12px;border-bottom:.5px solid var(--line)}
+.hh-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hh-top h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.hx{flex:none;width:40px;height:40px;border-radius:50%;border:0;background:var(--plate);display:inline-flex;align-items:center;justify-content:center;color:var(--ink)}
+.hx:disabled{opacity:.35}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px;padding:2px;border-radius:11px;background:var(--plate)}
+.seg button{border:0;background:transparent;border-radius:9px;min-height:34px;font-size:14px;font-weight:600;color:var(--sub)}
+.seg button[aria-pressed="true"]{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg.sm button{min-height:30px;font-size:13px}
+.hb{flex:1;min-height:0;overflow:auto;padding:14px 16px calc(28px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.pos{color:var(--greenTxt)}.neg{color:#B0241A}.zero{color:var(--mute)}
+.ovlist{display:flex;flex-direction:column}
+.ov{display:grid;grid-template-columns:34px minmax(0,1fr) 64px 60px;align-items:center;gap:10px;width:100%;min-height:60px;border:0;border-bottom:.5px solid var(--line);background:transparent;text-align:left;padding:6px 2px}
+.ov b{display:block;font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov small{display:block;font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov em{font-style:normal;text-align:right;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.ov .sp{display:block;width:64px;height:26px}
+.hd-nav{display:flex;justify-content:space-between;align-items:center;margin:-6px 0 -4px}
+.hd-nav .link{padding:0;font-weight:600}
+.hd-nav span{display:flex;gap:6px}
+.hd-head{display:flex;align-items:center;gap:12px}
+.hd-head h3{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tile{background:var(--plate);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums}
+.tile small{font-size:12px;font-weight:600;color:var(--sub)}
+.tile b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.tile b u{text-decoration:none;font-size:13px;font-weight:600;color:var(--mute);margin-left:2px}
+.tile span{font-size:12px;color:var(--mute)}
+@media (min-width:460px){.tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.cbox{border:.5px solid var(--line);border-radius:16px;padding:10px 8px 4px;display:flex;flex-direction:column;gap:4px}
+.ro{padding:0 6px;display:flex;flex-direction:column;gap:1px;font-variant-numeric:tabular-nums;min-height:38px}
+.ro b{font-size:15px}.ro span{font-size:12px;color:var(--sub)}
+.hc{display:block;touch-action:pan-y;cursor:crosshair}
+.lgd{display:flex;gap:14px;padding:2px 6px 6px;font-size:11px;color:var(--mute);flex-wrap:wrap}
+.lgd i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:0}
+.sec{margin:6px 0 -6px;font-size:13px;font-weight:700;color:var(--sub)}
+.srow{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;padding:9px 6px;border:0;border-bottom:.5px solid var(--line);background:transparent;text-align:left;font-variant-numeric:tabular-nums;border-radius:0}
+.srow.on{background:var(--plate);border-radius:12px;border-bottom-color:transparent}
+.srow .d b{display:block;font-size:14px}.srow .d small{font-size:11px;color:var(--mute)}
+.srow .s{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .s small{display:block;font-size:11px;font-weight:500;color:var(--mute)}
+.srow .s small.miss{color:#9A3D00}
+.srow .v{text-align:right}.srow .v b{display:block;font-size:15px}.srow .v small{font-size:11px;font-weight:700}
+.hm{display:grid;grid-template-columns:16px;grid-template-rows:14px repeat(7,auto);grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:3px}
+.hm i{display:block;aspect-ratio:1;border-radius:3px;background:var(--plate)}
+.hm i.l1{background:#BCD6F5}.hm i.l2{background:#5E9BE4}.hm i.l3{background:var(--blue)}
+.hm i.t{box-shadow:inset 0 0 0 1.5px var(--ink)}.hm i.f{background:transparent}
+.hm i[data-d]{cursor:pointer}
+.hm .hl{font-size:10px;line-height:14px;color:var(--mute);white-space:nowrap;overflow:visible}
+.hleg{display:flex;align-items:center;justify-content:flex-end;gap:3px;font-size:11px;color:var(--mute)}
+.hleg i{display:block;width:10px;height:10px;border-radius:2px;background:var(--plate)}
+.hleg i.l1{background:#BCD6F5}.hleg i.l2{background:#5E9BE4}.hleg i.l3{background:var(--blue)}
+.dcard{border-bottom:.5px solid var(--line)}
+.dcard>button{display:grid;grid-template-columns:62px minmax(0,1fr) auto 14px;gap:10px;align-items:center;width:100%;min-height:54px;border:0;background:transparent;text-align:left;padding:6px 2px}
+.dcard .dd b{display:block;font-size:16px;font-variant-numeric:tabular-nums}.dcard .dd small{font-size:11px;color:var(--mute)}
+.dcard .dd small.t{color:var(--blue);font-weight:700}
+.dcard .bars{gap:2px}.dcard .bars i{flex:1;height:6px;border-radius:2px}
+.dcard em{font-style:normal;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
+.dcard .chev{transition:transform .15s;color:var(--mute)}
+.dcard.open .chev{transform:rotate(90deg)}
+.dbody{padding:0 0 10px}
+.drow{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;min-height:36px;font-size:14px;font-variant-numeric:tabular-nums;width:100%;border:0;background:transparent;text-align:left;padding:0 2px}
+.drow span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow span small{color:var(--sub);margin-left:6px;font-size:13px}
+.drow em{font-style:normal;font-size:12px;font-weight:700}
+.pr{display:inline-block;margin-left:4px;padding:1px 6px;border-radius:6px;background:#E6F4EA;color:var(--greenTxt);font-size:10px;font-weight:800;vertical-align:1px}
+.empty{padding:28px 8px;text-align:center;color:var(--sub);font-size:14px;line-height:1.6}
+
 /* folded outer screen / short screens */
 @media (max-height:700px){.ctx h1{font-size:24px}.rule{display:none}:root{--pad:min(204px,56vw)}}
 @media (max-height:620px){
@@ -216,6 +290,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 <div class="app" id="app">
   <aside class="pageL" id="pageL" aria-label="오늘 운동 순서와 추세">
     <div class="lp-head"><h2>오늘 운동</h2><span id="lpCount"></span></div>
+    <button type="button" class="pill" id="histOpenL" style="align-self:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19h16M5 15l4-5 4 3 6-7"/></svg>지난 기록 · 그래프</button>
     <div class="bars daybars" id="lpBars" aria-hidden="true" style="width:100%"></div>
     <div class="exlist" id="exList"></div>
     <div class="lp-trend" id="lpTrend"></div>
@@ -281,7 +356,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 
 <dialog id="list" aria-labelledby="listT">
   <div class="dlg">
-    <h2 id="listT">운동 목록</h2>
+    <div class="lh"><h2 id="listT">운동 목록</h2><button type="button" class="pill" id="histOpen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19h16M5 15l4-5 4 3 6-7"/></svg>지난 기록 · 그래프</button></div>
     <div class="sub">운동을 누르면 바로 이동해요.</div>
     <div id="listBody" class="exlist"></div>
     <div id="listFoot" style="display:flex;flex-direction:column;align-items:center"></div>
@@ -309,8 +384,19 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   <div class="dlg">
     <h2 id="trendT">8주 추세</h2>
     <div id="trendBody"></div>
-    <button type="button" class="btn wide" id="trendClose">닫기</button>
+    <div class="btns">
+      <button type="button" class="btn" id="trendClose">닫기</button>
+      <button type="button" class="btn pri" id="trendHist">전체 기록 보기</button>
+    </div>
   </div>
+</dialog>
+
+<dialog id="hist" aria-labelledby="histT">
+  <div class="hh">
+    <div class="hh-top"><h2 id="histT">지난 기록</h2><button type="button" class="hx" id="histClose" aria-label="닫기"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="seg" id="hTab"><button type="button" data-tab="ex">운동별</button><button type="button" data-tab="day">날짜별</button></div>
+  </div>
+  <div class="hb" id="histBody"></div>
 </dialog>
 
 <script>
@@ -996,6 +1082,248 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
     void realToday;
     persist(); prefill(); render(); toast('예시 데이터를 넣었어요');
   }
+
+  /* ---------- 지난 기록 (읽기 전용 · 데이터는 바꾸지 않음) ---------- */
+  const HV = { tab: 'ex', ex: null, range: 84, sel: -1, more: 14, open: null };
+  const RANGES = [[28, '4주'], [84, '12주'], [0, '전체']];
+  const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+  const dsOf = (dn) => { const d = new Date(dn * 864e5); return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()); };
+  const wdOf = (s) => DOW[new Date(dayNum(s) * 864e5).getUTCDay()];
+  const tone = (v) => (v > 0.05 ? 'pos' : v < -0.05 ? 'neg' : 'zero');
+  const CHEV = '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  function exHist(ex) {
+    const tn = dayNum(today()), bw = isBw(ex);
+    const all = sessions(ex, false).reverse().map((s) => { const f = s.sets[0]; return { date: s.date, x: dayNum(s.date), sets: s.sets, w: f.w, r: f.r, T: f.T, y: bw ? 0 : e10(f.w, f.r) }; });
+    let best = 0;
+    all.forEach((p, i) => {
+      p.prev = i ? all[i - 1] : null;
+      p.miss = typeof p.T === 'number' && p.y < p.T - 1e-6;
+      p.pr = !bw && i > 0 && p.y > best + 1e-6;
+      best = Math.max(best, p.y);
+    });
+    return { all, pts: all.filter((p) => !HV.range || tn - p.x < HV.range), best };
+  }
+  const rangeSeg = () => '<div class="seg sm">' + RANGES.map(([d, l]) => '<button type="button" data-range="' + d + '" aria-pressed="' + (HV.range === d) + '">' + l + '</button>').join('') + '</div>';
+  function spark(pts) {
+    if (pts.length < 2) return '<span></span>';
+    const W = 64, Hh = 26, ys = pts.map((p) => p.y), x0 = pts[0].x, x1 = pts[pts.length - 1].x || x0 + 1;
+    let lo = Math.min(...ys), hi = Math.max(...ys); if (hi - lo < 0.5) { lo -= 0.25; hi += 0.25; }
+    const X = (x) => (2 + (x - x0) / Math.max(1, x1 - x0) * (W - 6)).toFixed(1), Y = (y) => (3 + (1 - (y - lo) / (hi - lo)) * (Hh - 6)).toFixed(1);
+    const l = pts[pts.length - 1];
+    return '<svg class="sp" viewBox="0 0 ' + W + ' ' + Hh + '" aria-hidden="true"><polyline fill="none" stroke="#0A66D1" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="' + pts.map((p) => X(p.x) + ',' + Y(p.y)).join(' ') + '"/><circle cx="' + X(l.x) + '" cy="' + Y(l.y) + '" r="2.6" fill="#0A66D1"/></svg>';
+  }
+  function niceStep(raw) { for (const s of [0.25, 0.5, 1, 2, 2.5, 5, 10, 20]) if (s >= raw) return s; return 50; }
+  function hChart(pts, W, sel) {
+    const Hh = 190, pl = 34, pr = 14, pt = 12, pb = 24;
+    let x0 = pts[0].x, x1 = pts[pts.length - 1].x; if (x1 === x0) { x0 -= 3; x1 += 3; }
+    const ys = pts.map((p) => p.y), lo = Math.min(...ys), hi = Math.max(...ys), span = Math.max(1, hi - lo), stp = niceStep(span / 3);
+    const y0 = Math.floor((lo - span * 0.12) / stp) * stp, y1 = Math.ceil((hi + span * 0.12) / stp) * stp;
+    const X = (x) => pl + (x - x0) / (x1 - x0) * (W - pl - pr), Y = (y) => pt + (1 - (y - y0) / (y1 - y0)) * (Hh - pt - pb);
+    const fy = (v) => (stp < 1 ? v.toFixed(1) : String(Math.round(v)));
+    let s = '<svg class="hc" width="' + W + '" height="' + Hh + '" viewBox="0 0 ' + W + ' ' + Hh + '" role="img" aria-label="세션별 추정 10RM 그래프">';
+    for (let v = y0; v <= y1 + 1e-9; v += stp) {
+      s += '<line x1="' + pl + '" x2="' + (W - pr) + '" y1="' + Y(v).toFixed(1) + '" y2="' + Y(v).toFixed(1) + '" stroke="#EFEFF4"/>';
+      s += '<text x="' + (pl - 6) + '" y="' + (Y(v) + 3.5).toFixed(1) + '" text-anchor="end" font-size="10" fill="#8E8E93">' + fy(v) + '</text>';
+    }
+    const n = pts.length, idx = n <= 2 ? [0, n - 1] : W < 300 ? [0, n - 1] : [0, Math.round((n - 1) / 2), n - 1];
+    [...new Set(idx)].forEach((i, k, a) => {
+      const anc = a.length === 1 ? 'middle' : k === 0 ? 'start' : k === a.length - 1 ? 'end' : 'middle';
+      s += '<text x="' + X(pts[i].x).toFixed(1) + '" y="' + (Hh - 6) + '" text-anchor="' + anc + '" font-size="10" fill="#8E8E93">' + md(pts[i].date) + '</text>';
+    });
+    const line = pts.map((p) => X(p.x).toFixed(1) + ',' + Y(p.y).toFixed(1)).join(' ');
+    if (n > 1) s += '<polygon fill="#0A66D1" opacity=".07" points="' + X(pts[0].x).toFixed(1) + ',' + (Hh - pb) + ' ' + line + ' ' + X(pts[n - 1].x).toFixed(1) + ',' + (Hh - pb) + '"/>';
+    const sp = pts[sel];
+    if (sp) s += '<line x1="' + X(sp.x).toFixed(1) + '" x2="' + X(sp.x).toFixed(1) + '" y1="' + pt + '" y2="' + (Hh - pb) + '" stroke="#C7C7CC" stroke-dasharray="3 3"/>';
+    if (n > 1) s += '<polyline fill="none" stroke="#0A66D1" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" points="' + line + '"/>';
+    const rr = n > 40 ? 2.6 : 3.6;
+    pts.forEach((p, i) => {
+      const on = i === sel, r = on ? 6 : rr;
+      s += '<circle cx="' + X(p.x).toFixed(1) + '" cy="' + Y(p.y).toFixed(1) + '" r="' + r + '" fill="' + (p.miss ? '#fff' : '#0A66D1') + '" stroke="' + (p.miss ? '#C25E00' : '#fff') + '" stroke-width="' + (p.miss ? 2 : on ? 2.5 : 1.5) + '"/>';
+    });
+    return s + '</svg>';
+  }
+  function hReadout(p, ex) {
+    if (!p) return '';
+    const ch = p.prev ? sgn(pct(p.y, p.prev.y)) + '% (지난 세션 대비)' : '첫 기록';
+    return '<b>' + md(p.date) + ' (' + wdOf(p.date) + ') · 추정 10RM ' + f1(p.y) + 'kg' + (p.pr ? ' <span class="pr">최고</span>' : '') + '</b>' +
+      '<span>' + p.sets.map((s) => s.w + '×' + s.r).join(' · ') + '  ·  ' + ch + (p.miss ? ' · 목표 ' + f1(p.T) + ' 미달' : '') + '</span>';
+  }
+  function chartWidth() { return Math.max(240, Math.min(600, $('histBody').clientWidth - 32 - 18)); }
+  function renderChartBox() {
+    const box = $('hcBox'); if (!box) return;
+    const { pts } = exHist(HV.ex), sel = HV.sel < 0 || HV.sel >= pts.length ? pts.length - 1 : HV.sel;
+    box.querySelector('.ro').innerHTML = hReadout(pts[sel], HV.ex);
+    box.querySelector('.cw').innerHTML = hChart(pts, chartWidth(), sel);
+    $('histBody').querySelectorAll('.srow').forEach((r) => r.classList.toggle('on', Number(r.dataset.k) === sel));
+  }
+
+  function histOverview() {
+    let h = rangeSeg() + '<div class="ovlist">';
+    ORDER.forEach((ex) => {
+      const { all, pts } = exHist(ex);
+      let sub, tail, sp = '<span></span>';
+      if (isBw(ex)) {
+        sub = all.length ? '맨몸 · 마지막 ' + md(all[all.length - 1].date) : '맨몸 · 기록 없음';
+        tail = '<em class="zero">' + pts.length + '회</em>';
+      } else if (!all.length) {
+        sub = '기록 없음 · 시작 10RM ' + EX[ex].start + 'kg'; tail = '<em class="zero">—</em>';
+      } else {
+        const l = all[all.length - 1], ch = pts.length >= 2 ? pct(pts[pts.length - 1].y, pts[0].y) : null;
+        sub = '10RM ' + f1(l.y) + 'kg · 최근 ' + l.w + '×' + l.r;
+        tail = '<em class="' + (ch == null ? 'zero' : tone(ch)) + '">' + (ch == null ? '—' : sgn(ch) + '%') + '</em>';
+        sp = spark(pts);
+      }
+      h += '<button type="button" class="ov" data-ex="' + ex + '">' + icon(ex, 32, '') + '<span><b>' + esc(EX[ex].name) + '</b><small>' + esc(sub) + '</small></span>' + sp + tail + '</button>';
+    });
+    return h + '</div><p class="trend-more">오른쪽 % = 선택한 기간의 첫 세션 → 마지막 세션 추정 10RM 변화. 맨몸 운동은 완료 횟수예요. 운동을 누르면 그래프와 세트별 기록이 보여요.</p>';
+  }
+
+  function histDetail() {
+    const ex = HV.ex, i = ORDER.indexOf(ex), bw = isBw(ex), { all, pts, best } = exHist(ex);
+    let h = '<div class="hd-nav"><button type="button" class="link" data-h="back">‹ 전체 운동</button><span>' +
+      '<button type="button" class="hx" data-h="prevEx" aria-label="이전 운동"' + (i === 0 ? ' disabled' : '') + '><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg></button>' +
+      '<button type="button" class="hx" data-h="nextEx" aria-label="다음 운동"' + (i === ORDER.length - 1 ? ' disabled' : '') + '><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></span></div>';
+    h += '<div class="hd-head"><div class="extile">' + icon(ex, 38, '') + '</div><h3>' + esc(EX[ex].name) + '</h3></div>' + rangeSeg();
+    if (!all.length) return h + '<p class="empty">아직 이 운동 기록이 없어요.<br>' + (bw ? '세트를 마치면 여기에 쌓여요.' : '시작 10RM은 ' + EX[ex].start + 'kg이에요.') + '</p>';
+    const tn = dayNum(today()), last = all[all.length - 1];
+    if (bw) {
+      const in4 = all.filter((p) => tn - p.x < 28).length;
+      h += '<div class="tiles"><div class="tile"><small>기간 완료</small><b>' + pts.length + '<u>회</u></b></div><div class="tile"><small>최근 4주</small><b>' + in4 + '<u>회</u></b></div>' +
+        '<div class="tile"><small>전체</small><b>' + all.length + '<u>회</u></b></div><div class="tile"><small>마지막</small><b>' + md(last.date) + '</b><span>' + wdOf(last.date) + '요일</span></div></div>';
+    } else {
+      const ch = pts.length >= 2 ? pct(pts[pts.length - 1].y, pts[0].y) : null, vs = pct(last.y, EX[ex].start);
+      h += '<div class="tiles">' +
+        '<div class="tile"><small>현재 추정 10RM</small><b>' + f1(last.y) + '<u>kg</u></b><span>' + last.w + 'kg × ' + last.r + '회</span></div>' +
+        '<div class="tile"><small>기간 변화</small><b class="' + (ch == null ? 'zero' : tone(ch)) + '">' + (ch == null ? '—' : sgn(ch) + '%') + '</b><span>' + (pts.length >= 2 ? f1(pts[0].y) + ' → ' + f1(pts[pts.length - 1].y) : '2세션부터') + '</span></div>' +
+        '<div class="tile"><small>최고 기록</small><b>' + f1(best) + '<u>kg</u></b><span>시작 ' + EX[ex].start + 'kg 대비 ' + sgn(vs) + '%</span></div>' +
+        '<div class="tile"><small>세션</small><b>' + pts.length + '<u>회</u></b><span>전체 ' + all.length + '회</span></div></div>';
+      h += pts.length ? '<div class="cbox" id="hcBox"><div class="ro"></div><div class="cw"></div><div class="lgd"><span><i style="background:#0A66D1"></i>첫 세트 추정 10RM</span><span><i style="background:#fff;box-shadow:inset 0 0 0 2px #C25E00"></i>목표 미달</span><span>그래프를 눌러 날짜별로 보기</span></div></div>'
+        : '<p class="empty">이 기간에는 기록이 없어요. 기간을 넓혀 보세요.</p>';
+    }
+    if (pts.length) {
+      h += '<p class="sec">세션 기록 · 최신순</p><div>';
+      for (let k = pts.length - 1; k >= 0; k--) {
+        const p = pts[k];
+        if (bw) { h += '<div class="srow"><span class="d"><b>' + md(p.date) + '</b><small>' + wdOf(p.date) + '</small></span><span class="s">' + p.sets.length + '세트 완료</span><span class="v"></span></div>'; continue; }
+        const ch = p.prev ? pct(p.y, p.prev.y) : null;
+        h += '<button type="button" class="srow" data-k="' + k + '"><span class="d"><b>' + md(p.date) + '</b><small>' + wdOf(p.date) + '</small></span>' +
+          '<span class="s">' + p.sets.map((s) => s.w + '×' + s.r).join(' · ') + (typeof p.T === 'number' ? '<small class="' + (p.miss ? 'miss' : '') + '">목표 ' + f1(p.T) + (p.miss ? ' · 미달' : ' ✓') + '</small>' : '<small>&nbsp;</small>') + '</span>' +
+          '<span class="v"><b>' + f1(p.y) + (p.pr ? '<span class="pr">최고</span>' : '') + '</b><small class="' + (ch == null ? 'zero' : tone(ch)) + '">' + (ch == null ? '첫 기록' : sgn(ch) + '%') + '</small></span></button>';
+      }
+      h += '</div><p class="trend-more">추정 10RM = 그날 첫 세트 무게 × (30 + 횟수) ÷ 40 · % 는 지난 세션 대비</p>';
+    }
+    return h;
+  }
+
+  function histDays() {
+    const by = {};
+    data.sets.forEach((s) => { (by[s.date] = by[s.date] || []).push(s); });
+    const days = Object.keys(by).sort().reverse();
+    if (!days.length) return '<p class="empty">아직 기록이 없어요.<br>세트를 완료하면 날짜별로 여기에 쌓여요.</p>';
+    const tn = dayNum(today()), dow = (new Date(tn * 864e5).getUTCDay() + 6) % 7, WEEKS = 17, start = tn - dow - (WEEKS - 1) * 7;
+    const exN = (ds) => (by[ds] ? new Set(by[ds].map((s) => s.ex)).size : 0);
+    const lvl = (n) => (n >= 10 ? 3 : n >= 5 ? 2 : n > 0 ? 1 : 0);
+    let hm = '<div class="hm" role="img" aria-label="최근 17주 운동한 날"><span></span>' + ['월', '', '수', '', '금', '', '일'].map((l) => '<span class="hl">' + l + '</span>').join('');
+    let lastM = -1;
+    for (let w = 0; w < WEEKS; w++) {
+      const d0 = start + w * 7, m = new Date(d0 * 864e5).getUTCMonth();
+      hm += '<span class="hl">' + (m !== lastM ? (m + 1) + '월' : '') + '</span>'; lastM = m;
+      for (let k = 0; k < 7; k++) {
+        const dn = d0 + k, ds = dsOf(dn);
+        if (dn > tn) { hm += '<i class="f"></i>'; continue; }
+        const n = exN(ds);
+        hm += '<i class="l' + lvl(n) + (dn === tn ? ' t' : '') + '"' + (n ? ' data-d="' + ds + '" title="' + md(ds) + ' · ' + n + '개 운동"' : '') + '></i>';
+      }
+    }
+    hm += '</div>';
+    const cnt = (f) => days.filter(f).length, mPre = today().slice(0, 7);
+    let h = '<div class="tiles">' +
+      '<div class="tile"><small>최근 4주</small><b>' + cnt((d) => tn - dayNum(d) < 28) + '<u>일</u></b><span>주 ' + (cnt((d) => tn - dayNum(d) < 28) / 4).toFixed(1) + '회</span></div>' +
+      '<div class="tile"><small>이번 달</small><b>' + cnt((d) => d.startsWith(mPre)) + '<u>일</u></b></div>' +
+      '<div class="tile"><small>전체</small><b>' + days.length + '<u>일</u></b><span>' + md(days[days.length - 1]) + '부터</span></div>' +
+      '<div class="tile"><small>총 세트</small><b>' + data.sets.length + '</b></div></div>';
+    h += hm + '<div class="hleg">적게<i></i><i class="l1"></i><i class="l2"></i><i class="l3"></i>많이 · 하루에 한 운동 가짓수</div>';
+    const info = {};
+    ORDER.forEach((ex) => { exHist(ex).all.forEach((p) => { info[ex + p.date] = p; }); });
+    if (HV.open == null) HV.open = days[0];
+    h += '<p class="sec">날짜별 · 최신순</p><div>';
+    days.slice(0, HV.more).forEach((ds) => {
+      const ss = by[ds], exs = ORDER.filter((e) => ss.some((s) => s.ex === e)), open = HV.open === ds;
+      const bars = ORDER.map((e) => { const c = ss.filter((s) => s.ex === e).length; return '<i class="' + (c >= SETS ? 'd' : c > 0 ? 'p' : '') + '"></i>'; }).join('');
+      h += '<div class="dcard' + (open ? ' open' : '') + '" id="dc-' + ds + '"><button type="button" data-day="' + ds + '" aria-expanded="' + open + '"><span class="dd"><b>' + md(ds) + '</b><small' + (ds === today() ? ' class="t">오늘' : '>' + wdOf(ds) + '요일') + '</small></span>' +
+        '<div class="bars" aria-hidden="true">' + bars + '</div><em>' + exs.length + '개 · ' + ss.length + '세트</em>' + CHEV + '</button>';
+      if (open) {
+        h += '<div class="dbody">' + exs.map((e) => {
+          const p = info[e + ds], list = ss.filter((s) => s.ex === e).sort((a, b) => a.ts - b.ts);
+          let tail = '';
+          if (!isBw(e) && p) { const ch = p.prev ? pct(p.y, p.prev.y) : null; tail = '<em class="' + (ch == null ? 'zero' : tone(ch)) + '">' + (ch == null ? '첫 기록' : sgn(ch) + '%') + '</em>'; }
+          return '<button type="button" class="drow" data-ex="' + e + '">' + icon(e, 24, '') + '<span>' + esc(EX[e].short) + (p && p.pr ? '<span class="pr">최고</span>' : '') + '<small>' + (isBw(e) ? list.length + '세트 완료' : list.map((s) => s.w + '×' + s.r).join(' · ')) + '</small></span>' + tail + '</button>';
+        }).join('') + '</div>';
+      }
+      h += '</div>';
+    });
+    h += '</div>';
+    if (days.length > HV.more) h += '<button type="button" class="btn wide" data-h="more">더 보기 (' + (days.length - HV.more) + '일 남음)</button>';
+    return h;
+  }
+
+  function renderHist() {
+    $('hTab').querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === HV.tab)));
+    $('histBody').innerHTML = HV.tab === 'day' ? histDays() : HV.ex ? histDetail() : histOverview();
+    renderChartBox();
+  }
+  function openHist(ex) {
+    ['list', 'trendDlg'].forEach((id) => { if ($(id).open) $(id).close(); });
+    if (ex) { HV.tab = 'ex'; HV.ex = ex; }
+    HV.sel = -1;
+    $('hist').showModal();
+    renderHist(); $('histBody').scrollTop = 0;
+  }
+  $('histOpen').addEventListener('click', () => openHist());
+  $('histOpenL').addEventListener('click', () => openHist());
+  $('trendHist').addEventListener('click', () => openHist(curEx()));
+  $('histClose').addEventListener('click', () => $('hist').close());
+  $('hTab').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tab]'); if (!b || b.dataset.tab === HV.tab) return;
+    HV.tab = b.dataset.tab; renderHist(); $('histBody').scrollTop = 0;
+  });
+  $('histBody').addEventListener('click', (e) => {
+    const t = e.target, top = () => { $('histBody').scrollTop = 0; };
+    const rg = t.closest('[data-range]'); if (rg) { HV.range = Number(rg.dataset.range); HV.sel = -1; renderHist(); return; }
+    const hb = t.closest('[data-h]');
+    if (hb) {
+      const a = hb.dataset.h, i = ORDER.indexOf(HV.ex);
+      if (a === 'back') { HV.ex = null; renderHist(); top(); }
+      if (a === 'prevEx' && i > 0) { HV.ex = ORDER[i - 1]; HV.sel = -1; renderHist(); top(); }
+      if (a === 'nextEx' && i < ORDER.length - 1) { HV.ex = ORDER[i + 1]; HV.sel = -1; renderHist(); top(); }
+      if (a === 'more') { HV.more += 14; renderHist(); }
+      return;
+    }
+    const sr = t.closest('.srow[data-k]'); if (sr) { HV.sel = Number(sr.dataset.k); renderChartBox(); $('hcBox').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
+    const exb = t.closest('[data-ex]'); if (exb) { HV.tab = 'ex'; HV.ex = exb.dataset.ex; HV.sel = -1; renderHist(); top(); return; }
+    const dy = t.closest('[data-day]'); if (dy) { HV.open = HV.open === dy.dataset.day ? '' : dy.dataset.day; renderHist(); return; }
+    const cell = t.closest('i[data-d]');
+    if (cell) {
+      const ds = cell.dataset.d, days = [...new Set(data.sets.map((s) => s.date))].sort().reverse(), k = days.indexOf(ds);
+      HV.open = ds; if (k >= HV.more) HV.more = k + 1;
+      renderHist();
+      const c = document.getElementById('dc-' + ds); if (c) c.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  });
+  const pickPt = (e) => {
+    const svg = e.target.closest && e.target.closest('svg.hc'); if (!svg) return;
+    const { pts } = exHist(HV.ex); if (!pts.length) return;
+    const rc = svg.getBoundingClientRect(), W = rc.width, x = e.clientX - rc.left, pl = 34, pr = 14;
+    let x0 = pts[0].x, x1 = pts[pts.length - 1].x; if (x1 === x0) { x0 -= 3; x1 += 3; }
+    let bi = 0, bd = Infinity;
+    pts.forEach((p, i) => { const d = Math.abs(pl + (p.x - x0) / (x1 - x0) * (W - pl - pr) - x); if (d < bd) { bd = d; bi = i; } });
+    if (bi !== HV.sel) { HV.sel = bi; renderChartBox(); }
+  };
+  let hDrag = false;
+  $('histBody').addEventListener('pointerdown', (e) => { if (e.target.closest('svg.hc')) { hDrag = true; pickPt(e); } });
+  $('histBody').addEventListener('pointermove', (e) => { if (hDrag || e.pointerType === 'mouse') pickPt(e); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => $('histBody').addEventListener(ev, () => { hDrag = false; }));
+  window.addEventListener('resize', () => { if ($('hist').open) renderChartBox(); });
 
   /* ---------- boot ---------- */
   document.addEventListener('visibilitychange', () => {
