@@ -151,6 +151,41 @@ button{cursor:pointer}
 .lp-trend .t1 b{font-size:15px}
 .lp-trend .t1 span{font-size:12px;color:var(--sub)}
 .lp-trend svg{display:block}
+.lp-trend[hidden],.rtrend[hidden]{display:none!important}
+/* A/D: 완료 운동 접기 줄 */
+.xsum{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;border:0;border-bottom:.5px solid var(--line);background:transparent;padding:0 4px;text-align:left;font-size:13px;font-weight:600;color:var(--greenTxt)}
+.xsum span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xsum small{font-size:12px;font-weight:600;color:var(--mute);white-space:nowrap}
+.chv{flex:none;color:var(--mute);transition:transform .2s}
+[aria-expanded="true"]>.chv,[aria-expanded="true"] .chv{transform:rotate(180deg)}
+/* C: 접히는 추세 줄 */
+.lt-line{display:flex;flex-direction:column;gap:4px;width:100%;border:0;background:transparent;padding:0;text-align:left}
+.lt-line .r1{display:flex;align-items:center;gap:8px;width:100%}
+.lt-line .r1 b{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lt-line .r2{display:flex;align-items:center;gap:10px;width:100%}
+.lt-line .r2 svg{flex:1;height:22px}
+.lt-line .r2 span{font-size:12px;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+.lt-line[aria-expanded="true"] .r2{display:none}
+.lt-body{display:flex;flex-direction:column;gap:6px}
+/* B: 오른쪽 추세 카드 */
+.rtrend{display:none;flex:none;margin:0 14px 0 24px;flex-direction:column;gap:8px;padding:12px 16px;border:0;border-radius:18px;background:var(--plate);text-align:left}
+.rtrend .r1{display:flex;align-items:center;gap:10px}
+.rtrend .r1 b{flex:1;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rtrend .r1 span{font-size:12px;font-weight:600;color:var(--sub);white-space:nowrap}
+.rtrend .r2{display:flex;align-items:center;gap:16px}
+.rtrend .st{display:flex;gap:16px;flex:none}
+.rtrend .st div{display:flex;flex-direction:column;gap:1px}
+.rtrend .st small{font-size:11px;color:var(--sub);white-space:nowrap}
+.rtrend .st b{font-size:18px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rtrend .r2 svg{flex:1;height:44px}
+/* 3안: 지금 운동 밑에 붙는 추세 */
+.xrow.cur.acc{border-radius:12px 12px 0 0}
+.xacc{display:flex;flex-direction:column;gap:6px;margin:0 0 6px;padding:4px 10px 10px 36px;border-radius:0 0 12px 12px;background:var(--plate)}
+.xacc .r1{display:flex;align-items:baseline;gap:8px}
+.xacc .r1 b{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xacc .r1 span{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
+.xacc svg.big{height:78px!important}
+.xacc .more{align-self:flex-start;border:0;background:transparent;padding:2px 0;font-size:12px;font-weight:700;color:var(--blue)}
 
 /* toast */
 .toast{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translate(-50%,calc(-100% - 60px));visibility:hidden;transition:transform .25s ease,visibility 0s .25s;z-index:10;background:rgba(28,28,30,.95);color:#fff;border-radius:14px;padding:10px 14px;font-size:14px;font-weight:600;max-width:calc(100% - 32px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
@@ -301,6 +336,20 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .pageR .ctx .daypos,.pageR .ctx .daybars{display:none}
   .ctx{padding-top:6px}
   .lp-trend svg.big{height:150px}
+  [data-lv="3"] .lp-trend{display:none}
+}
+/* 1안: 세로로 긴 펼친 화면은 추세를 오른쪽 빈자리로 */
+@media (min-width:560px) and (min-height:860px){
+  [data-lv="1"] .rtrend{display:flex}
+  [data-lv="1"] .lp-trend{display:none}
+}
+/* 펼친 가로 화면: 엄지 패드가 잘리지 않게 세트 칸을 패드 왼쪽으로 */
+@media (min-width:560px) and (min-height:480px) and (max-height:760px){
+  .pageR .bottom{flex-direction:row;align-items:flex-end}
+  .pageR .side{flex:1;align-self:flex-end}
+  .pageR #ledger{grid-template-columns:minmax(0,1fr)}
+  .pageR .lrow,.pageR .lrow:last-of-type{flex-direction:row;align-items:baseline;gap:10px}
+  .hero{gap:8px}
 }
 /* rest timer: 레이아웃은 그대로, 배경이 차오르고 버튼·숫자·안내줄로 표시 */
 .water{position:fixed;left:0;right:0;bottom:0;height:0;pointer-events:none;z-index:4;transition:height .3s linear}
@@ -364,6 +413,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     </section>
 
     <button type="button" class="trend" id="trend"></button>
+    <button type="button" class="rtrend" id="rTrend"></button>
 
     <section class="bottom">
       <div class="side">
@@ -518,6 +568,12 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   const fmtSet = (s) => (isBw(s.ex) ? '완료' : s.w + '×' + s.r);
   const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
   const wide = () => window.matchMedia('(min-width:560px) and (min-height:480px)').matches;
+  /* 미리보기용 안 선택: ?v=1|2|3 */
+  const LV = [1, 2, 3].includes(Number(new URLSearchParams(location.search).get('v'))) ? Number(new URLSearchParams(location.search).get('v')) : 1;
+  document.documentElement.dataset.lv = LV;
+  let foldOpen = false;
+  let trendOpen = (() => { try { const v = localStorage.getItem('dumbbell-lt-open'); return v ? v === '1' : LV === 2; } catch (e) { return LV === 2; } })();
+  const CHEV_D = '<svg class="chv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
   const todaySets = (ex) => { const t = today(); return data.sets.filter((s) => s.date === t && (!ex || s.ex === ex)).sort((a, b) => a.ts - b.ts); };
   const doneCount = (ex) => todaySets(ex).length;
@@ -817,22 +873,56 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   /* left page: exercise map + big trend */
   function renderLeft(t) {
     if (!wide()) return;
-    $('exList').innerHTML = rowsHtml();
-    const ex = curEx();
-    $('lpTrend').innerHTML = '<div class="t1"><b class="tk-' + t.ev.kind + '">' + esc(EX[ex].short) + ' · ' + esc(t.ev.label) + '</b><span>' + (t.bw ? '' : '추정 10RM') + '</span></div>' +
-      verdictHtml(t) + chart(t, true);
+    const ex = curEx(), ev = t.ev, head = esc(EX[ex].short) + ' · ' + esc(ev.label);
+    const wk = ev.stats ? ev.stats[1][1] : '', mo = ev.stats ? ev.stats[0][1] : '';
+    $('exList').innerHTML = rowsHtml(true, t);
+    /* C: 한 줄로 접히는 추세 (1안 가로·2안) */
+    $('lpTrend').innerHTML = '<button type="button" class="lt-line" id="ltBtn" aria-expanded="' + trendOpen + '"><span class="r1"><b class="tk-' + ev.kind + '">' + head + '</b>' + CHEV_D + '</span>' +
+      '<span class="r2">' + (t.bw ? '' : chart(t, false)) + '<span>' + esc(ev.short) + '</span></span></button>' +
+      (trendOpen ? '<div class="lt-body">' + verdictHtml(t) + chart(t, true) + '</div>' : '');
+    /* B: 오른쪽 카드 (1안 세로) */
+    $('rTrend').innerHTML = '<span class="r1"><b class="tk-' + ev.kind + '">' + head + '</b><span>자세히 ›</span></span>' +
+      '<span class="r2">' + (ev.stats ? '<span class="st"><div><small>주 속도</small><b>' + esc(wk) + '</b></div><div><small>월 속도</small><b>' + esc(mo.replace(' (2주부터)', '')) + '</b></div></span>' : '<span class="st"><div><small>추세</small><b>' + esc(ev.short) + '</b></div></span>') + (t.bw ? '' : chart(t, false)) + '</span>';
+    $('rTrend').setAttribute('aria-label', ev.label + ', ' + ev.sum + ', 자세히 보기');
+    requestAnimationFrame(scrollCur);
   }
-  function rowsHtml() {
-    return ORDER.map((e, i) => {
-      const c = doneCount(e), here = i === data.idx;
-      let tail;
-      if (c >= SETS) tail = '3/3 ✓';
-      else if (here) tail = c + '/3 지금';
-      else if (c > 0) tail = c + '/3';
-      else if (isBw(e)) tail = '맨몸';
-      else { const s = suggest(e); tail = s.w + '×' + s.r + (s.kind === 'up' ? ' ↑' : ''); }
-      return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= SETS ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= SETS ? 'done' : '') + '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em></button>';
-    }).join('');
+  /* A: 지금 운동이 목록에 늘 보이게 */
+  function scrollCur() {
+    const L = $('exList'), c = L.querySelector('.xrow.cur'); if (!c) return;
+    const acc = L.querySelector('.xacc'), lr = L.getBoundingClientRect(), cr = c.getBoundingClientRect();
+    const bot = acc ? acc.getBoundingClientRect().bottom : cr.bottom;
+    if (cr.top >= lr.top && bot <= lr.bottom) return;
+    L.scrollTop += (cr.top - lr.top) - Math.max(0, (lr.height - (bot - cr.top)) / 2);
+  }
+  function rowHtml(e, i) {
+    const c = doneCount(e), here = i === data.idx;
+    let tail;
+    if (c >= SETS) tail = '3/3 ✓';
+    else if (here) tail = c + '/3 지금';
+    else if (c > 0) tail = c + '/3';
+    else if (isBw(e)) tail = '맨몸';
+    else { const s = suggest(e); tail = s.w + '×' + s.r + (s.kind === 'up' ? ' ↑' : ''); }
+    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= SETS ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= SETS ? 'done' : '') + '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em></button>';
+  }
+  function rowsHtml(left, t) {
+    if (!left) return ORDER.map(rowHtml).join('');
+    /* D: 끝난 운동은 한 줄로 접기 */
+    const done = ORDER.map((e, i) => i).filter((i) => i !== data.idx && doneCount(ORDER[i]) >= SETS);
+    const fold = done.length >= 2;
+    let h = fold ? '<button type="button" class="xsum" data-act="done" aria-expanded="' + foldOpen + '"><span>✓ 끝낸 운동 ' + done.length + '개</span><small>' + (foldOpen ? '접기' : '펼치기') + '</small>' + CHEV_D + '</button>' : '';
+    ORDER.forEach((e, i) => {
+      if (fold && !foldOpen && done.includes(i)) return;
+      const here = i === data.idx;
+      let r = rowHtml(e, i);
+      if (here && LV === 3 && t) {
+        const ev = t.ev;
+        r = r.replace('class="xrow cur', 'class="xrow cur acc');
+        r += '<div class="xacc"><div class="r1"><b class="tk-' + ev.kind + '">' + esc(ev.label) + '</b><span>' + (ev.stats ? '주 ' + esc(ev.stats[1][1]) + ' · 월 ' + esc(ev.stats[0][1].replace(' (2주부터)', '')) : esc(ev.short)) + '</span></div>' +
+          (t.bw ? '' : chart(t, true)) + '<button type="button" class="more" data-act="trend">자세히 ›</button></div>';
+      }
+      h += r;
+    });
+    return h;
   }
 
   function renderGo() {
@@ -1006,19 +1096,27 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   pr.addEventListener('click', (e) => { if (swallow) { e.stopPropagation(); e.preventDefault(); } }, true);
 
   /* ---------- trend dialog (single column) ---------- */
-  $('trend').addEventListener('click', () => {
+  function openTrend() {
     const ex = curEx(), t = trend(ex);
     $('trendT').textContent = EX[ex].short + ' · 8주 추세';
     $('trendBody').innerHTML = '<p class="delta tk-' + t.ev.kind + '">' + esc(t.ev.label) + '</p>' + verdictHtml(t) + chart(t, true) + sgDetail(ex) +
       (t.bw ? '' : '<p class="trend-more">추정 10RM = 그날 첫 세트 무게 × (30 + 횟수) ÷ 40<br>판정: 최근 ' + EVAL_N + '세션 추세선(점선) 기울기 · 주당 +' + FAST + '% 이상 빠름(기준 보정 중), +' + THRESH + '% 이상 향상, −' + THRESH + '% 미만 하락, 그 사이 정체' +
         (t.pts.length ? '<br>최근: ' + t.pts.slice(-4).map((p) => md(p.date) + ' ' + p.w + '×' + p.r + '=' + f1(p.y)).join(' · ') : '') + '</p>');
     $('trendDlg').showModal();
+  }
+  $('trend').addEventListener('click', openTrend);
+  $('rTrend').addEventListener('click', openTrend);
+  $('lpTrend').addEventListener('click', (e) => {
+    if (!e.target.closest('#ltBtn')) return;
+    trendOpen = !trendOpen;
+    try { localStorage.setItem('dumbbell-lt-open', trendOpen ? '1' : '0'); } catch (er) {}
+    renderLeft(trend(curEx()));
   });
   $('trendClose').addEventListener('click', () => $('trendDlg').close());
 
   /* ---------- list (dialog + left page) ---------- */
   function openList() {
-    $('listBody').innerHTML = rowsHtml();
+    $('listBody').innerHTML = rowsHtml(false);
     const hasSample = data.sets.some((s) => s.sample);
     $('listFoot').innerHTML = !data.sets.length ? '<button type="button" class="link" id="seedBtn">예시 데이터로 둘러보기</button>' : hasSample ? '<button type="button" class="link" id="unseedBtn">예시 데이터 지우기</button>' : '';
     showSync(syncing ? '저장 중…' : ''); drawRestCfg();
@@ -1037,7 +1135,12 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     if (e.target.id === 'seedBtn') { seed(); $('list').close(); }
     if (e.target.id === 'unseedBtn') { data.sets = data.sets.filter((s) => !s.sample); persist(); prefill(); render(); $('list').close(); }
   });
-  $('exList').addEventListener('click', (e) => jump(e, false));
+  $('exList').addEventListener('click', (e) => {
+    const a = e.target.closest('[data-act]');
+    if (a && a.dataset.act === 'done') { foldOpen = !foldOpen; renderLeft(trend(curEx())); return; }
+    if (a && a.dataset.act === 'trend') { openTrend(); return; }
+    jump(e, false);
+  });
 
   /* ---------- edit dialog ---------- */
   let editing = null;
