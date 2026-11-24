@@ -283,21 +283,35 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .ctx{padding-top:6px}
   .lp-trend svg.big{height:150px}
 }
-/* rest timer */
-.rest{position:absolute;left:16px;right:16px;top:calc(8px + env(safe-area-inset-top));z-index:5;height:40px;border-radius:20px;background:var(--plate);display:flex;align-items:center;gap:2px;padding:0 4px 0 14px;overflow:hidden;isolation:isolate;animation:fade .2s ease-out}
-.rest[hidden]{display:none}
-.rest .rbar{position:absolute;inset:0;z-index:-1;background:#DCE9F9;transform-origin:left;transform:scaleX(0);transition:transform .25s linear}
-.rest .rl{font-size:12px;font-weight:600;color:var(--sub);margin-right:8px}
-.rest .rt{font-size:20px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-right:auto}
-.rest button{flex:none;border:0;background:transparent;height:32px;min-width:44px;padding:0 8px;border-radius:16px;font-size:13px;font-weight:700;color:var(--blue);font-variant-numeric:tabular-nums}
-.rest button[hidden]{display:none}
-.rest button:active{background:rgba(0,0,0,.07)}
-.rest.end{background:#E3F3E7}.rest.end .rl,.rest.end .rt{color:var(--greenTxt)}.rest.end .rbar{display:none}.rest.end button{color:var(--greenTxt)}
-body.resting .ctx-top{visibility:hidden}
-body.resting .done{padding-top:calc(40px + env(safe-area-inset-top))}
-body.resting .done .chk{margin-top:12px}
-body.resting .toast{top:calc(56px + env(safe-area-inset-top))}
-@media (min-width:560px) and (min-height:480px){body.resting .ctx{padding-top:52px}}
+/* rest timer: 레이아웃은 그대로, 배경이 차오르고 버튼·숫자·안내줄로 표시 */
+.water{position:fixed;left:0;right:0;bottom:0;height:0;pointer-events:none;z-index:4;transition:height .3s linear}
+.water[hidden]{display:none}
+.water .wb{position:absolute;inset:0;background:rgba(10,102,209,.07)}
+.water .wave{position:absolute;left:0;top:-7px;width:200%;height:8px;color:#0A66D1;animation:wv 4s linear infinite}
+@keyframes wv{to{transform:translateX(-50%)}}
+.water .tag{position:absolute;left:16px;bottom:100%;margin-bottom:8px;padding:4px 11px;border-radius:999px;background:var(--blue);color:#fff;font-size:15px;font-weight:800;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 8px rgba(10,102,209,.25)}
+.water .tag small{font-size:11px;font-weight:700;opacity:.8;margin-left:4px}
+.water.hi .tag{bottom:auto;top:10px;margin-bottom:0}
+.water.end .wb{background:rgba(36,138,61,.08)}.water.end .wave,.water.end .tag{display:none}
+.k.go{position:relative}
+.k.go .rring,.k.go .rlbl{display:none}
+body.rest-on .k.go:not(.next):not(.idle){background:#fff;color:var(--blue);box-shadow:0 0 0 1px #DCE9F9 inset}
+body.rest-on .k.go:not(.next):not(.idle) #goIc{display:none}
+body.rest-on .k.go:not(.next):not(.idle) .rring{display:block;position:absolute;inset:-3px;transform:rotate(-90deg);pointer-events:none}
+body.rest-on .k.go:not(.next):not(.idle) .rlbl{display:flex;flex-direction:column;align-items:center;line-height:1}
+.rlbl b{font-size:19px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.rlbl small{font-size:10px;font-weight:700;color:var(--sub);margin-top:3px}
+body.rest-end .k.go:not(.next):not(.idle){box-shadow:0 6px 14px rgba(10,102,209,.3),0 0 0 7px rgba(10,102,209,.18)}
+body.rest-on #nums{opacity:.28;filter:saturate(.4)}
+#nums{transition:opacity .3s}
+.delta.rst{color:var(--blue)}.delta.rend{color:var(--greenTxt)}
+.delta .rtx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.delta .tm{font-variant-numeric:tabular-nums;font-weight:800}.delta .rov{font-weight:600;opacity:.75}
+#dayPos .rd{color:var(--blue)}#dayPos .rd.e{color:var(--greenTxt)}
+.rmenu{position:fixed;z-index:8;display:flex;gap:4px;padding:5px;border-radius:18px;background:rgba(28,28,30,.95);box-shadow:0 10px 30px rgba(0,0,0,.25);animation:fade .15s ease-out}
+.rmenu[hidden]{display:none}
+.rmenu button{border:0;background:transparent;color:#fff;height:44px;padding:0 14px;border-radius:13px;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rmenu button:active{background:rgba(255,255,255,.15)}.rmenu button[hidden]{display:none}
 .sync .step button{background:#fff}
 .step .val{width:72px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:#fff;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -351,11 +365,12 @@ body.resting .toast{top:calc(56px + env(safe-area-inset-top))}
       </div>
     </section>
 
-    <div class="rest" id="rest" role="timer" hidden><i class="rbar" id="restBar"></i><span class="rl" id="restL">휴식</span><b class="rt" id="restT">0:00</b><button type="button" id="restM" aria-label="휴식 15초 줄이기">−15</button><button type="button" id="restP" aria-label="휴식 15초 늘리기">+15</button><button type="button" id="restX" aria-label="휴식 타이머 끄기">✕</button></div>
     <div class="done" id="done" hidden></div>
   </div>
 </div>
 
+<div class="water" id="water" hidden aria-hidden="true"><div class="wb"></div><svg class="wave" viewBox="0 0 200 8" preserveAspectRatio="none"><path d="M0 4Q12.5 0 25 4T50 4T75 4T100 4T125 4T150 4T175 4T200 4V8H0Z" fill="currentColor" fill-opacity=".07"/><path d="M0 4Q12.5 0 25 4T50 4T75 4T100 4T125 4T150 4T175 4T200 4" fill="none" stroke="currentColor" stroke-opacity=".55" stroke-width=".6"/></svg><span class="tag" id="wTag"></span></div>
+<div class="rmenu" id="rmenu" role="menu" hidden><button type="button" role="menuitem" id="restM">−15초</button><button type="button" role="menuitem" id="restP">+15초</button><button type="button" role="menuitem" id="restX">휴식 끝</button></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <dialog id="edit" aria-labelledby="editT">
@@ -697,6 +712,7 @@ body.resting .toast{top:calc(56px + env(safe-area-inset-top))}
     $('kUndo').disabled = !todaySets().length;
     $('kWup').classList.toggle('hint', !bw && sg.kind === 'up' && cur.w < sg.w && n === 0);
     renderGo();
+    restDecor();
     renderLeft(t);
     requestAnimationFrame(fitNums);
   }
@@ -794,6 +810,7 @@ body.resting .toast{top:calc(56px + env(safe-area-inset-top))}
   });
 
   $('kGo').addEventListener('click', () => {
+    if (lpFired) { lpFired = false; return; }   /* 휴식 메뉴를 연 길게 누르기는 세트 저장 안 함 */
     const ex = curEx(), n = doneCount(ex), bw = isBw(ex);
     if (showingDone) { advance(); return; }
     if (n >= SETS) { if (allDone()) openList(); else goIdx(nextIncomplete(data.idx), 'next'); return; }
@@ -865,7 +882,7 @@ body.resting .toast{top:calc(56px + env(safe-area-inset-top))}
   let sw = null, swallow = false;
   const pr = $('pageR');
   pr.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('.pad, input, .rest') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    if (e.target.closest('.pad, input') || (e.pointerType === 'mouse' && e.button !== 0)) return;
     if (e.clientX < 20 || e.clientX > window.innerWidth - 20) return;
     sw = { x: e.clientX, y: e.clientY, dx: 0, dy: 0, on: false, id: e.pointerId };
   });
@@ -1385,7 +1402,7 @@ body.resting .toast{top:calc(56px + env(safe-area-inset-top))}
     rest = { end: Date.now() + sec * 1000, total: sec * 1000 }; restRang = false;
     saveRun(); scheduleBeep(); lockWake(true); drawRest();
   }
-  function stopRest() { clearTimeout(restTick); if (!rest && $('rest').hidden) return; rest = null; saveRun(); cancelBeep(); lockWake(false); drawRest(); }
+  function stopRest() { clearTimeout(restTick); closeRMenu(); if (!rest && $('water').hidden) return; rest = null; saveRun(); cancelBeep(); lockWake(false); drawRest(); render(); }
   function adjRest(d) {
     if (!rest) return;
     const left = rest.end - Date.now(); if (left <= 0) return;
@@ -1393,25 +1410,55 @@ body.resting .toast{top:calc(56px + env(safe-area-inset-top))}
     rest.end = Date.now() + nl; rest.total = Math.max(rest.total + d * 1000, nl);
     saveRun(); scheduleBeep(); drawRest(); buzz(8);
   }
+  $('kGo').insertAdjacentHTML('beforeend', '<svg class="rring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="none" stroke="#DCE9F9" stroke-width="6"/><circle id="rArc" cx="50" cy="50" r="46" fill="none" stroke="#0A66D1" stroke-width="6" stroke-linecap="round" pathLength="100"/></svg><span class="rlbl" aria-hidden="true"><b id="rLbl"></b><small>휴식</small></span>');
+  const restSec = () => Math.ceil((rest.end - Date.now()) / 1000);
+  function restDecor() {             /* render()가 덮어쓴 글자를 휴식 표시로 바꿈 */
+    if (!rest) return;
+    const left = restSec(), ended = left <= 0, ex = curEx(), n = doneCount(ex);
+    $('dayPos').innerHTML = ended ? '<b class="rd e">휴식 끝</b>' : '<b class="rd">휴식 ' + mmss(left) + '</b>';
+    $('rLbl').textContent = mmss(Math.max(0, left));
+    $('rArc').setAttribute('stroke-dasharray', Math.max(0, Math.min(100, left * 1000 / rest.total * 100)) + ' 100');
+    if (n >= SETS) return;
+    const dl = $('delta');
+    dl.className = 'delta ' + (ended ? 'rend' : 'rst');
+    dl.innerHTML = '<span class="rtx">' + (ended ? '✓ 휴식 끝 · ' + (n + 1) + '세트 시작 <span class="rov">+' + (-left) + '초</span>'
+      : '⏱ 휴식 중 <span class="tm">' + mmss(left) + '</span> · 끝나면 ' + (isBw(ex) ? '시작' : '이 무게로')) + '</span>';
+  }
   function drawRest() {
-    const el = $('rest');
+    const w = $('water'), B = document.body;
     clearTimeout(restTick); restTick = null;
-    if (!rest) { el.hidden = true; document.body.classList.remove('resting'); return; }
+    if (!rest) { w.hidden = true; B.classList.remove('rest-on', 'rest-end'); return; }
     const left = rest.end - Date.now();
     if (left <= -OVER_MAX) { stopRest(); return; }
-    const ended = left <= 0;
-    if (ended && !restRang) { restRang = true; if (!document.hidden) { buzz([200, 100, 200]); restart(el, 'pop'); } lockWake(false); }
-    el.hidden = false; document.body.classList.add('resting');
-    el.classList.toggle('end', ended);
-    $('restL').textContent = ended ? '휴식 끝' : '휴식';
-    $('restT').textContent = ended ? '+' + mmss(Math.floor(-left / 1000)) : mmss(Math.ceil(left / 1000));
-    $('restM').hidden = ended; $('restP').hidden = ended;
-    $('restX').setAttribute('aria-label', ended ? '휴식 알림 닫기' : '휴식 타이머 끄기');
-    $('restBar').style.transform = 'scaleX(' + Math.min(1, Math.max(0, 1 - left / rest.total)) + ')';
+    const ended = left <= 0, s = restSec();
+    if (ended && !restRang) { restRang = true; closeRMenu(); if (!document.hidden) { buzz([200, 100, 200]); restart($('kGo'), 'pop'); } lockWake(false); }
+    B.classList.toggle('rest-on', !ended); B.classList.toggle('rest-end', ended);
+    const h = ended ? 100 : Math.min(100, Math.max(0, (1 - left / rest.total) * 100));
+    w.hidden = false; w.classList.toggle('end', ended); w.classList.toggle('hi', h > 85);
+    w.style.height = h + '%';
+    $('wTag').innerHTML = (s >= 60 ? Math.floor(s / 60) + '분' + (s % 60 ? ' ' + (s % 60) + '초' : '') : s + '초') + '<small>남음</small>';
+    restDecor();
     restTick = setTimeout(drawRest, 250);
   }
-  $('restM').addEventListener('click', () => adjRest(-15));
-  $('restP').addEventListener('click', () => adjRest(15));
+  /* 휴식 중 완료 버튼 길게 누르기 → −15 / +15 / 끝 */
+  let lpT = null, lpFired = false;
+  function openRMenu() {
+    if (!rest) return;
+    const m = $('rmenu'), ended = rest.end <= Date.now();
+    $('restM').hidden = ended; $('restP').hidden = ended; $('restX').textContent = ended ? '닫기' : '휴식 끝';
+    m.hidden = false;
+    const r = $('kGo').getBoundingClientRect(), mw = m.offsetWidth;
+    m.style.left = Math.min(window.innerWidth - mw - 8, Math.max(8, r.left + r.width / 2 - mw / 2)) + 'px';
+    m.style.top = Math.max(8, r.top - m.offsetHeight - 12) + 'px';
+    buzz(20);
+  }
+  function closeRMenu() { $('rmenu').hidden = true; }
+  $('kGo').addEventListener('pointerdown', () => { lpFired = false; clearTimeout(lpT); if (rest) lpT = setTimeout(() => { lpFired = true; openRMenu(); }, 450); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => $('kGo').addEventListener(ev, () => clearTimeout(lpT)));
+  $('kGo').addEventListener('contextmenu', (e) => { if (rest) e.preventDefault(); });
+  document.addEventListener('pointerdown', (e) => { if (!$('rmenu').hidden && !e.target.closest('#rmenu, #kGo')) closeRMenu(); });
+  $('restM').addEventListener('click', () => { adjRest(-15); closeRMenu(); });
+  $('restP').addEventListener('click', () => { adjRest(15); closeRMenu(); });
   $('restX').addEventListener('click', () => { stopRest(); buzz(10); });
   function drawRestCfg() {
     const f = (v) => (v ? (v >= 60 ? mmss(v) : v + '초') : '끔');
