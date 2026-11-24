@@ -899,7 +899,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
     return '{\n' + Object.keys(head).map((k) => '  ' + JSON.stringify(k) + ': ' + JSON.stringify(head[k])).join(',\n') +
       ',\n  "sets": [' + (sets.length ? '\n' + sets.map((x) => '    ' + JSON.stringify(x)).join(',\n') + '\n  ' : '') + '],\n  "deleted": ' + JSON.stringify(data.deleted || []) + '\n}\n';
   }
-  async function sync() {
+  async function sync(force) {
     if (!lsGet(TOKK)) return;
     if (syncing) { syncAgain = true; return; }
     clearTimeout(syncTimer); syncTimer = null; syncing = true; syncErr = ''; showSync('저장 중…');
@@ -908,7 +908,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
         const { sha, doc } = await ghPull();
         if (mergeRemote(doc) && !showingDone) render();
         const remoteKey = doc ? setsKey((doc.sets || []).slice().sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1)), (doc.deleted || []).slice().sort()) : null;
-        if (remoteKey === setsKey(realSets(), data.deleted || [])) break;
+        if (!force && remoteKey === setsKey(realSets(), data.deleted || [])) break;
         const n = realSets().length;
         const r = await ghApi('PUT', { message: '운동 기록 ' + today() + ' · 총 ' + n + '세트', content: b64e(docText()), branch: GH.branch, ...(sha ? { sha } : {}) });
         if (r.ok) break;
@@ -937,9 +937,9 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   }
   $('tokSave').addEventListener('click', () => {
     const v = $('tokIn').value.trim(); if (!v) return;
-    lsSet(TOKK, v); $('tokIn').value = ''; syncErr = ''; showSync(); sync();
+    lsSet(TOKK, v); $('tokIn').value = ''; syncErr = ''; showSync(); sync(true);
   });
-  $('syncNow').addEventListener('click', () => sync());
+  $('syncNow').addEventListener('click', async () => { await sync(true); toast(syncErr ? 'GitHub 저장 실패: ' + syncErr : 'GitHub에 저장했어요'); });
   $('tokOff').addEventListener('click', () => { lsSet(TOKK, ''); lsSet(SYNCK, ''); syncAt = ''; syncErr = ''; showSync(); toast('GitHub 연결을 해제했어요'); });
 
   /* ---------- 백업 파일 ---------- */
