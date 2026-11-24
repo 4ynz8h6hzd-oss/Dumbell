@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>덤벨 세트 기록</title>
+<link id="favIcon" rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%230A66D1%22/%3E%3Cg%20fill%3D%22%23FFFFFF%22%3E%3Crect%20x%3D%2216%22%20y%3D%2210.5%22%20width%3D%2232%22%20height%3D%223%22%20rx%3D%221.5%22/%3E%3Crect%20x%3D%2222%22%20y%3D%225%22%20width%3D%223%22%20height%3D%2214%22%20rx%3D%221.2%22/%3E%3Crect%20x%3D%2239%22%20y%3D%225%22%20width%3D%223%22%20height%3D%2214%22%20rx%3D%221.2%22/%3E%3Crect%20x%3D%2218%22%20y%3D%226%22%20width%3D%223%22%20height%3D%2212%22%20rx%3D%221.2%22/%3E%3Crect%20x%3D%2243%22%20y%3D%226%22%20width%3D%223%22%20height%3D%2212%22%20rx%3D%221.2%22/%3E%3Crect%20x%3D%2230.5%22%20y%3D%2212%22%20width%3D%223%22%20height%3D%229%22/%3E%3Cpath%20d%3D%22M32%2020C23%2020%2019.5%2027%2019.5%2037L18.5%2044C15.5%2044.8%2013.5%2046%2013.5%2048.5L50.5%2048.5C50.5%2046%2048.5%2044.8%2045.5%2044L44.5%2037C44.5%2027%2041%2020%2032%2020Z%22/%3E%3Ccircle%20cx%3D%2232%22%20cy%3D%2253%22%20r%3D%224%22/%3E%3C/g%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23FFFFFF%22%20stroke-width%3D%222.6%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M12%2031Q8.5%2037%2012%2043M52%2031Q55.5%2037%2052%2043%22/%3E%3C/g%3E%3C/svg%3E">
+<link id="touchIcon" rel="apple-touch-icon" href="data:image/png;base64,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">
 <style>
 /* VOICE: 조용한 집중 — 지금 들 무게 하나만 크게
    IDEA: 운동기구 옆 기록 카드. 펼치면 왼쪽 페이지는 지도(순서·추세), 오른쪽 페이지는 지금 할 일
@@ -541,6 +543,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   }
 
   function render() {
+    updateIcon();
     const ex = curEx(), n = doneCount(ex), bw = isBw(ex), total = ORDER.length;
     const doneEx = ORDER.filter((e) => doneCount(e) >= SETS).length;
     $('dayPos').innerHTML = '운동 ' + (data.idx + 1) + ' / ' + total + ' <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
@@ -995,6 +998,63 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
     }
     void realToday;
     persist(); prefill(); render(); toast('예시 데이터를 넣었어요');
+  }
+
+  /* ---------- 살아있는 앱 아이콘: Dumb + Bell = 종 모양 덤벨 ----------
+     원판 = 무게 운동 추정10RM 평균 향상률(시작 대비 +5%마다 1장, 한쪽 1~4장)
+     소리 물결 = 오늘 세트 있음 1줄 · 오늘 전부 끝 2줄 / 마지막 운동이 3일보다 오래되면 회색 */
+  function bellSVG(o, square) {
+    const n = o.plates, bg = o.rest ? '#8E8E93' : '#0A66D1';
+    let p = '';
+    for (let i = 0; i < n; i++) {
+      const x = 22 - 4 * i, h = 14 - 2 * i, y = 12 - h / 2;
+      p += '<rect x="' + x + '" y="' + y + '" width="3" height="' + h + '" rx="1.2"/><rect x="' + (39 + 4 * i) + '" y="' + y + '" width="3" height="' + h + '" rx="1.2"/>';
+    }
+    const bx = 20 - 4 * (n - 1);
+    let waves = '';
+    if (o.ring > 0) waves += '<path d="M12 31Q8.5 37 12 43M52 31Q55.5 37 52 43"/>';
+    if (o.ring > 1) waves += '<path d="M6.5 27.5Q1.5 37 6.5 46.5M57.5 27.5Q62.5 37 57.5 46.5"/>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+      '<rect width="64" height="64" rx="' + (square ? 0 : 14) + '" fill="' + bg + '"/>' +
+      '<g fill="#FFFFFF">' +
+      '<rect x="' + bx + '" y="10.5" width="' + (64 - 2 * bx) + '" height="3" rx="1.5"/>' + p +
+      '<rect x="30.5" y="12" width="3" height="9"/>' +
+      '<path d="M32 20C23 20 19.5 27 19.5 37L18.5 44C15.5 44.8 13.5 46 13.5 48.5L50.5 48.5C50.5 46 48.5 44.8 45.5 44L44.5 37C44.5 27 41 20 32 20Z"/>' +
+      '<circle cx="32" cy="53" r="4"/></g>' +
+      (waves ? '<g fill="none" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round">' + waves + '</g>' : '') +
+      '</svg>';
+  }
+  function iconState() {
+    const rs = [];
+    ORDER.forEach((ex) => {
+      if (isBw(ex)) return;
+      const ss = sessions(ex, false);
+      if (ss.length) rs.push(e10(ss[0].sets[0].w, ss[0].sets[0].r) / EX[ex].start);
+    });
+    const g = rs.length ? rs.reduce((a, b) => a + b, 0) / rs.length : 1;
+    const plates = Math.max(1, Math.min(4, 1 + Math.floor((g - 1) / 0.05 + 1e-9)));
+    const ring = ORDER.every((e) => doneCount(e) >= SETS) ? 2 : todaySets().length ? 1 : 0;
+    const last = data.sets.reduce((m, s) => (s.date > m ? s.date : m), '');
+    const rest = !ring && !!last && dayNum(today()) - dayNum(last) > 3;
+    return { plates, ring, rest };
+  }
+  let iconKey = '';
+  function updateIcon() {
+    const st = iconState(), k = st.plates + ':' + st.ring + ':' + st.rest;
+    if (k === iconKey) return;
+    iconKey = k;
+    const fav = $('favIcon'), touch = $('touchIcon');
+    if (fav) fav.href = 'data:image/svg+xml,' + encodeURIComponent(bellSVG(st, false));
+    if (!touch) return;
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = c.height = 180;
+        c.getContext('2d').drawImage(img, 0, 0, 180, 180);
+        touch.href = c.toDataURL('image/png');
+      } catch (e) {}
+    };
+    img.src = 'data:image/svg+xml,' + encodeURIComponent(bellSVG(st, true));
   }
 
   /* ---------- boot ---------- */
