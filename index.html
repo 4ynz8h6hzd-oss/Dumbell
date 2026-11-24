@@ -161,8 +161,11 @@ button{cursor:pointer}
 .lp-pace i{width:8px;height:8px;border-radius:2px}
 .lp-pace .z{opacity:.4}
 .pc-fast i{background:#C4281C}.pc-up i{background:#248A3D}.pc-flat i{background:#B07A00}.pc-down i{background:#C26A00}.pc-hold i{background:#C7C7CC}
-.pageL .xrow{grid-template-columns:18px 24px minmax(0,1fr) 58px auto}
-.xrow b.pc{font-size:12px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pageL .xrow{grid-template-columns:18px 24px minmax(0,1fr);min-height:46px;padding:5px 4px}
+.xrow .nm{display:flex;flex-direction:column;gap:1px;min-width:0}
+.xrow .meta{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:500}
+.xrow .meta em{font-size:12px}
+.xrow b.pc{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .xrow b.pc.tk-hold{font-weight:500;color:var(--faint)}
 .xrow.ok b.pc{opacity:.75}
 .cal{margin:0;display:flex;flex-direction:column;gap:2px;font-size:12px;line-height:1.45;color:var(--sub);font-variant-numeric:tabular-nums}
@@ -925,14 +928,14 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   function rowHtml(e, i, left) {
     const c = doneCount(e), here = i === data.idx;
     let pc = '';
-    if (left) { if (isBw(e)) pc = '<b class="pc"></b>'; else { const ev = trend(e).ev; pc = '<b class="pc tk-' + ev.kind + '">' + (ev.wk === undefined ? '—' : (ev.kind === 'fast' ? '⚠' : '') + sgn(ev.wk) + '%') + '</b>'; } }
+    if (left) { if (isBw(e)) pc = ''; else { const ev = trend(e).ev; pc = '<b class="pc tk-' + ev.kind + '">' + (ev.wk === undefined ? '—' : (ev.kind === 'fast' ? '⚠' : '') + sgn(ev.wk) + '%') + '</b>'; } }
     let tail;
     if (c >= SETS) tail = left ? '✓' : '3/3 ✓';
     else if (here) tail = left ? (c ? c + '/3' : '지금') : c + '/3 지금';
     else if (c > 0) tail = c + '/3';
     else if (isBw(e)) tail = '맨몸';
     else { const s = suggest(e); tail = s.w + '×' + s.r + (s.kind === 'up' ? ' ↑' : ''); }
-    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= SETS ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= SETS ? 'done' : '') + '<span>' + esc(left ? EX[e].short : EX[e].name) + '</span>' + pc + '<em>' + tail + '</em></button>';
+    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= SETS ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= SETS ? 'done' : '') + (left ? '<span class="nm"><span>' + esc(EX[e].name) + '</span><span class="meta">' + pc + '<em>' + tail + '</em></span></span>' : '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em>') + '</button>';
   }
   function rowsHtml(left, t) {
     if (!left) return ORDER.map((e, i) => rowHtml(e, i, false)).join('');
