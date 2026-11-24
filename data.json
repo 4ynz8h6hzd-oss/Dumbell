@@ -1,6 +1,6 @@
 {
   "app": "dumbbell-set-log",
-  "updated": "2026-11-24T13:19:19.649Z",
+  "updated": "2026-11-24T13:40:04.894Z",
   "timeZone": "Asia/Seoul",
   "note": "세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, u=수정 시각. 추정10RM = w×(30+r)÷40",
   "exercises": {"frog":"프로그 펌프 (맨몸)","chintuck":"친턱 (맨몸)","sumo":"덤벨 스모 스쿼트 (시작 10RM 20kg)","rdl":"루마니안 데드리프트 (시작 10RM 23kg)","lateral":"레터럴 레이즈 (시작 10RM 8kg)","rcurl":"리버스 컬 (시작 10RM 12kg)","row":"벤트오버 로우 (시작 10RM 15kg)","crunch":"크런치 (시작 10RM 3kg)","rfly":"리버스 플라이 (시작 10RM 10kg)","wrist":"리스트 롤러 (시작 10RM 5kg)","curl":"바이셉 컬 (시작 10RM 8kg)","neck":"넥 컬 (맨몸)","l2h":"로우 투 하이 플라이 (시작 10RM 4kg)"},
@@ -122,13 +122,7 @@
     {"id":"vsim-neck-2026-11-22-2","ex":"neck","date":"2026-11-22","ts":1795346240000,"w":0,"r":0,"u":1795346240000},
     {"id":"vsim-l2h-2026-11-22-0","ex":"l2h","date":"2026-11-22","ts":1795346400000,"w":4,"r":13,"T":4.284,"u":1795346400000},
     {"id":"vsim-l2h-2026-11-22-1","ex":"l2h","date":"2026-11-22","ts":1795346520000,"w":4,"r":12,"u":1795346520000},
-    {"id":"vsim-l2h-2026-11-22-2","ex":"l2h","date":"2026-11-22","ts":1795346640000,"w":4,"r":11,"u":1795346640000},
-    {"id":"mwuq154r717ki","ex":"frog","date":"2026-11-24","ts":1795526353467,"w":0,"r":0},
-    {"id":"mwuq16p1yleyu","ex":"chintuck","date":"2026-11-24","ts":1795526355493,"w":0,"r":0},
-    {"id":"mwuq170mpwxhl","ex":"chintuck","date":"2026-11-24","ts":1795526355910,"w":0,"r":0},
-    {"id":"mwuq1780aat10","ex":"chintuck","date":"2026-11-24","ts":1795526356176,"w":0,"r":0},
-    {"id":"mwuq186945vu5","ex":"frog","date":"2026-11-24","ts":1795526357409,"w":0,"r":0},
-    {"id":"mwuq18cbtzhd5","ex":"frog","date":"2026-11-24","ts":1795526357627,"w":0,"r":0}
+    {"id":"vsim-l2h-2026-11-22-2","ex":"l2h","date":"2026-11-22","ts":1795346640000,"w":4,"r":11,"u":1795346640000}
   ],
-  "deleted": ["mwuidt3y2se36","mwuijcplb5172","mwuj5brdqp018","mwuj5nufz3jpy","mwuj5u69kyual","mwuj5x99zvqbd","mwuj5zz1cc3c9","mwukpl5sc4c5n","mwukplar9cjnm","mwukplfxmn7g2","mwukppfgmy4if","mwuksrmh8vp7w","mwukt0tivhqj9","mwukt3pcfpvau","mwul3p78bzpqb","mwum9drrnajxn","mwum9rg9d5szr","mwupwp3rhvw9q","mwupwydh7rp15","mwuq0537hvra8","mwuq05ijjd3lu","mwuq05n67zilf","mwuq0965q2p1l","mwuq09b86gb7k","mwuq09gs5elba","mwuq0b6txklvn","mwuq0bdr4skbe","mwuq0bjb7xoh4","mwuq0m06ubilu","mwuq0n33u9m8x","mwuq0s8n51qb1","mwuq0ulc8hqtj","mwuq0v2i2zppx","mwuq0w77gdgkq","mwuq0z5pvz8fw"]
+  "deleted": ["mwuidt3y2se36","mwuijcplb5172","mwuj5brdqp018","mwuj5nufz3jpy","mwuj5u69kyual","mwuj5x99zvqbd","mwuj5zz1cc3c9","mwukpl5sc4c5n","mwukplar9cjnm","mwukplfxmn7g2","mwukppfgmy4if","mwuksrmh8vp7w","mwukt0tivhqj9","mwukt3pcfpvau","mwul3p78bzpqb","mwum9drrnajxn","mwum9rg9d5szr","mwupwp3rhvw9q","mwupwydh7rp15","mwuq0537hvra8","mwuq05ijjd3lu","mwuq05n67zilf","mwuq0965q2p1l","mwuq09b86gb7k","mwuq09gs5elba","mwuq0b6txklvn","mwuq0bdr4skbe","mwuq0bjb7xoh4","mwuq0m06ubilu","mwuq0n33u9m8x","mwuq0s8n51qb1","mwuq0ulc8hqtj","mwuq0v2i2zppx","mwuq0w77gdgkq","mwuq0z5pvz8fw","mwuq154r717ki","mwuq16p1yleyu","mwuq170mpwxhl","mwuq1780aat10","mwuq186945vu5","mwuq18cbtzhd5"]
 }
