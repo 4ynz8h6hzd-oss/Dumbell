@@ -1,12 +1,10 @@
 {
   "app": "dumbbell-set-log",
-  "updated": "2026-11-24T10:07:06.253Z",
+  "updated": "2026-11-24T10:07:09.506Z",
   "timeZone": "Asia/Seoul",
   "note": "세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, u=수정 시각. 추정10RM = w×(30+r)÷40",
   "exercises": {"frog":"프로그 펌프 (맨몸)","chintuck":"친턱 (맨몸)","sumo":"덤벨 스모 스쿼트 (시작 10RM 20kg)","rdl":"루마니안 데드리프트 (시작 10RM 23kg)","lateral":"레터럴 레이즈 (시작 10RM 8kg)","rcurl":"리버스 컬 (시작 10RM 12kg)","row":"벤트오버 로우 (시작 10RM 15kg)","crunch":"크런치 (시작 10RM 3kg)","rfly":"리버스 플라이 (시작 10RM 10kg)","wrist":"리스트 롤러 (시작 10RM 5kg)","curl":"바이셉 컬 (시작 10RM 8kg)","neck":"넥 컬 (맨몸)","l2h":"로우 투 하이 플라이 (시작 10RM 4kg)"},
   "order": ["frog","chintuck","sumo","rdl","lateral","rcurl","row","crunch","rfly","wrist","curl","neck","l2h"],
-  "sets": [
-    {"id":"mwuj5zz1cc3c9","ex":"chintuck","date":"2026-11-24","ts":1795514822749,"w":0,"r":0}
-  ],
-  "deleted": ["mwuidt3y2se36","mwuj5nufz3jpy","mwuj5u69kyual","mwuj5x99zvqbd"]
+  "sets": [],
+  "deleted": ["mwuidt3y2se36","mwuj5nufz3jpy","mwuj5u69kyual","mwuj5x99zvqbd","mwuj5zz1cc3c9"]
 }
