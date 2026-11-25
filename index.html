@@ -689,15 +689,6 @@ body.rest-on #nums{opacity:.55}
   const pctI = (v) => { const r = Math.round(v); return (r >= 0 ? '+' : '−') + Math.abs(r) + '%'; };   /* 메인 화면용 정수 % */
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const buzz = (ms) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-  /* 진동 + iOS 폴백: iOS Safari엔 navigator.vibrate가 없음 → iOS 18+는 스위치 체크박스 라벨을 누르면 기기 햅틱(짧은 '톡' 1번, 세기·길이 조절 불가) */
-  const haptic = (ms) => {
-    if (navigator.vibrate) { buzz(ms); return; }
-    try {
-      const l = document.createElement('label'); l.setAttribute('aria-hidden', 'true'); l.style.display = 'none';
-      const i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); l.appendChild(i);
-      document.head.appendChild(l); l.click(); l.remove();
-    } catch (e) {}
-  };
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const isBw = (ex) => !!EX[ex].bw;
   const fmtSet = (s) => (isBw(s.ex) ? '완료' : s.w + '×' + s.r);
@@ -1213,7 +1204,7 @@ body.rest-on #nums{opacity:.55}
     /* 스와이프만 화면이 밀려남. 패드·자동 넘김은 제자리에서 내용만 살짝 바뀜 (움직이는 건 목록) */
     if (dx) slideSwap(dir === 'prev' ? 1 : -1, apply, dx);
     else { apply(); if (!REDUCED()) ['ctx', 'hero'].forEach((id) => { const el = $(id); if (el.animate) el.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: padRoll ? 60 : 220, easing: 'ease-out' }); }); }
-    if (!quiet) { haptic(12); sfx('nav'); }
+    if (!quiet) { buzz(12); sfx('nav'); }
   }
   function goStep(d, dx) { flushSwap(); goIdx(data.idx + d, d < 0 ? 'prev' : 'next', dx); }
 
@@ -1538,10 +1529,14 @@ body.rest-on #nums{opacity:.55}
      놓으면 손 속도로 도착점을 투영(iOS 감속률) → 가장 가까운 줄을 도착점으로 → 손 속도를 그대로 이어받아
      감속하다가 마지막은 스프링으로 딱 안착. 줄이 렌즈를 지날 때마다 틱(진동·소리). 운동은 놓는 순간 바로 바뀜 */
   const WDEC = 0.997, WTH = 1.45;
-  let tickAt = 0;
+  let hapEl = null, tickAt = 0;
   function wTick() {
     const t = performance.now(); if (t - tickAt < 14) return; tickAt = t;
-    haptic(4);   /* iOS 18+: 스위치 체크박스를 누르면 기기 햅틱이 울림 */
+    if (navigator.vibrate) { try { navigator.vibrate(4); } catch (e) {} }
+    else {   /* iOS 18+: 스위치 체크박스를 누르면 기기 햅틱이 울림 */
+      if (!hapEl) { hapEl = document.createElement('label'); hapEl.setAttribute('aria-hidden', 'true'); hapEl.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none'; hapEl.innerHTML = '<input type="checkbox" switch tabindex="-1">'; document.body.appendChild(hapEl); }
+      try { hapEl.click(); } catch (e) {}
+    }
     sfx('tick');
   }
   function mkWheel(o) {
@@ -1617,7 +1612,7 @@ body.rest-on #nums{opacity:.55}
       };
       w.raf = requestAnimationFrame(step);
     };
-    w.done = () => { w.busy = false; w.snap = false; if (w.moved) { w.moved = false; haptic(10); } if (o.settle) o.settle(); };
+    w.done = () => { w.busy = false; w.snap = false; if (w.moved) { w.moved = false; buzz(10); } if (o.settle) o.settle(); };
     return w;
   }
   const rowH = (tr) => (tr && tr.firstElementChild ? tr.firstElementChild.offsetHeight : 0);
