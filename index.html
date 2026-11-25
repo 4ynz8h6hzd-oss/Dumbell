@@ -1745,8 +1745,21 @@ body.rest-on #nums{opacity:.55}
     }
     navArm = ''; goStep(d);
   };
-  $('kPrev').addEventListener('click', () => padNav(-1));
-  $('kNext').addEventListener('click', () => padNav(1));
+  /* 누르고 있으면 연속 이동 (0.42초 뒤부터 0.22초마다) — 세트 진행 중 확인도 길게 누르면 통과 */
+  [['kPrev', -1], ['kNext', 1]].forEach(([id, d]) => {
+    const b = $(id); let t1 = null, t2 = null;
+    const stop = () => { clearTimeout(t1); clearInterval(t2); t1 = t2 = null; b.classList.remove('pressed'); };
+    b.addEventListener('pointerdown', (e) => {
+      if (b.disabled || (e.button && e.button !== 0)) return;
+      e.preventDefault(); stop();
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      b.classList.add('pressed'); padNav(d);
+      t1 = setTimeout(() => { padNav(d); t2 = setInterval(() => padNav(d), 220); }, 420);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
+    b.addEventListener('click', (e) => { if (e.detail === 0) padNav(d); });
+    b.addEventListener('contextmenu', (e) => e.preventDefault());
+  });
   $('kUndo').addEventListener('click', () => {
     flushSwap();
     const all = todaySets(), s = all[all.length - 1], pl = data.cyc.last;
