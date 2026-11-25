@@ -31,7 +31,6 @@ button{cursor:pointer}
 .bars{display:flex;gap:4px}
 .bars i{display:block;height:4px;border-radius:2px;background:var(--line)}
 .bars i.d{background:var(--ink)}.bars i.c{background:var(--blue)}.bars i.p{background:#9A9AA0}
-.daybars{width:150px;gap:3px}.daybars i{flex:1}
 .ic{flex:none;display:block}.ic .a{fill:var(--ac)}
 .exhead{display:flex;align-items:center;gap:12px}
 .extile{flex:none;width:52px;height:52px;border-radius:15px;background:#EAF2FD;display:flex;align-items:center;justify-content:center}
@@ -160,6 +159,7 @@ button{cursor:pointer}
 .pageL .xrow{grid-template-columns:24px minmax(0,1fr) 24px;min-height:46px;padding:5px 4px}
 /* 사이클 휠: 가운데 렌즈는 제자리, 운동 목록만 미끄러짐 (스크롤 없음) */
 #exList{--rh:48px;position:relative;display:block;flex:1 1 0;max-height:624px;min-height:200px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.3),#000 15%,#000 85%,rgba(0,0,0,.3));mask-image:linear-gradient(to bottom,rgba(0,0,0,.3),#000 15%,#000 85%,rgba(0,0,0,.3))}
+#exList{touch-action:none;-webkit-user-select:none;user-select:none;cursor:grab}#exList.drag{cursor:grabbing}
 #exList .track{position:absolute;left:0;right:0;top:calc(50% - var(--rh) / 2 - 12 * var(--rh));will-change:transform}
 #exList .xrow,#exList .xrow:last-of-type{height:var(--rh);min-height:0;padding:0 8px 0 12px;border:0;border-radius:0;background:transparent;box-shadow:none}
 #exList .xrow .nm>span:first-child{font-weight:500}#exList .xrow.cur .nm>span:first-child{font-weight:600}
@@ -413,7 +413,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .pageR .pad{align-self:flex-end}
   .pageR{max-width:none;margin:0;width:100%}
   .pageR .trend{display:none}
-  .pageR .ctx .daypos,.pageR .ctx .daybars{display:none}
+  .pageR .ctx .daypos{display:none}
   .ctx{padding-top:6px}
   .lp-trend svg.big{height:150px}
 }
@@ -470,7 +470,6 @@ body.rest-on #nums{opacity:.55}
   <aside class="pageL" id="pageL" aria-label="오늘 운동 순서와 추세">
     <div class="lp-head"><h2>오늘 운동</h2><span id="lpCount"></span></div>
     <button type="button" class="pill" id="histOpenL" style="align-self:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19h16M5 15l4-5 4 3 6-7"/></svg>지난 기록 · 그래프</button>
-    <div class="bars daybars" id="lpBars" aria-hidden="true" style="width:100%"></div>
     <div class="exlist" id="exList"><div class="track" id="exTrack"></div><div class="lens" aria-hidden="true"></div></div>
     <div class="lp-trend" id="lpTrend"></div>
   </aside>
@@ -479,7 +478,6 @@ body.rest-on #nums{opacity:.55}
     <header class="ctx" id="ctx">
       <div class="ctx-top">
         <button type="button" class="daypos" id="dayPos" aria-label="오늘 운동 목록 열기"></button>
-        <div class="bars daybars" id="dayBars" aria-hidden="true"></div>
       </div>
       <div class="exhead"><div class="extile" id="exTile"></div><h1 id="exName"></h1></div>
       <div class="setrow"><div class="bars setbars" id="setBars" aria-hidden="true"></div><span id="setTxt"></span><span class="eta" id="eta"></span></div>
@@ -1206,8 +1204,6 @@ body.rest-on #nums{opacity:.55}
     const ex = curEx(), n = doneCount(ex), bw = isBw(ex), total = ORDER.length;
     const doneEx = ORDER.filter((e) => doneCount(e) >= nSets(e)).length, N = nSets(ex);
     $('dayPos').innerHTML = '완료 ' + doneEx + ' / ' + total + ' <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
-    const bars = rotOrder().map(([i]) => { const e = ORDER[i], c = doneCount(e); return '<i class="' + (i === data.idx ? 'c' : c >= nSets(e) ? 'd' : c > 0 ? 'p' : '') + '"></i>'; }).join('');
-    $('dayBars').innerHTML = bars; $('lpBars').innerHTML = bars;
     $('lpCount').textContent = doneEx + ' / ' + total + ' 완료';
     $('exName').textContent = EX[ex].name;
     $('exTile').innerHTML = icon(ex, 40, '');
@@ -1486,7 +1482,7 @@ body.rest-on #nums{opacity:.55}
   }
   /* 사이클: 운동이 바뀌면 목록이 그만큼 굴러서 지금 운동이 가운데로 */
   /* 바퀴 위치는 렌즈(가운데)에 고정. 바뀐 만큼 떨어진 곳에서 트랙이 미끄러져 들어옴. 도중에 또 바뀌면 지금 보이는 위치에서 이어서 */
-  let listIdx = -1, listAnim = null;
+  let listIdx = -1, listAnim = null, wHold = null;
   function wheelHtml() { let h = ''; for (let k = -12; k <= 12; k++) { const i = cyc(data.idx + k); h += rowHtml(ORDER[i], i, true, k); } return h; }
   /* 13줄이 렌즈 높이에 딱 맞게: 줄 높이 = 목록 높이 ÷ 13 (34~48px) */
   function fitWheel() { const L = $('exList'), h = L.clientHeight; if (h) L.style.setProperty('--rh', Math.max(34, Math.min(48, Math.floor(h / 13))) + 'px'); }
@@ -1497,7 +1493,8 @@ body.rest-on #nums{opacity:.55}
     if (!st || REDUCED() || !tr.animate || !tr.firstElementChild) return;
     const h = tr.firstElementChild.offsetHeight;
     let now = 0;
-    if (listAnim && listAnim.playState === 'running') { now = new DOMMatrixReadOnly(getComputedStyle(tr).transform).m42; listAnim.cancel(); }
+    if (wHold !== null) { now = wHold; wHold = null; }
+    else if (listAnim && listAnim.playState === 'running') { now = new DOMMatrixReadOnly(getComputedStyle(tr).transform).m42; listAnim.cancel(); }
     const from = Math.max(-5 * h, Math.min(5 * h, now + st * h));
     listAnim = tr.animate([{ transform: 'translateY(' + from.toFixed(1) + 'px)' }, { transform: 'translateY(0)' }], { duration: Math.round(Math.min(680, 420 + 45 * Math.abs(from / h))), easing: 'cubic-bezier(.22,.8,.24,1)' });
   }
@@ -1868,7 +1865,53 @@ body.rest-on #nums{opacity:.55}
     if (e.target.id === 'seedBtn') { seed(); $('list').close(); }
     if (e.target.id === 'unseedBtn') { data.sets = data.sets.filter((s) => !s.sample); persist(); prefill(); render(); $('list').close(); }
   });
-  $('exList').addEventListener('click', (e) => jump(e, false));
+  /* 왼쪽 바퀴: 위아래로 끌면 굴러가고, 놓으면 가운데(렌즈)에 온 운동으로 바뀜. 휠·트랙패드도 한 칸씩 */
+  let wDrag = null, wNoClick = false, wAcc = 0, wLast = 0;
+  const wList = $('exList');
+  const trOff = () => new DOMMatrixReadOnly(getComputedStyle($('exTrack')).transform).m42 || 0;
+  wList.addEventListener('pointerdown', (e) => {
+    wNoClick = false;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const tr = $('exTrack'), h = tr.firstElementChild ? tr.firstElementChild.offsetHeight : 0; if (!h) return;
+    let now = 0;
+    if (listAnim && listAnim.playState === 'running') { now = trOff(); listAnim.cancel(); tr.style.transform = 'translateY(' + now.toFixed(1) + 'px)'; }
+    wDrag = { y: e.clientY, base: now, off: now, h, id: e.pointerId, on: !!now, st: Math.round(-now / h), ly: e.clientY, lt: e.timeStamp, v: 0 };
+  });
+  wList.addEventListener('pointermove', (e) => {
+    const d = wDrag; if (!d || e.pointerId !== d.id) return;
+    const dy = e.clientY - d.y;
+    if (!d.on) { if (Math.abs(dy) < 6) return; d.on = true; }
+    if (!wList.hasPointerCapture(e.pointerId)) { try { wList.setPointerCapture(e.pointerId); } catch (er) {} wList.classList.add('drag'); }
+    const lim = 6 * d.h;
+    d.off = Math.max(-lim, Math.min(lim, d.base + dy));
+    const dt = e.timeStamp - d.lt; if (dt > 0) { d.v = 0.6 * d.v + 0.4 * ((e.clientY - d.ly) / dt); d.ly = e.clientY; d.lt = e.timeStamp; }
+    $('exTrack').style.transform = 'translateY(' + d.off.toFixed(1) + 'px)';
+    const st = Math.round(-d.off / d.h); if (st !== d.st) { d.st = st; buzz(4); }
+  });
+  const wEnd = (e) => {
+    const d = wDrag; if (!d || e.pointerId !== d.id) return;
+    wDrag = null; wList.classList.remove('drag');
+    if (!d.on) return;
+    wNoClick = true;
+    const tr = $('exTrack'), lim = 6 * d.h;
+    const fling = e.type !== 'pointercancel' && e.timeStamp - d.lt < 80 ? d.v * 140 : 0;
+    const st = Math.max(-6, Math.min(6, Math.round(-Math.max(-lim, Math.min(lim, d.off + fling)) / d.h)));
+    tr.style.transform = '';
+    if (st) { wHold = d.off; goIdx(data.idx + st, st < 0 ? 'prev' : 'next'); if (wHold !== null) { wHold = null; } return; }
+    if (!REDUCED() && tr.animate && d.off) listAnim = tr.animate([{ transform: 'translateY(' + d.off.toFixed(1) + 'px)' }, { transform: 'translateY(0)' }], { duration: 260, easing: 'cubic-bezier(.22,.8,.24,1)' });
+  };
+  wList.addEventListener('pointerup', wEnd);
+  wList.addEventListener('pointercancel', wEnd);
+  wList.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (wDrag) return;
+    wAcc += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    const t = e.timeStamp;
+    if (Math.abs(wAcc) < 40 || t - wLast < 110) return;
+    const d = wAcc > 0 ? 1 : -1; wAcc = 0; wLast = t;
+    goIdx(data.idx + d, d < 0 ? 'prev' : 'next');
+  }, { passive: false });
+  $('exList').addEventListener('click', (e) => { if (wNoClick) { wNoClick = false; return; } jump(e, false); });
 
   /* ---------- edit dialog ---------- */
   let editing = null;
