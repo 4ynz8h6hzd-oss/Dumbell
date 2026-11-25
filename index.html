@@ -1523,7 +1523,7 @@ body.rest-on #nums{opacity:.55}
      잡는 순간 멈춤(돌던 것도 손가락에 붙음) · 손가락과 1:1 · 줄 자리마다 아주 살짝 붙는 자석 · 끝은 고무줄
      놓으면 손 속도로 도착점을 투영(iOS 감속률) → 가장 가까운 줄을 도착점으로 → 손 속도를 그대로 이어받아
      감속하다가 마지막은 스프링으로 딱 안착. 줄이 렌즈를 지날 때마다 틱(진동·소리). 운동은 놓는 순간 바로 바뀜 */
-  const WDEC = 0.997, WTH = 1.1;
+  const WDEC = 0.997, WTH = 1.35;
   let hapEl = null, tickAt = 0;
   function wTick() {
     const t = performance.now(); if (t - tickAt < 14) return; tickAt = t;
@@ -1597,8 +1597,8 @@ body.rest-on #nums{opacity:.55}
         for (let i = 0; i < n; i++) {
           const rem = w.tgt - w.off;
           /* 멀리 남았고 손 방향 그대로면: 마찰 감속(남은 거리에 비례하는 속도로 매끈하게). 가까워지면 스프링 */
-          if (Math.abs(rem) > 0.5 * w.h && rem * w.vel > 0) { const want = rem / (w.snap ? 0.06 : (o.glide || 0.3)) * sp;   /* o.glide: 작을수록 굴러가는 속도 빠름 */ w.vel += (want - w.vel) * Math.min(1, dt * (w.snap ? 55 : 9) * sp); }
-          else { const T = (w.snap ? 0.09 : 0.34) / sp, z = w.snap ? 0.88 : 0.78, k = (2 * Math.PI / T) ** 2, c = 4 * Math.PI * z / T; w.vel += (-k * -rem - c * w.vel) * dt; }
+          if (Math.abs(rem) > 0.5 * w.h && rem * w.vel > 0) { const want = rem / (w.snap ? 0.04 : (o.glide || 0.3)) * sp;   /* o.glide: 작을수록 굴러가는 속도 빠름 */ w.vel += (want - w.vel) * Math.min(1, dt * (w.snap ? 90 : Math.abs(w.vel) > Math.abs(want) ? 40 : 9) * sp); }   /* 원하는 속도보다 빠르면 세게 감속 — 아주 빠른 튕김도 도착 줄을 지나치지 않게 */
+          else { const T = (w.snap ? 0.06 : 0.34) / sp, z = w.snap ? 0.82 : 0.78, k = (2 * Math.PI / T) ** 2, c = 4 * Math.PI * z / T; w.vel += (-k * -rem - c * w.vel) * dt; }
           w.off += w.vel * dt;
         }
         w.paint();
@@ -1613,7 +1613,7 @@ body.rest-on #nums{opacity:.55}
   const rowH = (tr) => (tr && tr.firstElementChild ? tr.firstElementChild.offsetHeight : 0);
   let lwCommit = false, padRoll = false;
   const lw = mkWheel({
-    fit: true, spd: 1.3, vmax: 16, glide: 0.2, el: () => $('exTrack'), R: () => 6.5 * lw.h / WTH,   /* 13줄이 원통 ±WTH rad에 들어가는 반경 — 줄 높이에만 묶음(목록 높이는 아래 추세 내용·화면 높이 따라 켤 때마다 달라져서) */
+    fit: true, spd: 1.3, vmax: 30, glide: 0.12, el: () => $('exTrack'), R: () => 6.5 * lw.h / WTH,   /* 13줄이 원통 ±WTH rad에 들어가는 반경 — 줄 높이에만 묶음(목록 높이는 아래 추세 내용·화면 높이 따라 켤 때마다 달라져서) */
     commit: (st) => { lwCommit = true; const i0 = data.idx; goIdx(data.idx + st, st < 0 ? 'prev' : 'next', 0, true); lwCommit = false; if (data.idx !== i0) lw.moved = true; return st * lw.h; },
   });
   /* 운동이 바뀌면(패드·스와이프·목록) 바퀴도 같은 물리로 굴러서 지금 운동이 렌즈로 */
