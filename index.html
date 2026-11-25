@@ -1743,18 +1743,29 @@ body.rest-on #nums{opacity:.55}
       navArm = k; setTimeout(() => { if (navArm === k) navArm = ''; }, 2000);
       buzz(8); toast('세트 진행 중 · 한 번 더 누르면 ' + (d < 0 ? '이전' : '다음') + ' 운동으로'); return;
     }
-    navArm = ''; goStep(d);
+    navArm = ''; flushSwap(); const i0 = data.idx; goIdx(data.idx + d, d < 0 ? 'prev' : 'next', 0, true); if (data.idx !== i0) wTick();
   };
-  /* 누르고 있으면 연속 이동 (0.42초 뒤부터 0.22초마다) — 세트 진행 중 확인도 길게 누르면 통과 */
+  /* 누르고 있으면 연속 이동: 베지어 곡선으로 점점 빨라짐(피젯 스피너처럼) — 세트 진행 중 확인도 길게 누르면 통과 */
+  const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x → y (이분법) */
+    const f = (t, a, b) => 3 * a * t * (1 - t) * (1 - t) + 3 * b * t * t * (1 - t) + t * t * t;
+    let lo = 0, hi = 1, t = x; for (let k = 0; k < 20; k++) { t = (lo + hi) / 2; if (f(t, x1, x2) < x) lo = t; else hi = t; }
+    return f(t, y1, y2);
+  };
+  const NAV_EASE = bez(0.6, 0, 0.3, 1), NAV_SLOW = 300, NAV_FAST = 55, NAV_RAMP = 1800;
   [['kPrev', -1], ['kNext', 1]].forEach(([id, d]) => {
-    const b = $(id); let t1 = null, t2 = null;
-    const stop = () => { clearTimeout(t1); clearInterval(t2); t1 = t2 = null; b.classList.remove('pressed'); };
+    const b = $(id); let t = null, t0 = 0;
+    const stop = () => { clearTimeout(t); t = null; b.classList.remove('pressed'); };
+    const loop = () => {
+      padNav(d);
+      const p = Math.min(1, (performance.now() - t0) / NAV_RAMP);
+      t = setTimeout(loop, NAV_SLOW - (NAV_SLOW - NAV_FAST) * NAV_EASE(p));
+    };
     b.addEventListener('pointerdown', (e) => {
       if (b.disabled || (e.button && e.button !== 0)) return;
       e.preventDefault(); stop();
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       b.classList.add('pressed'); padNav(d);
-      t1 = setTimeout(() => { padNav(d); t2 = setInterval(() => padNav(d), 220); }, 420);
+      t = setTimeout(() => { t0 = performance.now(); loop(); }, 400);
     });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
     b.addEventListener('click', (e) => { if (e.detail === 0) padNav(d); });
