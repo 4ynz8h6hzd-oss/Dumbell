@@ -165,9 +165,14 @@ button{cursor:pointer}
 .xrow b.pc svg{display:block}
 .ti{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;flex:none}
 .ti-up{background:#E3F3E7;color:#248A3D}.ti-fast{background:#FDE7E5;color:#C4281C}.ti-flat{background:#FBF0D9;color:#9A6B00}.ti-down{background:#FCEBDD;color:#B05A00}.ti-hold{background:#F2F2F7;color:#8E8E93}.ti-cap{background:#ECE8FA;color:#6E56CF}
-.rtrend .wd{display:flex;flex-direction:column;gap:6px;flex:none}
-.rtrend .wd div{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;white-space:nowrap}
-.rtrend .wd small{width:44px;font-size:12px;font-weight:500;color:var(--sub)}
+.wd{display:flex;flex-direction:column;gap:6px}.rtrend .wd{flex:none}
+.wd div{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;white-space:nowrap}
+.wd small{width:44px;flex:none;font-size:12px;font-weight:500;color:var(--sub)}
+.nmore{font-size:13px;color:var(--sub)}
+.nmore summary{cursor:pointer;font-weight:600;padding:8px 0;list-style:none;color:var(--blue)}
+.nmore summary::-webkit-details-marker{display:none}
+.nmore summary::after{content:' ›'}.nmore[open] summary::after{content:' ‹'}
+.nmore>div{display:flex;flex-direction:column;gap:8px}
 .xrow b.pc.tk-hold{font-weight:500;color:var(--faint)}
 .xrow.ok b.pc{opacity:.75}
 .cal{margin:0;display:flex;flex-direction:column;gap:2px;font-size:12px;line-height:1.45;color:var(--sub);font-variant-numeric:tabular-nums}
@@ -833,7 +838,18 @@ body.rest-on #nums{opacity:.55}
         (others.length ? ' · 다른 후보 ' + others.join(', ') : '')]
     ];
     if (maxed) expl.push(['장비 한계', '가장 무거운 덤벨(' + MAX_W + 'kg)에서 ' + last.r + '회 · 무게로는 더 못 올려서 횟수만 늘고 있어요. 3초에 걸쳐 내리기나 바닥에서 1초 정지로 바꾸고 아래 \'기준 재설정\'을 누르면 다시 ' + RMIN + '~' + RMAX + '회 구간에서 진도를 잴 수 있어요']);
-    return { kind, w: pick.w, r: pick.r, T: pick.e, goal, step, mode, delta, why, note, prev: last, ago: agoTxt(hrs), expl, title: '1세트 (탑세트)', up, pen, hrs, dayF: day.f, fDrop, loadX, boDev, adjAct, pick0, atMax, maxed,
+    const plain = [
+      ['지난번', md(last.date) + ' 첫 세트 ' + last.w + 'kg × ' + last.r + '회' + (last.q === 1 ? ' · 여유 있었어요' : last.q === -1 ? ' · 한계였어요' : '') + (last.capped ? ' · 평소보다 너무 잘 나와서 일부만 인정했어요' : '')],
+      ['진도', mode === 'break' ? Math.round(hrs / 24) + '일 만이라 조금 가볍게 다시 시작해요'
+        : mode === 'deload' ? '2번 연속 목표를 못 채워서 한 번 가볍게 쉬어가요'
+        : mode === 'fatigue' ? (fDrop ? '지난번 뒤 세트들이 평소보다 많이 떨어졌어요 · 이번엔 유지' : '최근 일주일 운동량이 평소보다 많아요 · 이번엔 유지')
+        : mode === 'easy' ? '지난번 목표를 조금 못 채워서 천천히 올려요'
+        : lvlDays < 1 ? '이 기록을 막 세웠어요' : '이 기록을 ' + Math.round(lvlDays) + '일째 유지 중 · 오래 할수록 올릴 힘이 쌓여요'],
+      ['회복', pen > 0 && adjAct ? '지난 운동 후 아직 덜 쉬어서 살짝 낮췄어요' : pen > 0 ? '조금 덜 쉬었지만 무게는 그대로예요' : '충분히 쉬었어요'],
+      ['오늘 컨디션', day.f < 1 && adjAct ? '앞에서 한 운동 피로가 있어서 살짝 낮췄어요' : day.f < 1 ? '앞선 운동 피로가 조금 있지만 무게는 그대로예요' : '앞선 운동 영향 없어요'],
+      ['결정', maxed ? '가장 무거운 덤벨이라 횟수로만 진도를 내요 · ' + pick.w + 'kg × ' + pick.r + '회' : up ? '한 단계 올려서 ' + pick.w + 'kg × ' + pick.r + '회' : '아직 올릴 만큼 쌓이지 않아서 ' + pick.w + 'kg × ' + pick.r + '회 그대로']
+    ];
+    return { kind, w: pick.w, r: pick.r, T: pick.e, goal, step, mode, delta, why, note, prev: last, ago: agoTxt(hrs), expl, plain, title: '1세트 (탑세트)', up, pen, hrs, dayF: day.f, fDrop, loadX, boDev, adjAct, pick0, atMax, maxed,
       last: [lastLine, others.length ? '다른 후보: ' + others.join(', ') : ''].filter(Boolean).join('  ·  ') };
   }
 
@@ -887,15 +903,23 @@ body.rest-on #nums{opacity:.55}
       ['방식', type === 'i' ? '고립 운동 → 무게를 낮춰 1세트 횟수(' + top.r + '회) 이상 · 천천히, 근육 수축에 집중 (MMC)' : type === 'c' ? '복합 운동 → 무게 유지, 횟수가 ' + RMIN + '회 아래로 떨어질 때만 1kg 내림' : '초경량 운동 → 무게 유지, 횟수만 조정'],
       ['결정', '예상 추정 10RM ' + f1(capAt(tUse)) + 'kg에서 가능한 횟수 → ' + p.w + 'kg × ' + p.r + '회 · 더 되면 1회 남을 때까지 하세요. 끝나고 \'여유·딱 맞음·한계\'를 눌러 주면 다음 세트와 다음 세션에 반영돼요']
     ];
+    const plain = [
+      ['직전 세트', (k - 1) + '세트 ' + last.w + 'kg × ' + last.r + '회' + (vs === null ? '' : vs < -1 ? ' · 예상보다 힘들었어요' : vs > 1 ? ' · 예상보다 잘 됐어요' : ' · 예상대로예요')],
+      ['휴식', el < rst ? '아직 쉬는 중 · 휴식은 끝까지 채우세요' : '휴식 끝 · 시작하세요'],
+      ['방식', type === 'i' ? '고립 운동이라 무게를 낮춰서라도 1세트만큼 · 천천히 근육 수축에 집중' : type === 'c' ? '복합 운동이라 무게 유지 · 횟수가 너무 줄 때만 1kg 내려요' : '가벼운 운동이라 무게 유지 · 횟수만 조정'],
+      ['결정', p.w + 'kg × ' + p.r + '회 · 더 되면 1회 남을 때까지 하세요. 끝나고 여유·딱 맞음·한계를 눌러 주면 다음에 반영돼요']
+    ];
     const why = '직전 ' + last.w + '×' + last.r + (vs !== null && Math.abs(vs) > 1 ? ' (예상 ' + sgn(vs) + '%)' : '') + ' → 휴식 ' + secTxt(tUse) + ' 뒤 ' + Math.round(rec) + '% → ' + p.w + '×' + p.r;
     const note = '';   /* '지금 시작하면 …'은 휴식을 줄이라는 신호로 읽혀서 화면에 띄우지 않음 */
-    return { kind, w: p.w, r: p.r, step: pct(e10(p.w, p.r), le), delta, why, note, expl, title: k + '세트 (백오프)', bo: true, cap: capAt(tUse), capEl: capAt(el), carry, last: '',
+    return { kind, w: p.w, r: p.r, step: pct(e10(p.w, p.r), le), delta, why, note, expl, plain, title: k + '세트 (백오프)', bo: true, cap: capAt(tUse), capEl: capAt(el), carry, last: '',
       vs, el, rst, early, rec, k, prevSet: last };
   }
   function suggestNow(ex) {
     const ts = todaySets(ex);
     return isBw(ex) || !ts.length || ts.length >= nSets(ex) ? suggest(ex) : backoff(ex, ts, Date.now());
   }
+  const plainHtml = (sg) => '<ol class="steps">' + (sg.plain || sg.expl).map((x) => '<li><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></li>').join('') + '</ol>';
+  const numBox = (inner, lab) => '<details class="nmore"><summary>' + (lab || '계산 숫자 보기') + '</summary><div>' + inner + '</div></details>';
   const explHtml = (sg) => '<ol class="steps">' + sg.expl.map((x) => '<li><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></li>').join('') + '</ol>';
 
   /* ---------- trend (estimated 10RM) ---------- */
@@ -921,11 +945,11 @@ body.rest-on #nums{opacity:.55}
       if (m30.length >= 2) { let ax = 0, ay = 0, nu = 0, de = 0; m30.forEach((p) => { ax += p.x; ay += p.y; }); ax /= m30.length; ay /= m30.length;
         m30.forEach((p) => { nu += (p.x - ax) * (p.y - ay); de += (p.x - ax) ** 2; }); if (de) mo = nu / de * 30 / ay * 100; }
       const msg = {
-        fast: '주의: 정상 속도는 주 1~3%인데 이건 실제 근력이 늘었다고 보기 어려운 속도예요. 시작 10RM이 너무 가볍게 잡혔거나, 반동·자세 변화나 기록 실수일 수 있어요. 무게를 확인해 보세요.',
-        up: '건강한 속도(주 1~3%)로 꾸준히 늘고 있어요.',
+        fast: '실제 근력이 늘었다고 보기엔 너무 빨라요. 시작 무게가 가볍게 잡혔거나, 반동·자세가 바뀌었거나, 기록 실수일 수 있어요. 무게를 확인해 보세요.',
+        up: '건강한 속도로 꾸준히 늘고 있어요.',
         flat: '최근 기록이 제자리예요. 잠, 식사, 쉬는 날을 점검해 보세요.',
         down: '최근 기록이 내려가요. 피로가 쌓였을 수 있어요. 목표를 계속 못 채우면 앱이 무게를 낮춰요.' }[kind] +
-        (days < 14 ? ' 기록이 ' + days + '일치라 속도는 참고용이에요.' : '');
+        (lp.x - pts[0].x < 14 ? ' 기록이 아직 2주가 안 돼서 참고만 하세요.' : '');
       ev = { kind, label: { fast: '빠른 상승 · 확인', up: '향상 중', flat: '정체', down: '하락' }[kind], slope, mx, my, wk, mo, moOk: m30.length >= 2 && lp.x - m30[0].x >= 14,
         short: f1(lp.y) + 'kg · 주 ' + pctI(wk),
         msg,
@@ -949,8 +973,8 @@ body.rest-on #nums{opacity:.55}
   /* 오버슈트 한 줄: 목표 경로 대비 얼마나 앞서/뒤처졌나 */
   function calLine(ev) {
     const c = ev.cal; if (!c) return '';
-    const o = c.over, tag = o >= 3 ? '⚠ 목표 경로보다 ' + sgn(o) + '% 앞섬 · 시작 기준이 가벼웠거나 기록 확인 필요' : o <= -3 ? '목표 경로보다 ' + sgn(o) + '% 뒤처짐' : '목표 경로대로 가는 중';
-    return '<span class="cal"><span>시작 기준 ' + c.start + 'kg → 첫 기록 ' + f1(c.first) + ' → 지금 <b>' + f1(c.now) + '</b> · 목표 경로 ' + f1(c.exp) + '</span><em class="' + (o >= 3 ? 'tk-fast' : o <= -3 ? 'tk-down' : 'tk-up') + '">' + tag + '</em></span>';
+    const o = c.over, ff = ev.kind === 'fast', tag = o >= 3 && ff ? '⚠ 목표 경로보다 ' + sgn(o) + '% 앞섬 · 시작 기준이 가벼웠거나 기록 확인 필요' : o >= 3 ? '목표 경로보다 ' + sgn(o) + '% 앞섬 · 건강한 속도라 괜찮아요' : o <= -3 ? '목표 경로보다 ' + sgn(o) + '% 뒤처짐' : '목표 경로대로 가는 중';
+    return '<span class="cal"><span>시작 기준 ' + c.start + 'kg → 첫 기록 ' + f1(c.first) + ' → 지금 <b>' + f1(c.now) + '</b> · 목표 경로 ' + f1(c.exp) + '</span><em class="' + (o >= 3 && ff ? 'tk-fast' : o >= 3 ? 'tk-up' : o <= -3 ? 'tk-down' : 'tk-up') + '">' + tag + '</em></span>';
   }
   const TI = { up: 'M7 17L17 7M9 7h8v8', fast: 'M12 4L2.5 20h19zM12 10v4M12 17h.01', flat: 'M5 12h14M13 6l6 6-6 6', down: 'M7 7l10 10M17 9v8H9', hold: 'M7 12h.01M12 12h.01M17 12h.01', cap: 'M5 5h14M12 19V9M8 13l4-4 4 4' };
   const tIcon = (k) => '<span class="ti ti-' + k + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + TI[k] + '"/></svg></span>';
@@ -959,16 +983,16 @@ body.rest-on #nums{opacity:.55}
   const MO_TXT = { fast: '너무 빨라요 · 기록 확인', up: '향상 중', flat: '정체', down: '하락 중' };
   function wordsHtml(ev) {
     if (!ev.stats) return '<div>' + tIcon(ev.kind === 'up' ? 'up' : 'hold') + esc(ev.short) + '</div>';
-    const mk = wkKind(ev.mo * 7 / 30), c = ev.cal, o = c ? c.over : 0, ck = o >= 3 ? 'fast' : o <= -3 ? 'down' : 'up';
+    const mk = wkKind(ev.mo * 7 / 30), c = ev.cal, o = c ? c.over : 0, ff = ev.kind === 'fast', ck = o >= 3 && ff ? 'fast' : o <= -3 ? 'down' : 'up';
     return '<div><small>이번 주</small>' + tIcon(wkKind(ev.wk)) + WK_TXT[wkKind(ev.wk)] + '</div>' +
       '<div><small>이번 달</small>' + (ev.moOk ? tIcon(mk) + MO_TXT[mk] : tIcon('hold') + '2주 더 쌓이면 판단') + '</div>' +
-      (c ? '<div><small>목표</small>' + tIcon(ck) + (o >= 3 ? '목표보다 앞서요 · 기록 확인' : o <= -3 ? '목표보다 조금 느려요' : '목표대로 가는 중') + '</div>' : '');
+      (c ? '<div><small>목표</small>' + tIcon(ck) + (o >= 3 && ff ? '목표보다 너무 앞서요 · 기록 확인' : o >= 3 ? '목표보다 빨리 늘고 있어요' : o <= -3 ? '목표보다 조금 느려요' : '목표대로 가는 중') + '</div>' : '');
   }
   const COL = { cap: '#6E56CF', fast: '#C4281C', up: '#248A3D', flat: '#B07A00', down: '#C26A00', hold: '#8E8E93' };
   /* status block: verdict sentence + 3 numbers + speed scale */
   function verdictHtml(t) {
     const ev = t.ev;
-    let h = '<p class="why">' + esc(ev.msg) + '</p>';
+    let h = '';
     if (!ev.stats) return h;
     h += '<div class="vstats two">' + ev.stats.map((x) => '<div><span>' + esc(x[0]) + '</span><b>' + esc(x[1]) + '</b></div>').join('') + '</div>';
     const lo = -3, hi = 10, pos = (v) => Math.min(98.5, Math.max(1.5, (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * 100)).toFixed(1);
@@ -1291,16 +1315,18 @@ body.rest-on #nums{opacity:.55}
   function openToday() {
     const t = todayStat(), cls = (r) => (r.max > JUMP * 100 || r.dev > 5 ? 'warn' : r.dev < -4 || (r.rest !== null && r.rest < t.plan * 0.8) ? 'neg' : r.dev > 1 ? 'pos' : 'neu');
     $('todayBody').innerHTML = '<p class="why c-' + t.st[0] + '" style="font-weight:800;font-size:16px">' + esc(t.st[1]) + '</p>' +
-      (t.rows.length ? '<div class="trows">' + t.rows.map((r) => '<div class="trow"><b>' + esc(EX[r.e].short) + ' · ' + setsTxt(r.xs) + '</b><em class="c-' + cls(r) + '">' + (r.dev === null ? '—' : sgn(r.dev) + '%') + '</em><small>' +
-        (r.rest !== null ? '평균 휴식 ' + secTxt(r.rest) + (r.rest < t.plan * 0.8 ? ' · 짧음' : '') : '1세트만') + (r.max > JUMP * 100 ? ' · 예상보다 ' + sgn(r.max) + '% 세트 있음' : '') + '</small></div>').join('') + '</div>' : '<p class="why">아직 기록이 없어요.</p>') +
-      '<p class="trend-more">% = 그 세트를 시작할 때 앱이 예상한 추정 10RM 대비 실제 결과의 평균 · ±4% 안은 컨디션 차이 · +5% 넘게 오르면 무리 주의, 세트 하나라도 +10%를 넘으면 기록 확인 · 휴식이 설정(' + secTxt(t.plan) + ')의 80%보다 짧으면 휴식 부족</p>';
+      (t.rows.length ? '<div class="trows">' + t.rows.map((r) => '<div class="trow"><b>' + esc(EX[r.e].short) + ' · ' + setsTxt(r.xs) + '</b><em class="c-' + cls(r) + '">' + (r.dev === null ? '—' : { warn: '확인 필요', neg: r.dev < -4 ? '힘든 날' : '휴식 짧음', pos: '잘 됨', neu: '예상대로' }[cls(r)]) + '</em><small>' +
+        (r.rest !== null ? (r.rest < t.plan * 0.8 ? '휴식이 짧았어요' : '휴식 충분') : '1세트만') + (r.max > JUMP * 100 ? ' · 너무 높게 나온 세트가 있어요 · 반동·기록 확인' : r.dev > 5 ? ' · 예상보다 훨씬 잘 됐어요 · 무리 주의' : '') + '</small></div>').join('') + '</div>' : '<p class="why">아직 기록이 없어요.</p>') +
+      '<p class="trend-more">앱이 예상한 것과 실제로 한 결과를 비교해요. 훨씬 높으면 반동이나 기록 실수, 낮으면 피로나 휴식 부족일 수 있어요.</p>' +
+      (t.rows.length ? numBox('<p class="trend-more">' + t.rows.map((r) => esc(EX[r.e].short) + ' ' + (r.dev === null ? '—' : sgn(r.dev) + '%') + (r.rest !== null ? ' · 휴식 ' + secTxt(r.rest) : '')).join('<br>') + '</p>' +
+      '<p class="trend-more">% = 그 세트를 시작할 때 앱이 예상한 추정 10RM 대비 실제 결과의 평균 · ±4% 안은 컨디션 차이 · +5% 넘게 오르면 무리 주의, 세트 하나라도 +10%를 넘으면 기록 확인 · 휴식이 설정(' + secTxt(t.plan) + ')의 80%보다 짧으면 휴식 부족</p>') : '');
     $('todayDlg').showModal();
   }
   function openWhy() {
     const sg = whySg; if (!sg || !sg.expl) return;
     $('whyT').textContent = EX[curEx()].short + ' · ' + sg.title;
-    $('whyBody').innerHTML = explHtml(sg) +
-      '<p class="trend-more">추정 10RM = 무게 × (30 + 횟수) ÷ 40 · 1세트는 다음 세션 진도의 기준, 2·3세트는 직전 세트 실제 결과와 실제 휴식 시간으로 매번 다시 계산 · 오늘 예상보다 못 한 만큼 같은 근육 운동은 100%, 다른 운동은 50% 반영(최대 −6%)</p>';
+    $('whyBody').innerHTML = plainHtml(sg) + numBox(explHtml(sg) +
+      '<p class="trend-more">추정 10RM = 무게 × (30 + 횟수) ÷ 40 · 1세트는 다음 세션 진도의 기준, 2·3세트는 직전 세트 실제 결과와 실제 휴식 시간으로 매번 다시 계산 · 오늘 예상보다 못 한 만큼 같은 근육 운동은 100%, 다른 운동은 50% 반영(최대 −6%)</p>');
     const ex = curEx();
     $('whyBody').insertAdjacentHTML('beforeend', isBw(ex) ? '' : '<button type="button" class="btn wide" id="resetBtn" style="margin-top:4px">기술·자세를 바꿨어요 · 기준 재설정</button>');
     const rb = $('resetBtn');
@@ -1324,9 +1350,9 @@ body.rest-on #nums{opacity:.55}
   function sgDetail(ex) {
     if (isBw(ex)) return '';
     const sg = suggest(ex);
-    if (sg.expl) return '<div class="sgx"><b>오늘 1세트 추천 ' + sg.w + 'kg × ' + sg.r + '회는 이렇게 나왔어요</b>' + explHtml(sg) + '</div>';
+    if (sg.expl) return '<div class="sgx"><b>오늘 1세트 추천 ' + sg.w + 'kg × ' + sg.r + '회는 이렇게 나왔어요</b>' + plainHtml(sg) + numBox(explHtml(sg), '추천 계산 숫자 보기') + '</div>';
     return '<div class="sgx"><b>오늘 추천 ' + sg.w + 'kg × ' + sg.r + '회는 이렇게 나왔어요</b><p>' + esc(sg.why) + '</p>' + (sg.last ? '<p>' + esc(sg.last) + '</p>' : '') +
-      '<p>주 ' + RATE * 100 + '% 속도 기준 · 지난 운동 후 ' + REC_H + '시간 안 됐으면 덜 회복된 만큼 목표를 살짝 낮추고, 세트마다 횟수가 평소보다 많이 줄었거나 최근 7일 운동량이 평소의 1.5배를 넘으면 이번엔 유지해요.</p></div>';
+      numBox('<p>주 ' + RATE * 100 + '% 속도 기준 · 지난 운동 후 ' + REC_H + '시간 안 됐으면 덜 회복된 만큼 목표를 살짝 낮추고, 세트마다 횟수가 평소보다 많이 줄었거나 최근 7일 운동량이 평소의 1.5배를 넘으면 이번엔 유지해요.</p>', '추천 계산 숫자 보기') + '</div>';
   }
 
   /* left page: exercise map + big trend */
@@ -1338,7 +1364,7 @@ body.rest-on #nums{opacity:.55}
     /* C: 한 줄로 접히는 추세 (1안 가로·2안) */
     $('lpTrend').innerHTML = '<button type="button" class="lt-line" id="ltBtn" aria-expanded="' + trendOpen + '"><span class="r1"><b class="tk-' + ev.kind + '">' + head + '</b>' + CHEV_D + '</span>' +
       '<span class="r2">' + (t.bw ? '' : chart(t, false)) + '<span>' + esc(ev.wk !== undefined ? WK_TXT[wkKind(ev.wk)] : ev.short) + '</span></span></button>' +
-      (trendOpen ? '<div class="lt-body">' + calLine(ev) + verdictHtml(t) + chart(t, true) + '</div>' : '');
+      (trendOpen ? '<div class="lt-body"><div class="wd">' + wordsHtml(ev) + '</div><p class="why">' + esc(ev.msg) + '</p>' + chart(t, true) + (ev.stats ? numBox(calLine(ev) + verdictHtml(t), '추세 숫자 보기') : '') + '</div>' : '');
     /* B: 오른쪽 카드 (1안 세로) */
     $('rTrend').innerHTML = '<span class="r1"><b class="tk-' + ev.kind + '">' + head + '</b><span>자세히 ›</span></span>' +
       '<span class="r2"><span class="wd">' + wordsHtml(ev) + '</span>' + (t.bw ? '' : chart(t, false)) + '</span>';
@@ -1471,7 +1497,7 @@ body.rest-on #nums{opacity:.55}
     if (n + 1 === N) { render(); showDone(ex, sg); return; }
     { const pw = cur.w, pr = cur.r; sfx(n === 0 ? 'set1' : 'set2'); prefill(); render(); bumpNums(pw, pr); }
     const jp = !bw && s.P > 0 ? pct(e10(s.w, s.r), s.P) : 0;
-    toast(jp > JUMP * 100 ? '⚠ 예상보다 ' + sgn(jp) + '% · 기록을 확인해 주세요' : restShort ? '휴식이 짧았어요 · 다음 세트는 끝까지 쉬세요' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
+    toast(jp > JUMP * 100 ? '⚠ 예상보다 너무 높아요 · 기록을 확인해 주세요' : restShort ? '휴식이 짧았어요 · 다음 세트는 끝까지 쉬세요' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
   });
   /* 세트 진행 중(1세트 이상, 마지막 전)엔 «·» 한 번 더 눌러야 이동: kg 버튼 옆이라 잘못 눌림 방지 */
   let navArm = '';
@@ -1519,7 +1545,7 @@ body.rest-on #nums{opacity:.55}
       const got = eff(ts[0]);
       const T0 = typeof ts[0].T === 'number' ? ts[0].T : sg.T;
       ok = !(T0 > got + 1e-9);
-      cmp = '추정 10RM ' + f1(base) + ' → ' + f1(got) + 'kg (' + sgn(pct(got, base)) + '%) · ' + (ok ? '목표 달성 ✓' : '목표 ' + f1(T0) + 'kg에 조금 못 미침 → 다음엔 천천히');
+      cmp = (got > base * 1.0005 ? '지난번보다 올랐어요' : got < base * 0.9995 ? '지난번보다 조금 내려갔어요' : '지난번과 같아요') + ' · ' + (ok ? '목표 달성 ✓' : '목표에 조금 못 미쳤어요 → 다음엔 천천히');
     }
     const ni = nextIncomplete(data.idx), addAdv = (() => { const a = setAdvice(ex); return a && a.kind === 'add' ? a : null; })();
     /* 결정할 게 없으면(세트 추가 추천 없음 · 마지막 운동 아님) 완료 화면 없이 바로 다음 운동으로, 결과는 알림 한 줄 */
@@ -1569,11 +1595,11 @@ body.rest-on #nums{opacity:.55}
       const s1 = suggest(ex), day = dayFatigue(ex);
       const avg = xs.reduce((a, x) => a + dv(x), 0) / n;
       if (worst >= 0 && avg >= 1 && best <= JUMP * 100 && s1.mode !== 'fatigue' && s1.mode !== 'deload' && !(s1.pen > 0.004) && day.f === 1 && xs[n - 1].r >= RMIN + 1)
-        return { kind: 'add', why: (shortOk ? '휴식이 짧았는데도 ' : '') + '3세트 모두 예상보다 좋음(평균 ' + sgn(avg) + '%) · 회복 충분' };
+        return { kind: 'add', why: (shortOk ? '휴식이 짧았는데도 ' : '') + '3세트 모두 예상보다 좋았고 회복도 충분해요' };
     }
     if (n === N - 1 && n >= 2) {
       const l = dv(xs[n - 1]), b = backoff(ex, xs, Date.now() + 1e9);
-      if (l < -5) return { kind: 'skip', why: '직전 세트 예상보다 ' + sgn(l) + '% · 더 하면 피로만 쌓여요' };
+      if (l < -5) return { kind: 'skip', why: '직전 세트가 예상보다 많이 힘들었어요 · 더 하면 피로만 쌓여요' };
       if (b.r < RMIN && b.w <= MIN_W) return { kind: 'skip', why: '다음 세트 예상 ' + b.r + '회 · 효과보다 피로가 커요' };
     }
     return null;
@@ -1615,9 +1641,9 @@ body.rest-on #nums{opacity:.55}
   function openTrend() {
     const ex = curEx(), t = trend(ex);
     $('trendT').textContent = EX[ex].short + ' · 8주 추세';
-    $('trendBody').innerHTML = '<p class="delta tk-' + t.ev.kind + '">' + esc(t.ev.label) + '</p>' + calLine(t.ev) + verdictHtml(t) + chart(t, true) + sgDetail(ex) +
-      (t.bw ? '' : '<p class="trend-more">추정 10RM = 그날 첫 세트 무게 × (30 + 횟수) ÷ 40<br>판정: 최근 ' + EVAL_N + '세션 추세선(점선) 기울기 · 주당 +' + FAST + '% 이상 비정상 상승(주의), +' + THRESH + '% 이상 향상, −' + THRESH + '% 미만 하락, 그 사이 정체' +
-        (t.pts.length ? '<br>최근: ' + t.pts.slice(-4).map((p) => md(p.date) + ' ' + p.w + '×' + p.r + '=' + f1(p.y)).join(' · ') : '') + '</p>');
+    $('trendBody').innerHTML = '<p class="delta tk-' + t.ev.kind + '">' + esc(t.ev.label) + '</p><div class="wd">' + wordsHtml(t.ev) + '</div><p class="why">' + esc(t.ev.msg) + '</p>' + chart(t, true) + sgDetail(ex) +
+      (t.bw ? '' : numBox(calLine(t.ev) + verdictHtml(t) + '<p class="trend-more">추정 10RM = 그날 첫 세트 무게 × (30 + 횟수) ÷ 40<br>판정: 최근 ' + EVAL_N + '세션 추세선(점선) 기울기 · 주당 +' + FAST + '% 이상 비정상 상승(주의), +' + THRESH + '% 이상 향상, −' + THRESH + '% 미만 하락, 그 사이 정체' +
+        (t.pts.length ? '<br>최근: ' + t.pts.slice(-4).map((p) => md(p.date) + ' ' + p.w + '×' + p.r + '=' + f1(p.y)).join(' · ') : '') + '</p>', '추세 숫자 보기'));
     $('trendDlg').showModal();
   }
   $('trend').addEventListener('click', openTrend);
@@ -1866,6 +1892,7 @@ body.rest-on #nums{opacity:.55}
   const DOW = ['일', '월', '화', '수', '목', '금', '토'];
   const dsOf = (dn) => { const d = new Date(dn * 864e5); return d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()); };
   const wdOf = (s) => DOW[new Date(dayNum(s) * 864e5).getUTCDay()];
+  const chIcon = (v) => (v == null ? '<em class="zero">' + '—' + '</em>' : tIcon(v > 0.05 ? 'up' : v < -0.05 ? 'down' : 'flat'));
   const tone = (v) => (v > 0.05 ? 'pos' : v < -0.05 ? 'neg' : 'zero');
   const CHEV = '<svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
   function exHist(ex) {
@@ -1921,7 +1948,7 @@ body.rest-on #nums{opacity:.55}
   }
   function hReadout(p, ex) {
     if (!p) return '';
-    const ch = p.prev ? sgn(pct(p.y, p.prev.y)) + '% (지난 세션 대비)' : '첫 기록';
+    const cv = p.prev ? pct(p.y, p.prev.y) : 0, ch = p.prev ? (cv > 0.05 ? '지난번보다 올랐어요' : cv < -0.05 ? '지난번보다 내려갔어요' : '지난번과 같아요') : '첫 기록';
     return '<b>' + md(p.date) + ' (' + wdOf(p.date) + ') · 추정 10RM ' + f1(p.y) + 'kg' + (p.pr ? ' <span class="pr">최고</span>' : '') + '</b>' +
       '<span>' + p.sets.map((s) => s.w + '×' + s.r).join(' · ') + '  ·  ' + ch + (p.miss ? ' · 목표 ' + f1(p.T) + ' 미달' : '') + '</span>';
   }
@@ -1947,12 +1974,12 @@ body.rest-on #nums{opacity:.55}
       } else {
         const l = all[all.length - 1], ch = pts.length >= 2 ? pct(pts[pts.length - 1].y, pts[0].y) : null;
         sub = '10RM ' + f1(l.y) + 'kg · 최근 ' + l.w + '×' + l.r;
-        tail = '<em class="' + (ch == null ? 'zero' : tone(ch)) + '">' + (ch == null ? '—' : sgn(ch) + '%') + '</em>';
+        tail = chIcon(ch);
         sp = spark(pts);
       }
       h += '<button type="button" class="ov" data-ex="' + ex + '">' + icon(ex, 32, '') + '<span><b>' + esc(EX[ex].name) + '</b><small>' + esc(sub) + '</small></span>' + sp + tail + '</button>';
     });
-    return h + '</div><p class="trend-more">오른쪽 % = 선택한 기간의 첫 세션 → 마지막 세션 추정 10RM 변화. 맨몸 운동은 완료 횟수예요. 운동을 누르면 그래프와 세트별 기록이 보여요.</p>';
+    return h + '</div><p class="trend-more">오른쪽 아이콘 = 선택한 기간 동안 올랐는지(↗), 그대로인지(→), 내려갔는지(↘). 맨몸 운동은 완료 횟수예요. 운동을 누르면 그래프와 세트별 기록이 보여요.</p>';
   }
 
   function histDetail() {
@@ -1971,8 +1998,8 @@ body.rest-on #nums{opacity:.55}
       const ch = pts.length >= 2 ? pct(pts[pts.length - 1].y, pts[0].y) : null, vs = pct(last.y, EX[ex].start);
       h += '<div class="tiles">' +
         '<div class="tile"><small>현재 추정 10RM</small><b>' + f1(last.y) + '<u>kg</u></b><span>' + last.w + 'kg × ' + last.r + '회</span></div>' +
-        '<div class="tile"><small>기간 변화</small><b class="' + (ch == null ? 'zero' : tone(ch)) + '">' + (ch == null ? '—' : sgn(ch) + '%') + '</b><span>' + (pts.length >= 2 ? f1(pts[0].y) + ' → ' + f1(pts[pts.length - 1].y) : '2세션부터') + '</span></div>' +
-        '<div class="tile"><small>최고 기록</small><b>' + f1(best) + '<u>kg</u></b><span>시작 ' + EX[ex].start + 'kg 대비 ' + sgn(vs) + '%</span></div>' +
+        '<div class="tile"><small>기간 변화</small><b class="' + (ch == null ? 'zero' : tone(ch)) + '">' + (ch == null ? '—' : ch > 0.05 ? '올랐어요' : ch < -0.05 ? '내려갔어요' : '그대로') + '</b><span>' + (pts.length >= 2 ? f1(pts[0].y) + ' → ' + f1(pts[pts.length - 1].y) : '2세션부터') + '</span></div>' +
+        '<div class="tile"><small>최고 기록</small><b>' + f1(best) + '<u>kg</u></b><span>' + (vs > 0.05 ? '시작 ' + EX[ex].start + 'kg보다 높아요' : '시작 ' + EX[ex].start + 'kg 그대로') + '</span></div>' +
         '<div class="tile"><small>세션</small><b>' + pts.length + '<u>회</u></b><span>전체 ' + all.length + '회</span></div></div>';
       h += pts.length ? '<div class="cbox" id="hcBox"><div class="ro"></div><div class="cw"></div><div class="lgd"><span><i style="background:#0A66D1"></i>첫 세트 추정 10RM</span><span><i style="background:#fff;box-shadow:inset 0 0 0 2px #C25E00"></i>목표 미달</span><span>그래프를 눌러 날짜별로 보기</span></div></div>'
         : '<p class="empty">이 기간에는 기록이 없어요. 기간을 넓혀 보세요.</p>';
@@ -1985,9 +2012,9 @@ body.rest-on #nums{opacity:.55}
         const ch = p.prev ? pct(p.y, p.prev.y) : null;
         h += '<button type="button" class="srow" data-k="' + k + '"><span class="d"><b>' + md(p.date) + '</b><small>' + wdOf(p.date) + '</small></span>' +
           '<span class="s">' + p.sets.map((s) => s.w + '×' + s.r).join(' · ') + (typeof p.T === 'number' ? '<small class="' + (p.miss ? 'miss' : '') + '">목표 ' + f1(p.T) + (p.miss ? ' · 미달' : ' ✓') + '</small>' : '<small>&nbsp;</small>') + '</span>' +
-          '<span class="v"><b>' + f1(p.y) + (p.pr ? '<span class="pr">최고</span>' : '') + '</b><small class="' + (ch == null ? 'zero' : tone(ch)) + '">' + (ch == null ? '첫 기록' : sgn(ch) + '%') + '</small></span></button>';
+          '<span class="v"><b>' + f1(p.y) + (p.pr ? '<span class="pr">최고</span>' : '') + '</b>' + (ch == null ? '<small class="zero">첫 기록</small>' : chIcon(ch)) + '</span></button>';
       }
-      h += '</div><p class="trend-more">추정 10RM = 그날 첫 세트 무게 × (30 + 횟수) ÷ 40 · % 는 지난 세션 대비</p>';
+      h += '</div><p class="trend-more">추정 10RM = 그날 첫 세트 무게 × (30 + 횟수) ÷ 40 · 아이콘은 지난 세션보다 올랐는지·그대로인지·내려갔는지</p>';
     }
     return h;
   }
@@ -2033,7 +2060,7 @@ body.rest-on #nums{opacity:.55}
         h += '<div class="dbody">' + exs.map((e) => {
           const p = info[e + ds], list = ss.filter((s) => s.ex === e).sort((a, b) => a.ts - b.ts);
           let tail = '';
-          if (!isBw(e) && p) { const ch = p.prev ? pct(p.y, p.prev.y) : null; tail = '<em class="' + (ch == null ? 'zero' : tone(ch)) + '">' + (ch == null ? '첫 기록' : sgn(ch) + '%') + '</em>'; }
+          if (!isBw(e) && p) { const ch = p.prev ? pct(p.y, p.prev.y) : null; tail = ch == null ? '<em class="zero">첫 기록</em>' : chIcon(ch); }
           return '<button type="button" class="drow" data-ex="' + e + '">' + icon(e, 24, '') + '<span>' + esc(EX[e].short) + (p && p.pr ? '<span class="pr">최고</span>' : '') + '<small>' + (isBw(e) ? list.length + '세트 완료' : list.map((s) => s.w + '×' + s.r).join(' · ')) + '</small></span>' + tail + '</button>';
         }).join('') + '</div>';
       }
