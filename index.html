@@ -223,6 +223,26 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .rule{font-size:13px;font-variant-numeric:tabular-nums}
 @media (max-height:700px){.mood b{font-size:19px}.mood span{font-size:13px}}
 @media (max-height:620px){.mood b{font-size:18px}.mood span{display:none}}
+.today{flex:none;margin:0 24px 8px;display:flex;align-items:center;gap:10px;padding:10px 14px;border:0;border-radius:14px;background:var(--plate);text-align:left;color:var(--ink);font:inherit;transition:background-color .5s,color .5s}
+.today>i{flex:none;width:8px;height:8px;border-radius:50%;background:currentColor;animation:breathe 2.8s ease-in-out infinite}
+.today b{flex:1;min-width:0;font-size:15px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.today span{flex:none;font-size:12px;font-weight:600;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+.today.pos{color:#1E6E31;background:#EEF7F0}.today.neu{color:#0A4FA3;background:#EEF4FC}.today.neg{color:#9A3D00;background:#FDF2EA}.today.warn{color:#B0241A;background:#FCEDEC}
+.today.pop{animation:moodpop .5s ease-out}
+.trows{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}
+.trow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-bottom:.5px solid var(--line);font-size:13px}
+.trow b{font-weight:700}.trow em{font-style:normal;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
+.trow small{grid-column:1/-1;color:var(--sub);font-size:12px;font-variant-numeric:tabular-nums}
+.c-pos{color:#1E6E31}.c-neu{color:#0A4FA3}.c-neg{color:#9A3D00}.c-warn{color:#B0241A}
+.bump-up{animation:bumpUp .75s cubic-bezier(.2,.9,.3,1.2)}.bump-dn{animation:bumpDn .75s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes bumpUp{0%{transform:translateY(.25em) scale(.85);opacity:.3;color:#248A3D}45%{transform:translateY(-.06em) scale(1.08);opacity:1;color:#248A3D}100%{transform:none}}
+@keyframes bumpDn{0%{transform:translateY(-.25em) scale(.85);opacity:.3;color:#C26A00}45%{transform:translateY(.06em) scale(1.08);opacity:1;color:#C26A00}100%{transform:none}}
+.mood.pop{animation:moodin .55s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes moodin{0%{transform:translateY(10px);opacity:0}60%{transform:translateY(-2px);opacity:1}100%{transform:none}}
+@media (max-height:620px){.today{padding:7px 12px;margin-bottom:4px}.today span{display:none}}
+.hero>*{flex:none}
+.hero.t1 .rule,.hero.t1 .mood span{display:none}
+.hero.t2 .why{display:none}
 .why[role=button]{cursor:pointer}.why .more{color:var(--blue);white-space:nowrap}
 .steps{margin:6px 0 12px;padding:0;list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:10px}
 .steps li{counter-increment:st;display:grid;grid-template-columns:22px 1fr;column-gap:8px;font-size:13px;line-height:1.5;color:var(--sub)}
@@ -436,6 +456,7 @@ body.rest-on #nums{opacity:.55}
       <p class="rule" id="rule"></p>
     </section>
 
+    <button type="button" class="today" id="today" aria-label="오늘 운동 현황 보기"></button>
     <button type="button" class="trend" id="trend"></button>
     <button type="button" class="rtrend" id="rTrend"></button>
 
@@ -512,6 +533,13 @@ body.rest-on #nums{opacity:.55}
   </div>
 </dialog>
 
+<dialog id="todayDlg" aria-labelledby="todayT">
+  <div class="dlg">
+    <h2 id="todayT">오늘 운동 현황</h2>
+    <div id="todayBody"></div>
+    <button type="button" class="btn wide" id="todayClose">닫기</button>
+  </div>
+</dialog>
 <dialog id="whyDlg" aria-labelledby="whyT">
   <div class="dlg">
     <h2 id="whyT">판단 근거</h2>
@@ -960,14 +988,11 @@ body.rest-on #nums{opacity:.55}
 
     const sg = suggestNow(ex);
     renderNums(ex, bw, sg, n);
-    const dl = $('delta');
-    dl.className = 'delta ' + sg.kind;
-    const ap = sg.kind === 'up' || sg.kind === 'same' ? SVG_ARROW.up : sg.kind === 'down' ? SVG_ARROW.down : sg.kind === 'bw' ? SVG_ARROW.check : SVG_ARROW.side;
-    dl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + ap + '"/></svg>' + esc(sg.delta);
+    renderDelta(sg, bw);
     const ts = todaySets(ex);
+    renderToday();
     if (bw) { renderWhy(sg); $('why').textContent = sg.why; $('rule').textContent = sg.last; }
     else {
-      dl.innerHTML += '<em class="pct">' + (Math.abs(sg.step) < 0.05 ? '유지' : sgn(sg.step) + '%') + '</em>';
       renderWhy(sg);
     }
     void ts;
@@ -1020,8 +1045,8 @@ body.rest-on #nums{opacity:.55}
     }
     if (!sg.prev) return ['neu', '첫 기록이에요', '입력한 10RM으로 시작'];
     if (sg.mode === 'break') return ['neg', '오랜만이에요 · 가볍게', Math.round(sg.hrs / 24) + '일 만이라 3% 낮춤'];
-    if (sg.mode === 'deload') return ['neg', '쉬어가는 날 · 3% 낮춤', '2번 연속 목표 미달'];
-    if (sg.mode === 'fatigue') return ['neg', '피로 신호 · 이번엔 유지', sg.fDrop ? '지난번 세트 간 감소가 평소보다 큼' : '최근 7일 운동량 ' + sg.loadX.toFixed(1) + '배'];
+    if (sg.mode === 'deload') return ['neg', '누적 피로 · 한 번 쉬어가요 −3%', '2번 연속 목표 미달'];
+    if (sg.mode === 'fatigue') return ['neg', '누적 피로로 무게 정체 중', (sg.fDrop ? '지난번 세트 간 횟수 감소가 평소보다 컸어요' : '최근 7일 운동량이 평소의 ' + sg.loadX.toFixed(1) + '배예요') + ' · 이번엔 유지'];
     if (sg.dayF < 1) return ['neg', '오늘 피로 반영 ' + sgn(100 * (sg.dayF - 1)) + '%', '앞선 운동이 예상보다 덜 나왔어요'];
     if (sg.pen > 0.004) return ['neg', '아직 회복 중', Math.round(sg.hrs) + ' / ' + REC_H + '시간 · 목표 −' + (sg.pen * 100).toFixed(1) + '%'];
     if (sg.up) return ['pos', '올릴 차례예요 ' + sgn(sg.step) + '%', '회복 완료 · 주 ' + RATE * 100 + '% 속도'];
@@ -1054,6 +1079,58 @@ body.rest-on #nums{opacity:.55}
     $('why').innerHTML = l1 + more;
     $('rule').textContent = l2;
   }
+  function renderDelta(sg, bw) {
+    const dl = $('delta');
+    dl.className = 'delta ' + sg.kind;
+    const ap = sg.kind === 'up' || sg.kind === 'same' ? SVG_ARROW.up : sg.kind === 'down' ? SVG_ARROW.down : sg.kind === 'bw' ? SVG_ARROW.check : SVG_ARROW.side;
+    dl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + ap + '"/></svg>' + esc(sg.delta) +
+      (bw ? '' : '<em class="pct">' + (Math.abs(sg.step) < 0.05 ? '유지' : sgn(sg.step) + '%') + '</em>');
+  }
+  function bumpNums(pw, pr) {
+    if (!wIn) return;
+    if (cur.w !== pw) { wIn.classList.remove('bump-up', 'bump-dn'); void wIn.offsetWidth; wIn.classList.add(cur.w > pw ? 'bump-up' : 'bump-dn'); }
+    if (cur.r !== pr) { rIn.classList.remove('bump-up', 'bump-dn'); void rIn.offsetWidth; rIn.classList.add(cur.r > pr ? 'bump-up' : 'bump-dn'); }
+  }
+  /* ---------- 오늘 현황: 예상 대비 상승/하강, 휴식 부족 ---------- */
+  function todayStat() {
+    const plan = (() => { try { return restCfg.set || 90; } catch (e) { return 90; } })();
+    const rows = [];
+    ORDER.forEach((e) => {
+      if (isBw(e)) return;
+      const xs = todaySets(e); if (!xs.length) return;
+      const dv = xs.filter((x) => x.P > 0).map((x) => pct(e10(x.w, x.r), x.P));
+      const rs = xs.slice(1).map((x, i) => (x.ts - xs[i].ts) / 1000).filter((t) => t > 0 && t < 900);
+      rows.push({ e, xs, dev: dv.length ? dv.reduce((a, v) => a + v, 0) / dv.length : null, max: dv.length ? Math.max(...dv) : 0, rest: rs.length ? rs.reduce((a, v) => a + v, 0) / rs.length : null });
+    });
+    const dvs = rows.filter((r) => r.dev !== null), avg = dvs.length ? dvs.reduce((a, r) => a + r.dev, 0) / dvs.length : 0;
+    const rsAll = rows.filter((r) => r.rest !== null), rAvg = rsAll.length ? rsAll.reduce((a, r) => a + r.rest, 0) / rsAll.length : null;
+    const mx = rows.reduce((a, r) => Math.max(a, r.max), 0), sets = rows.reduce((a, r) => a + r.xs.length, 0);
+    let st;
+    if (!rows.length) st = ['neu', '오늘 아직 시작 전', ''];
+    else if (mx > JUMP * 100) st = ['warn', '오늘 상승 과다 · 기록 확인', '최대 ' + sgn(mx) + '%'];
+    else if (avg > 5) st = ['warn', '오늘 무게·횟수가 많이 올랐어요 · 무리 주의', '평균 ' + sgn(avg) + '%'];
+    else if (rAvg !== null && rAvg < plan * 0.8) st = ['neg', '휴식이 짧아요 · 더 쉬세요', '평균 ' + secTxt(rAvg) + ' / ' + secTxt(plan)];
+    else if (avg < -4) st = ['neg', '오늘 하강 중 · 목표를 낮추는 중', '평균 ' + sgn(avg) + '%'];
+    else if (avg > 1) st = ['pos', '오늘 페이스 좋아요', '예상 대비 ' + sgn(avg) + '%'];
+    else st = ['neu', '오늘 예상대로 진행 중', '예상 대비 ' + sgn(avg) + '%'];
+    return { st, rows, avg, rAvg, plan, sets };
+  }
+  let todayKey = '';
+  function renderToday() {
+    const t = todayStat(), el = $('today'), k = t.st[0] + t.st[1];
+    el.className = 'today ' + t.st[0];
+    if (todayKey && k !== todayKey) restart(el, 'pop');
+    todayKey = k;
+    el.innerHTML = '<i aria-hidden="true"></i><b>' + esc(t.st[1]) + '</b><span>' + esc(t.st[2]) + '</span>';
+  }
+  function openToday() {
+    const t = todayStat(), cls = (r) => (r.max > JUMP * 100 || r.dev > 5 ? 'warn' : r.dev < -4 || (r.rest !== null && r.rest < t.plan * 0.8) ? 'neg' : r.dev > 1 ? 'pos' : 'neu');
+    $('todayBody').innerHTML = '<p class="why c-' + t.st[0] + '" style="font-weight:800;font-size:16px">' + esc(t.st[1]) + '</p>' +
+      (t.rows.length ? '<div class="trows">' + t.rows.map((r) => '<div class="trow"><b>' + esc(EX[r.e].short) + ' · ' + setsTxt(r.xs) + '</b><em class="c-' + cls(r) + '">' + (r.dev === null ? '—' : sgn(r.dev) + '%') + '</em><small>' +
+        (r.rest !== null ? '평균 휴식 ' + secTxt(r.rest) + (r.rest < t.plan * 0.8 ? ' · 짧음' : '') : '1세트만') + (r.max > JUMP * 100 ? ' · 예상보다 ' + sgn(r.max) + '% 세트 있음' : '') + '</small></div>').join('') + '</div>' : '<p class="why">아직 기록이 없어요.</p>') +
+      '<p class="trend-more">% = 그 세트를 시작할 때 앱이 예상한 추정 10RM 대비 실제 결과의 평균 · ±4% 안은 컨디션 차이 · +5% 넘게 오르면 무리 주의, 세트 하나라도 +10%를 넘으면 기록 확인 · 휴식이 설정(' + secTxt(t.plan) + ')의 80%보다 짧으면 휴식 부족</p>';
+    $('todayDlg').showModal();
+  }
   function openWhy() {
     const sg = whySg; if (!sg || !sg.expl) return;
     $('whyT').textContent = EX[curEx()].short + ' · ' + sg.title;
@@ -1063,10 +1140,12 @@ body.rest-on #nums{opacity:.55}
   }
   setInterval(() => {
     const ex = curEx(), n = doneCount(ex);
-    if (showingDone || isBw(ex) || n >= SETS || document.hidden) return;
+    if (showingDone || document.hidden) return;
+    renderToday();
+    if (isBw(ex) || n >= SETS) return;
     const sg = suggestNow(ex);
-    renderWhy(sg);
-    if (cur.auto && (cur.w !== sg.w || cur.r !== sg.r)) { const a = cur.w !== sg.w ? 'w' : 'r'; cur.w = sg.w; cur.r = sg.r; syncInputs(a); fitNums(); buzz(8); }
+    renderWhy(sg); renderDelta(sg, false);
+    if (cur.auto && (cur.w !== sg.w || cur.r !== sg.r)) { const pw = cur.w, pr = cur.r; cur.w = sg.w; cur.r = sg.r; syncInputs(); fitNums(); bumpNums(pw, pr); buzz(8); }
   }, 1000);
   function sgDetail(ex) {
     if (isBw(ex)) return '';
@@ -1143,6 +1222,13 @@ body.rest-on #nums{opacity:.55}
     let fs = h < 620 ? 68 : h < 700 ? 84 : 104;
     el.style.fontSize = fs + 'px';
     while (el.scrollWidth > el.clientWidth + 1 && fs > 40) { fs -= 4; el.style.fontSize = fs + 'px'; }
+    /* 세로 공간이 모자라면: 숫자 크기 먼저 줄이고(최소 60), 그래도 넘치면 덜 중요한 줄부터 숨김 */
+    const hero = $('hero'), over = () => hero.scrollHeight > hero.clientHeight + 1;
+    hero.classList.remove('t1', 't2');
+    while (over() && fs > 76) { fs -= 4; el.style.fontSize = fs + 'px'; }
+    if (over()) hero.classList.add('t1');
+    while (over() && fs > 60) { fs -= 4; el.style.fontSize = fs + 'px'; }
+    if (over()) hero.classList.add('t2');
   }
   function commitInputs() {
     if (!wIn) return;
@@ -1200,7 +1286,7 @@ body.rest-on #nums{opacity:.55}
     restart($('kGo'), 'pop'); buzz(30);
     if (n + 1 < SETS) startRest(restCfg.set); else if (nextIncomplete(data.idx) >= 0) startRest(restCfg.ex); else stopRest();
     if (n + 1 === SETS) { render(); showDone(ex, sg); return; }
-    sfx(n === 0 ? 'set1' : 'set2'); prefill(); render();
+    { const pw = cur.w, pr = cur.r; sfx(n === 0 ? 'set1' : 'set2'); prefill(); render(); bumpNums(pw, pr); }
     const jp = !bw && s.P > 0 ? pct(e10(s.w, s.r), s.P) : 0;
     toast(jp > JUMP * 100 ? '⚠ 예상보다 ' + sgn(jp) + '% · 기록을 확인해 주세요' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
   });
@@ -1300,6 +1386,8 @@ body.rest-on #nums{opacity:.55}
   }
   $('trend').addEventListener('click', openTrend);
   $('why').addEventListener('click', openWhy);
+  $('today').addEventListener('click', openToday);
+  $('todayClose').addEventListener('click', () => $('todayDlg').close());
   $('why').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openWhy(); } });
   $('whyClose').addEventListener('click', () => $('whyDlg').close());
   $('rTrend').addEventListener('click', openTrend);
