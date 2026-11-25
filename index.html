@@ -63,7 +63,7 @@ button{cursor:pointer}
 /* trend row (single column only) */
 .trend{flex:none;margin:0 24px;display:flex;align-items:center;gap:12px;padding:11px 0;border:0;border-top:.5px solid var(--line);border-bottom:.5px solid var(--line);background:transparent;text-align:left}
 .trend b{font-size:12px;font-weight:700;white-space:nowrap}
-.tk-up{color:var(--greenTxt)}.tk-fast{color:#B0241A}.tk-flat{color:#7A5600}.tk-down{color:#9A4A00}.tk-hold{color:var(--sub)}
+.tk-up{color:var(--greenTxt)}.tk-fast{color:#8A5A00}.tk-flat{color:#7A5600}.tk-down{color:#9A4A00}.tk-hold{color:var(--sub)}
 .vstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .vstats.two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .vstats div{background:var(--plate);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;container-type:inline-size}
@@ -210,17 +210,18 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .btn{min-height:48px;border-radius:14px;border:0;font-size:16px;font-weight:600;background:var(--plate)}
 .btn.pri{background:var(--blue);color:#fff}.btn.del{grid-column:1/-1;background:#FDECEA;color:#B0241A}.btn.wide{grid-column:1/-1}
-.mood{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:18px;background:var(--plate);color:var(--ink);transition:background-color .5s,color .5s}
-.mood>i{flex:none;width:12px;height:12px;border-radius:50%;background:currentColor;animation:breathe 2.8s ease-in-out infinite}
-.mood b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
-.mood span{display:block;font-size:14px;font-weight:600;line-height:1.35;opacity:.85;font-variant-numeric:tabular-nums}.mood span:empty{display:none}
-.mood.pos{background:#E6F4EA;color:#1E6E31}.mood.neu{background:#EAF2FC;color:#0A4FA3}.mood.neg{background:#FDEEE3;color:#9A3D00}
+.mood{display:flex;align-items:center;gap:10px;color:var(--ink);transition:color .5s}
+.mood>i{flex:none;width:10px;height:10px;border-radius:50%;background:currentColor;animation:breathe 2.8s ease-in-out infinite}
+.mood b{display:block;font-size:22px;font-weight:800;letter-spacing:-.02em;line-height:1.25}
+.mood span{display:block;font-size:13px;font-weight:600;line-height:1.35;color:var(--sub);font-variant-numeric:tabular-nums}.mood span:empty{display:none}
+.mood.pos{color:#1E6E31}.mood.neu{color:#0A4FA3}.mood.neg{color:#9A3D00}.mood.warn{color:#B0241A}
+.mood.warn>i{animation-duration:1.2s}
 .mood.pop{animation:moodpop .45s ease-out}
 @keyframes breathe{0%,100%{transform:scale(.7);opacity:.55}50%{transform:scale(1.15);opacity:1}}
 @keyframes moodpop{0%{transform:scale(.97);opacity:.6}100%{transform:none;opacity:1}}
 .why{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}.why .ago{color:var(--sub)}
 .rule{font-size:13px;font-variant-numeric:tabular-nums}
-@media (max-height:700px){.mood{padding:9px 14px}.mood b{font-size:20px}.mood span{font-size:13px}}
+@media (max-height:700px){.mood b{font-size:19px}.mood span{font-size:13px}}
 @media (max-height:620px){.mood b{font-size:18px}.mood span{display:none}}
 .why[role=button]{cursor:pointer}.why .more{color:var(--blue);white-space:nowrap}
 .steps{margin:6px 0 12px;padding:0;list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:10px}
@@ -377,7 +378,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .water .wb{position:absolute;inset:0;background:rgba(10,102,209,.07)}
 .water .wave{position:absolute;left:0;top:-7px;width:200%;height:8px;color:#0A66D1;animation:wv 4s linear infinite}
 @keyframes wv{to{transform:translateX(-50%)}}
-.water .tag{position:absolute;left:16px;bottom:100%;margin-bottom:8px;padding:4px 11px;border-radius:999px;background:var(--blue);color:#fff;font-size:15px;font-weight:800;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 8px rgba(10,102,209,.25)}
+.water .tag{display:none!important;position:absolute;left:16px;bottom:100%;margin-bottom:8px;padding:4px 11px;border-radius:999px;background:var(--blue);color:#fff;font-size:15px;font-weight:800;line-height:1.3;font-variant-numeric:tabular-nums;white-space:nowrap;box-shadow:0 2px 8px rgba(10,102,209,.25)}
 .water .tag small{font-size:11px;font-weight:700;opacity:.8;margin-left:4px}
 .water.hi .tag{bottom:auto;top:10px;margin-bottom:0}
 .water.end .wb{background:rgba(36,138,61,.08)}.water.end .wave,.water.end .tag{display:none}
@@ -388,9 +389,10 @@ body.rest-on .k.go:not(.next):not(.idle) #goIc{display:none}
 body.rest-on .k.go:not(.next):not(.idle) .rring{display:block;position:absolute;inset:-3px;transform:rotate(-90deg);pointer-events:none}
 body.rest-on .k.go:not(.next):not(.idle) .rlbl{display:flex;flex-direction:column;align-items:center;line-height:1}
 .rlbl b{font-size:19px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.rlbl small{font-size:10px;font-weight:700;color:var(--sub);margin-top:3px}
+.rlbl small{font-size:15px;font-weight:800;color:var(--blue);letter-spacing:-.02em}
+.rring{opacity:.5}
 body.rest-end .k.go:not(.next):not(.idle){box-shadow:0 6px 14px rgba(10,102,209,.3),0 0 0 7px rgba(10,102,209,.18)}
-body.rest-on #nums{opacity:.28;filter:saturate(.4)}
+body.rest-on #nums{opacity:.55}
 #nums{transition:opacity .3s}
 .delta.rst{color:var(--blue)}.delta.rend{color:var(--greenTxt)}
 .delta .rtx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -543,6 +545,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   const MIN_W = 3, MAX_W = 24, SETS = 3;
   /* back-off (2·3세트): 세트당 추정10RM 손실 L(t) = L120 × g(t)/g(120), g(t) = G_FLOOR + e^(−t/TAU), t = 실제 휴식(초)
      type: c = 복합(무게 유지), i = 고립(MMC: 무게 낮추고 1세트 횟수 이상), f = 초경량(무게 고정) */
+  const JUMP = 0.10;   /* 예상보다 +10% 넘게 오른 세트 = 컨디션 차이로 보기 어려움 → 경고, 다음 계산엔 +10%까지만 반영 */
   const L_PRIOR = 0.05, L_MAX = 0.25, TAU = 60, G_FLOOR = 0.3, BO_RMAX = 20, DAY_FLOOR = 0.94, DAY_SYS = 0.5;
   const RATE = 0.02, REC_H = 48, REC_PEN = 0.02, BREAK_D = 14, DELOAD = 0.97, RMIN = 5, RMAX = 12, RMAX_LIGHT = 15;
   const WINDOW_DAYS = 56, EVAL_N = 6, THRESH = 0.5, FAST = 4, DONE_MS = 1600;
@@ -759,7 +762,8 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     const top = ts[0], last = ts[ts.length - 1], k = ts.length + 1, type = EX[ex].type || 'f', rst = planRest();
     const el = (now - last.ts) / 1000, tUse = Math.max(el, rst);
     const { L, n } = fatigue(ex);
-    const capAt = (t) => e10(last.w, last.r) * (1 - lossAt(L, t));
+    const base = typeof last.P === 'number' && last.P > 0 ? Math.min(e10(last.w, last.r), last.P * (1 + JUMP)) : e10(last.w, last.r);
+    const capAt = (t) => base * (1 - lossAt(L, t));
     const need = type === 'i' ? top.r : RMIN;
     const pick = (C) => {
       let W = type === 'i' ? Math.min(top.w, last.w) : last.w;
@@ -817,7 +821,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
         flat: '최근 기록이 제자리예요. 잠, 식사, 쉬는 날을 점검해 보세요.',
         down: '최근 기록이 내려가요. 피로가 쌓였을 수 있어요. 목표를 계속 못 채우면 앱이 무게를 낮춰요.' }[kind] +
         (days < 14 ? ' 기록이 ' + days + '일치라 속도는 참고용이에요.' : '');
-      ev = { kind, label: { fast: '⚠ 비정상 상승 · 기준 확인', up: '향상 중', flat: '정체', down: '하락' }[kind], slope, mx, my, wk,
+      ev = { kind, label: { fast: '빠른 상승 · 확인', up: '향상 중', flat: '정체', down: '하락' }[kind], slope, mx, my, wk,
         short: f1(lp.y) + 'kg · 주 ' + sgn(wk) + '%',
         msg,
         stats: [['월 속도', m30.length >= 2 && lp.x - m30[0].x >= 14 ? sgn(mo) + '%' : '— (2주부터)'], ['주 속도', sgn(wk) + '%']],
@@ -1002,16 +1006,17 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   /* main-screen reason line (tap → numbered steps); also refreshed every second while resting */
   /* live text: "몇 시간 몇 분 전"까지, 매초 갱신 */
   const agoLive = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)), d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60), sec = t % 60;
-    return (d ? d + '일 ' + h + '시간 ' + m + '분' : h ? h + '시간 ' + m + '분' : m ? m + '분 ' + sec + '초' : sec + '초') + ' 전'; };
+    void sec; return t < 60 ? '방금' : (d ? d + '일 ' + h + '시간 ' + m + '분' : h ? h + '시간 ' + m + '분' : m + '분') + ' 전'; };
   const setsTxt = (xs) => xs[0].w + '×' + xs.map((x, i) => (i && x.w !== xs[0].w ? x.w + '×' : '') + x.r).join('·');
   /* 긍정 · 중립 · 부정 한 줄 */
   function moodOf(ex, sg, n) {
     if (isBw(ex)) return n >= SETS ? ['pos', '3세트 끝', '수고했어요'] : ['neu', '맨몸 · 완료만 체크', ''];
-    if (n >= SETS) return ['pos', '3세트 끝 · 수고했어요', '다음 세션 1세트: ' + sg.w + '×' + sg.r];
+    const jump = todaySets(ex).map((x) => (x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0)).reduce((a, v) => Math.max(a, v), 0);
+    if (jump > JUMP * 100) return ['warn', '기록 확인 · 예상보다 ' + sgn(jump) + '%', '실수라면 오늘 세트를 눌러 고쳐 주세요'];
+    if (n >= SETS) return ['pos', '3세트 끝 · 수고했어요', '다음 세션 1세트 ' + sg.w + '×' + sg.r];
     if (sg.bo) {
-      const rs = sg.el < sg.rst ? (sg.early && (sg.early.w !== sg.w || sg.early.r !== sg.r) ? '지금 하면 ' + sg.early.w + '×' + sg.early.r + ' · ' : '') + secTxt(sg.rst - sg.el) + ' 더 쉬면 ' + sg.w + '×' + sg.r : '회복 ' + f1(sg.rec) + '% · ' + sg.w + '×' + sg.r + ' 가세요';
-      if (sg.vs === null || Math.abs(sg.vs) <= 1) return ['neu', '예상대로예요 · 페이스 유지', rs];
-      return sg.vs > 0 ? ['pos', '예상보다 좋아요 ' + sgn(sg.vs) + '%', rs] : ['neg', '피로가 예상보다 커요 ' + sgn(sg.vs) + '%', '그만큼 낮췄어요 · ' + rs];
+      if (sg.vs === null || Math.abs(sg.vs) <= 1) return ['neu', '예상대로예요', '페이스 유지'];
+      return sg.vs > 0 ? ['pos', '예상보다 좋아요 ' + sgn(sg.vs) + '%', '다음 세트도 1회 남을 때까지'] : ['neg', '피로가 예상보다 커요 ' + sgn(sg.vs) + '%', '그만큼 횟수를 낮췄어요'];
     }
     if (!sg.prev) return ['neu', '첫 기록이에요', '입력한 10RM으로 시작'];
     if (sg.mode === 'break') return ['neg', '오랜만이에요 · 가볍게', Math.round(sg.hrs / 24) + '일 만이라 3% 낮춤'];
@@ -1034,13 +1039,14 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     const more = sg.expl ? ' <span class="more">판단 근거 ›</span>' : '';
     let l1 = '', l2 = '';
     if (sg.bo) {
-      l1 = sg.k - 1 + '세트 ' + sg.prevSet.w + '×' + sg.prevSet.r + ' 완료 <span class="ago">' + agoLive(now - sg.prevSet.ts) + '</span>';
+      l1 = sg.k - 1 + '세트 ' + sg.prevSet.w + '×' + sg.prevSet.r + ' 완료';
     } else {
       if (sg.prev) l1 = '이 운동 지난번 ' + setsTxt(sg.prev.all) + ' <span class="ago">' + agoLive(now - sg.prev.end) + '</span>';
       else l1 = esc(sg.why);
       /* 직전에 끝낸 다른 운동 */
       const t = todaySets().filter((x) => x.ex !== ex && !isBw(x.ex)), lx = t.length ? t[t.length - 1] : null;
-      if (lx && n === 0) {
+      let resting = false; try { resting = !!rest && rest.end > Date.now(); } catch (e) {}
+      if (lx && n === 0 && !resting) {
         const xs = todaySets(lx.ex), dv = xs.filter((x) => x.P > 0), dev = dv.length ? dv.reduce((a, x) => a + Math.min(0, e10(x.w, x.r) / x.P - 1), 0) / dv.length : 0;
         l2 = '직전 운동 ' + EX[lx.ex].short + ' ' + setsTxt(xs) + ' · ' + agoLive(now - xs[xs.length - 1].ts) + (dev < -0.01 ? ' · 예상보다 ' + sgn(100 * dev) + '%' : ' · 예상대로');
       }
@@ -1195,7 +1201,8 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     if (n + 1 < SETS) startRest(restCfg.set); else if (nextIncomplete(data.idx) >= 0) startRest(restCfg.ex); else stopRest();
     if (n + 1 === SETS) { render(); showDone(ex, sg); return; }
     sfx(n === 0 ? 'set1' : 'set2'); prefill(); render();
-    toast((n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
+    const jp = !bw && s.P > 0 ? pct(e10(s.w, s.r), s.P) : 0;
+    toast(jp > JUMP * 100 ? '⚠ 예상보다 ' + sgn(jp) + '% · 기록을 확인해 주세요' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
   });
   $('kPrev').addEventListener('click', () => goIdx(data.idx - 1, 'prev'));
   $('kNext').addEventListener('click', () => goIdx(data.idx + 1, 'next'));
@@ -1810,19 +1817,14 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     rest.end = Date.now() + nl; rest.total = Math.max(rest.total + d * 1000, nl);
     saveRun(); scheduleBeep(); drawRest(); buzz(8);
   }
-  $('kGo').insertAdjacentHTML('beforeend', '<svg class="rring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="none" stroke="#DCE9F9" stroke-width="6"/><circle id="rArc" cx="50" cy="50" r="46" fill="none" stroke="#0A66D1" stroke-width="6" stroke-linecap="round" pathLength="100"/></svg><span class="rlbl" aria-hidden="true"><b id="rLbl"></b><small>휴식</small></span>');
+  $('kGo').insertAdjacentHTML('beforeend', '<svg class="rring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="none" stroke="#DCE9F9" stroke-width="6"/><circle id="rArc" cx="50" cy="50" r="46" fill="none" stroke="#0A66D1" stroke-width="6" stroke-linecap="round" pathLength="100"/></svg><span class="rlbl" aria-hidden="true"><small>휴식 중</small></span>');
   const restSec = () => Math.ceil((rest.end - Date.now()) / 1000);
   function restDecor() {             /* render()가 덮어쓴 글자를 휴식 표시로 바꿈 */
     if (!rest) return;
     const left = restSec(), ended = left <= 0, ex = curEx(), n = doneCount(ex);
-    $('dayPos').innerHTML = ended ? '<b class="rd e">휴식 끝</b>' : '<b class="rd">휴식 ' + mmss(left) + '</b>';
-    $('rLbl').textContent = mmss(Math.max(0, left));
+    /* 휴식 표시는 수면 + 버튼의 '휴식 중'만 (남은 시간 숫자 없음) */
+    void ended; void ex; void n;
     $('rArc').setAttribute('stroke-dasharray', Math.max(0, Math.min(100, left * 1000 / rest.total * 100)) + ' 100');
-    if (n >= SETS) return;
-    const dl = $('delta');
-    dl.className = 'delta ' + (ended ? 'rend' : 'rst');
-    dl.innerHTML = '<span class="rtx">' + (ended ? '✓ 휴식 끝 · ' + (n + 1) + '세트 시작 <span class="rov">+' + (-left) + '초</span>'
-      : '⏱ 휴식 중 <span class="tm">' + mmss(left) + '</span> · 끝나면 ' + (isBw(ex) ? '시작' : '이 무게로')) + '</span>';
   }
   function drawRest() {
     const w = $('water'), B = document.body;
