@@ -1190,7 +1190,7 @@ body.rest-on #nums{opacity:.55}
     const apply = () => { data.idx = i; persist(); prefill(); render(); };
     /* 스와이프만 화면이 밀려남. 패드·자동 넘김은 제자리에서 내용만 살짝 바뀜 (움직이는 건 목록) */
     if (dx) slideSwap(dir === 'prev' ? 1 : -1, apply, dx);
-    else { apply(); if (!REDUCED()) ['ctx', 'hero'].forEach((id) => { const el = $(id); if (el.animate) el.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: padRoll ? 90 : 220, easing: 'ease-out' }); }); }
+    else { apply(); if (!REDUCED()) ['ctx', 'hero'].forEach((id) => { const el = $(id); if (el.animate) el.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: padRoll ? 60 : 220, easing: 'ease-out' }); }); }
     if (!quiet) { buzz(12); sfx('nav'); }
   }
   function goStep(d, dx) { flushSwap(); goIdx(data.idx + d, d < 0 ? 'prev' : 'next', dx); }
@@ -1573,8 +1573,8 @@ body.rest-on #nums{opacity:.55}
         for (let i = 0; i < n; i++) {
           const rem = w.tgt - w.off;
           /* 멀리 남았고 손 방향 그대로면: 마찰 감속(남은 거리에 비례하는 속도로 매끈하게). 가까워지면 스프링 */
-          if (Math.abs(rem) > 0.5 * w.h && rem * w.vel > 0) { const want = rem / (w.snap ? 0.1 : 0.3); w.vel += (want - w.vel) * Math.min(1, dt * (w.snap ? 30 : 9)); }
-          else { const T = w.snap ? 0.15 : 0.34, z = w.snap ? 0.86 : 0.78, k = (2 * Math.PI / T) ** 2, c = 4 * Math.PI * z / T; w.vel += (-k * -rem - c * w.vel) * dt; }
+          if (Math.abs(rem) > 0.5 * w.h && rem * w.vel > 0) { const want = rem / (w.snap ? 0.06 : 0.3); w.vel += (want - w.vel) * Math.min(1, dt * (w.snap ? 45 : 9)); }
+          else { const T = w.snap ? 0.1 : 0.34, z = w.snap ? 0.88 : 0.78, k = (2 * Math.PI / T) ** 2, c = 4 * Math.PI * z / T; w.vel += (-k * -rem - c * w.vel) * dt; }
           w.off += w.vel * dt;
         }
         w.paint();
@@ -1738,13 +1738,13 @@ body.rest-on #nums{opacity:.55}
   });
   /* 세트 진행 중(1세트 이상, 마지막 전)엔 «·» 한 번 더 눌러야 이동: kg 버튼 옆이라 잘못 눌림 방지 */
   let navArm = '';
-  const padNav = (d) => {
+  const padNav = (d, cnt) => {
     const ex = curEx(), n = doneCount(ex), k = d < 0 ? 'p' : 'n';
     if (!showingDone && n > 0 && n < nSets(ex) && navArm !== k) {
       navArm = k; setTimeout(() => { if (navArm === k) navArm = ''; }, 2000);
       buzz(8); toast('세트 진행 중 · 한 번 더 누르면 ' + (d < 0 ? '이전' : '다음') + ' 운동으로'); return;
     }
-    navArm = ''; flushSwap(); const i0 = data.idx; padRoll = true; goIdx(data.idx + d, d < 0 ? 'prev' : 'next', 0, true); padRoll = false; if (data.idx !== i0) wTick();
+    navArm = ''; flushSwap(); const i0 = data.idx; padRoll = true; goIdx(data.idx + d * (cnt || 1), d < 0 ? 'prev' : 'next', 0, true); padRoll = false; if (data.idx !== i0) wTick();
   };
   /* 누르고 있으면 연속 이동: 베지어 곡선으로 점점 빨라짐(피젯 스피너처럼) — 세트 진행 중 확인도 길게 누르면 통과 */
   const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x → y (이분법) */
@@ -1752,21 +1752,22 @@ body.rest-on #nums{opacity:.55}
     let lo = 0, hi = 1, t = x; for (let k = 0; k < 20; k++) { t = (lo + hi) / 2; if (f(t, x1, x2) < x) lo = t; else hi = t; }
     return f(t, y1, y2);
   };
-  const NAV_EASE = bez(0.6, 0, 0.3, 1), NAV_SLOW = 260, NAV_FAST = 18, NAV_RAMP = 1400;
+  const NAV_EASE = bez(0.35, 0, 0.15, 1), NAV_SLOW = 150, NAV_FAST = 8, NAV_RAMP = 700, NAV_TICK = 24;
   [['kPrev', -1], ['kNext', 1]].forEach(([id, d]) => {
     const b = $(id); let t = null, t0 = 0;
     const stop = () => { clearTimeout(t); t = null; b.classList.remove('pressed'); };
     const loop = () => {
-      padNav(d);
-      const p = Math.min(1, (performance.now() - t0) / NAV_RAMP);
-      t = setTimeout(loop, NAV_SLOW - (NAV_SLOW - NAV_FAST) * NAV_EASE(p));
+      /* 간격이 화면 갱신보다 짧아지면 한 번에 여러 칸 (렌더 한 번 · 틱 한 번) */
+      const p = Math.min(1, (performance.now() - t0) / NAV_RAMP), gap = NAV_SLOW - (NAV_SLOW - NAV_FAST) * NAV_EASE(p);
+      padNav(d, Math.max(1, Math.round(NAV_TICK / gap)));
+      t = setTimeout(loop, Math.max(gap, NAV_TICK));
     };
     b.addEventListener('pointerdown', (e) => {
       if (b.disabled || (e.button && e.button !== 0)) return;
       e.preventDefault(); stop();
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       b.classList.add('pressed'); padNav(d);
-      t = setTimeout(() => { t0 = performance.now(); loop(); }, 320);
+      t = setTimeout(() => { t0 = performance.now(); loop(); }, 220);
     });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
     b.addEventListener('click', (e) => { if (e.detail === 0) padNav(d); });
