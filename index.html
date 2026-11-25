@@ -91,15 +91,14 @@ button{cursor:pointer}
 .lab{font-size:12px;font-weight:600;color:var(--mute);padding-bottom:6px}
 .lrow{display:flex;justify-content:space-between;align-items:baseline;width:100%;padding:8px 0;border:0;border-top:.5px solid var(--line);background:transparent;font-variant-numeric:tabular-nums;text-align:left}
 .lrow:last-of-type{border-bottom:.5px solid var(--line)}
-/* +1 세트 더: 패드 왼쪽 특별 버튼 (초록 그라데이션 + 숨쉬는 테두리) */
-.addk{position:relative;margin-top:10px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:14px 16px;border:0;border-radius:24px;color:#fff;text-align:left;
-  background:linear-gradient(145deg,#2E9B4F,#1E6E31);box-shadow:0 8px 24px rgba(30,110,49,.28);animation:addIn .35s cubic-bezier(.2,.9,.3,1.2) both}
-.addk[hidden]{display:none}
-.addk::after{content:'';position:absolute;inset:-4px;border-radius:28px;border:2px solid rgba(46,155,79,.45);animation:addPulse 1.8s ease-out infinite;pointer-events:none}
-.addk .plus{font-size:34px;font-weight:900;line-height:1;letter-spacing:-.03em}
-.addk b{font-size:17px;font-weight:800}
-.addk small{font-size:11px;font-weight:600;opacity:.85}
-.addk:active{transform:scale(.96)}
+/* +1 세트 더: 오늘 세트 다음 칸에 특별 카드 (초록 그라데이션 + 숨쉬는 테두리), 누르면 그 자리가 '지금' 칸이 됨 */
+.lrow.addk,.lrow.addk:last-of-type{position:relative;border:0;border-radius:12px;padding-left:12px;padding-right:10px;color:#fff;cursor:pointer;
+  background:linear-gradient(145deg,#2E9B4F,#1E6E31);box-shadow:0 6px 18px rgba(30,110,49,.28);animation:addIn .35s cubic-bezier(.2,.9,.3,1.2) both}
+.pageR .lrow.addk{background:linear-gradient(145deg,#2E9B4F,#1E6E31)}
+.lrow.addk small{color:rgba(255,255,255,.8)}
+.lrow.addk b{color:#fff;font-weight:800}
+.lrow.addk::after{content:'';position:absolute;inset:-3px;border-radius:15px;border:2px solid rgba(46,155,79,.45);animation:addPulse 1.8s ease-out infinite;pointer-events:none}
+.lrow.addk:active{transform:scale(.96)}
 @keyframes addIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
 @keyframes addPulse{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.08)}}
 @media (prefers-reduced-motion:reduce){.addk,.addk::after{animation:none}}
@@ -444,8 +443,6 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .pageR .bottom{flex-direction:column;align-items:stretch;gap:12px;padding:12px 14px 0 24px}
   .pageR .side{max-width:none;flex:none}
   .pageR #ledger{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px}   /* 세트 추가해도 한 줄 */
-  .pageR .bottom{position:relative}
-  .pageR .addk{position:absolute;left:24px;bottom:0;margin:0;width:min(200px,calc(100% - var(--pad) - 60px));height:calc(var(--pad) * .62);bottom:calc(var(--pad) * .19)}
   .pageR .lrow,.pageR .lrow:last-of-type{border:0;background:var(--plate);border-radius:12px;padding:8px 10px;flex-direction:column;align-items:flex-start;gap:2px}
   .pageR .lrow.c,.pageR .lrow.c:last-of-type{background:rgba(10,102,209,.06);box-shadow:inset 0 0 0 1px rgba(10,102,209,.16),0 2px 12px rgba(10,102,209,.08);padding-left:12px}
   .pageR #next{display:none}
@@ -467,7 +464,6 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .pageR .bottom{flex-direction:row;align-items:flex-end}
   .pageR .side{flex:1;align-self:flex-end}
   .pageR #ledger{grid-auto-flow:row;grid-template-columns:minmax(0,1fr)}
-  .pageR .addk{position:relative;left:auto;bottom:auto;width:auto;height:auto;margin-top:10px}
   .pageR .lrow,.pageR .lrow:last-of-type{flex-direction:row;align-items:baseline;gap:10px}
   .hero{gap:8px}
 }
@@ -541,7 +537,6 @@ body.rest-on #nums{opacity:.55}
         <span class="lab">오늘 세트</span>
         <div id="ledger"></div>
         <p class="next" id="next"></p>
-        <button type="button" class="addk" id="addK" hidden><span class="plus" aria-hidden="true">+1</span><b>세트 더</b><small>추천</small></button>
       </div>
       <div class="pad" id="pad" role="group" aria-label="엄지 패드">
         <button type="button" class="k cor" id="kPrev" aria-label="이전 운동"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button>
@@ -1277,6 +1272,7 @@ body.rest-on #nums{opacity:.55}
       else if (k === ts.length) lg += '<div class="lrow c"><small>' + (k + 1) + '</small><b>지금</b></div>';
       else lg += '<div class="lrow e"><small>' + (k + 1) + '</small><b>—</b></div>';
     }
+    if (addAdvOf(ex)) lg += '<button type="button" class="lrow addk" aria-label="1세트 더 하기 (추천)"><small>' + (Math.max(N, ts.length) + 1) + '</small><b>+ 세트 더</b></button>';
     $('ledger').innerHTML = lg;
     const ni = nextIncomplete(data.idx);
     $('next').innerHTML = allDone() ? '한 바퀴 끝<b>' + total + '개 모두 완료 · 다시 1번부터</b>' : ni >= 0 && ni !== data.idx ? '다음<b>' + esc(EX[ORDER[ni]].short) + '</b>' : '';
@@ -1684,7 +1680,7 @@ body.rest-on #nums{opacity:.55}
 
   /* 세트 추가 추천: 완료 화면 대신 엄지 패드 왼쪽 버튼으로 (가운데 버튼 = 다음 운동, 왼쪽 = 1세트 더) */
   const addAdvOf = (ex) => { const a = !isBw(ex) && doneCount(ex) >= nSets(ex) ? setAdvice(ex) : null; return a && a.kind === 'add' ? a : null; };
-  function renderAdd() { const b = $('addK'), on = !!addAdvOf(curEx()); b.hidden = !on; $('next').style.display = on ? 'none' : ''; }
+  function renderAdd() { $('next').style.display = addAdvOf(curEx()) ? 'none' : ''; }
   function renderGo() {
     renderAdd();
     const g = $('kGo'), n = doneCount(curEx()), N = nSets(curEx());
@@ -1841,7 +1837,8 @@ body.rest-on #nums{opacity:.55}
     b.addEventListener('click', (e) => { if (e.detail === 0) padNav(d); });
     b.addEventListener('contextmenu', (e) => e.preventDefault());
   });
-  $('addK').addEventListener('click', () => {
+  $('ledger').addEventListener('click', (e) => {
+    if (!e.target.closest('.addk')) return;
     const ex = curEx(), N = nSets(ex); if (!addAdvOf(ex)) return;
     setPlan(ex, N + 1); hideDone(); buzz(20); startRest(restCfg.set); prefill(); render(); toast('+1세트 · ' + (N + 1) + '세트로 진행');
   });
