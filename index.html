@@ -281,8 +281,9 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .today.pos{color:#1E6E31;background:#EEF7F0}.today.neu{color:#0A4FA3;background:#EEF4FC}.today.neg{color:#9A3D00;background:#FDF2EA}.today.warn{color:#B0241A;background:#FCEDEC}
 .today.pop{animation:moodpop .5s ease-out}
 .today.fin b{font-size:17px}
-.fb{flex:none;margin:10px 14px 0 24px;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-radius:14px;background:var(--plate)}
+.fb{flex:none;position:relative;overflow:hidden;margin:10px 14px 0 24px;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-radius:14px;background:var(--plate)}
 .fb[hidden]{display:none}
+.fb>i{position:absolute;left:0;bottom:0;width:100%;height:3px;background:var(--blue);opacity:.45;transform-origin:left;transition:transform 1s linear}
 .fb>span{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--sub);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fb>span b{display:block;font-size:13px;color:var(--ink)}
 .fb button{flex:none;min-width:52px;height:36px;padding:0 10px;border:0;border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:700;box-shadow:0 0 0 1px var(--line) inset}
@@ -1410,9 +1411,10 @@ body.rest-on #nums{opacity:.55}
     renderFb(); renderEta();
   }
   /* 방금 세트 원탭 여유 입력 (안 누르면 딱 맞음) */
+  const FB_MS = 15 * 60e3;
   function fbSet() {
     const all = todaySets(), s = all[all.length - 1];
-    if (!s || isBw(s.ex) || Date.now() - s.ts > 15 * 60e3) return null;
+    if (!s || isBw(s.ex) || Date.now() - s.ts > FB_MS) return null;
     if (s.q !== undefined && Date.now() - (qAt[s.id] || 0) > 2500) return null;   /* 고른 뒤 잠깐 보여주고 접음 */
     return s;
   }
@@ -1422,12 +1424,20 @@ body.rest-on #nums{opacity:.55}
     const s = fbSet(), el = $('fb');
     if (!s) { if (!el.hidden) { el.hidden = true; fbKey = ''; requestAnimationFrame(fitNums); } return; }
     const k = s.id + ':' + s.q + ':' + s.w + 'x' + s.r + ':' + curEx();
-    if (k === fbKey && !el.hidden) return;
+    if (k === fbKey && !el.hidden) return fbTick(s, el);
     fbKey = k;
     const xs = data.sets.filter((x) => x.ex === s.ex && skey(x) === skey(s)).sort((a, b) => a.ts - b.ts), i = xs.indexOf(s) + 1;
     el.innerHTML = '<span><b>방금 ' + (s.ex !== curEx() ? esc(EX[s.ex].short) + ' ' : '') + i + '세트 ' + s.w + '×' + s.r + '</b>여유가 어땠어요?</span>' +
       [[1, '여유'], [0, '딱 맞음'], [-1, '한계']].map((x) => '<button type="button" data-q="' + x[0] + '" aria-pressed="' + ((s.q === undefined ? 0 : s.q) === x[0]) + '">' + x[1] + '</button>').join('');
+    el.insertAdjacentHTML('beforeend', '<i></i>');
+    fbTick(s, el);
     if (el.hidden) { el.hidden = false; requestAnimationFrame(fitNums); }
+  }
+  /* 남은 시간: 아래 막대가 줄어들고 문구에 분 표시 — 다음 세트를 기록해도 바뀜 */
+  function fbTick(s, el) {
+    const left = Math.max(0, FB_MS - (Date.now() - s.ts)), m = Math.ceil(left / 60e3), t = el.querySelector('span'), bar = el.querySelector('i');
+    if (bar) bar.style.transform = 'scaleX(' + (s.q !== undefined ? 0 : left / FB_MS) + ')';
+    if (t && t.lastChild) t.lastChild.textContent = s.q !== undefined ? '기록했어요' : '여유는? · ' + (m > 1 ? m + '분 뒤 닫힘' : '곧 닫힘');
   }
   $('fb').addEventListener('click', (e) => {
     const b = e.target.closest('[data-q]'), s = fbSet(); if (!b || !s) return;
