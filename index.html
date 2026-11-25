@@ -1476,11 +1476,36 @@ body.rest-on #nums{opacity:.55}
     const ps = Object.keys(by).sort().reverse().map((d) => span(by[d].sort((a, b) => a.ts - b.ts))).filter((v) => v > 30e3 && v < 600e3).slice(0, 5);
     return ps.length ? median(ps) : 120e3;
   }
+  /* 오늘 한 바퀴: 오늘 처음 시작한 운동부터 13개 운동. 한 바퀴를 다 돌면 그 뒤 첫 세트부터 다음 바퀴 */
+  function dayLap() {
+    const t = todaySets().filter((s) => !s.sample);
+    let i0 = data.idx, t0 = Infinity, endTs = 0, k0 = 0;
+    for (;;) {
+      const first = t.find((s) => s.ts > endTs);
+      if (!first) return endTs ? { done: true, at: endTs } : laps(data.idx, Infinity);
+      i0 = ORDER.indexOf(first.ex); t0 = first.ts;
+      const L = laps(i0, t0);
+      if (L.left) return L;
+      endTs = L.at; if (++k0 > 20) return L;
+    }
+    function laps(i, ts) {
+      let left = 0, at = 0;
+      for (let k = 0; k < ORDER.length; k++) {
+        const e = ORDER[(i + k) % ORDER.length], all = data.sets.filter((s) => s.ex === e && !s.sample && s.ts >= ts).sort((a, b) => a.ts - b.ts);
+        const sk0 = all.length ? skey(all[0]) : null, since = all.filter((s) => skey(s) === sk0);   /* 이 바퀴의 세션 하나만 */
+        const cur = data.cyc.s[e], inCyc = since.length && sk0 === cur;
+        since.forEach((s) => { if (s.ts > at) at = s.ts; });
+        if (since.length && !inCyc) continue;   /* 지난 바퀴에서 끝낸 세션 */
+        if (since.length || (cur && doneCount(e) < nSets(e))) left += Math.max(0, nSets(e) - doneCount(e));
+        else left += cur ? SETS : nSets(e);   /* 이번 바퀴에서 이미 끝낸 운동은 다음 바퀴에 다시 */
+      }
+      return { left, at };
+    }
+  }
   function renderEta() {
-    const left = ORDER.reduce((a, e) => a + Math.max(0, nSets(e) - doneCount(e)), 0), el = $('eta');
-    if (!left) { el.textContent = ''; return; }
-    const d = new Date(Date.now() + left * setPace());
-    el.textContent = '남은 ' + left + '세트 · ' + d.getHours() + ':' + pad2(d.getMinutes()) + ' 끝';
+    const L = dayLap(), el = $('eta'), hm = (d) => d.getHours() + ':' + pad2(d.getMinutes());
+    if (L.done || !L.left) { el.textContent = L.at ? '한 바퀴 완료 · ' + hm(new Date(L.at)) : ''; return; }
+    el.textContent = '남은 ' + L.left + '세트 · ' + hm(new Date(Date.now() + L.left * setPace())) + ' 한 바퀴';
   }
   function openToday() {
     const t = todayStat(), cls = (r) => (r.max > JUMP * 100 || r.dev > 5 ? 'warn' : r.dev < -4 || (r.rest !== null && r.rest < t.plan * 0.8) ? 'neg' : r.dev > 1 ? 'pos' : 'neu');
