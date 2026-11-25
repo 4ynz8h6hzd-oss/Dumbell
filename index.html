@@ -996,7 +996,7 @@ body.rest-on #nums{opacity:.55}
     const mk = wkKind(ev.mo * 7 / 30), c = ev.cal, o = c ? c.over : 0, ff = ev.kind === 'fast', ck = o >= 3 && ff ? 'fast' : o <= -3 ? 'down' : 'up';
     return '<div><small>이번 주</small>' + tIcon(wkKind(ev.wk)) + WK_TXT[wkKind(ev.wk)] + '</div>' +
       '<div><small>이번 달</small>' + (ev.moOk ? tIcon(mk) + MO_TXT[mk] : tIcon('hold') + '2주 더 쌓이면 판단') + '</div>' +
-      (c ? '<div><small>목표</small>' + tIcon(ck) + (o >= 3 && ff ? '목표보다 너무 앞서요 · 기록 확인' : o >= 3 ? '목표보다 빨리 늘고 있어요' : o <= -3 ? '목표보다 조금 느려요' : '목표대로 가는 중') + '</div>' : '');
+      (c ? '<div><small>목표</small>' + tIcon(ck) + (o >= 3 && ff ? '주 ' + RATE * 100 + '% 목표보다 너무 앞서요 · 기록 확인' : o >= 3 ? '주 ' + RATE * 100 + '% 목표보다 빨리 늘고 있어요' : o <= -3 ? '주 ' + RATE * 100 + '% 목표보다 조금 느려요' : '주 ' + RATE * 100 + '% 목표 순항 중이에요') + '</div>' : '');
   }
   const COL = { cap: '#6E56CF', fast: '#C4281C', up: '#248A3D', flat: '#B07A00', down: '#C26A00', hold: '#8E8E93' };
   /* status block: verdict sentence + 3 numbers + speed scale */
