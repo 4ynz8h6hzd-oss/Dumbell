@@ -1797,7 +1797,7 @@ body.rest-on #nums{opacity:.55}
       e.preventDefault(); stop();
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       b.classList.add('pressed'); padNav(d);
-      t = setTimeout(() => { t0 = performance.now(); loop(); }, 220);
+      t = setTimeout(() => { t0 = performance.now(); loop(); }, 50);
     });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
     b.addEventListener('click', (e) => { if (e.detail === 0) padNav(d); });
