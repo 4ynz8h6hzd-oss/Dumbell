@@ -71,7 +71,7 @@ button{cursor:pointer}
 .vstats div{background:var(--plate);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;container-type:inline-size}
 .vstats span{font-size:11px;color:var(--sub);white-space:nowrap}
 .vstats b{font-size:min(17px,18cqi);font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
-.vscale{display:flex;flex-direction:column;gap:3px}
+.vscale{display:flex;flex-direction:column;gap:3px;margin-top:2px}
 .vbar{position:relative;display:flex;height:8px;border-radius:4px;overflow:visible}
 .vbar i{height:100%;opacity:.22}.vbar i.on{opacity:.9}
 .vbar i:first-child{border-radius:4px 0 0 4px}.vbar i:last-of-type{border-radius:0 4px 4px 0}
@@ -202,6 +202,7 @@ dialog{border:0;border-radius:22px;padding:0;width:min(400px,calc(100% - 24px));
 dialog::backdrop{background:rgba(0,0,0,.3)}
 .dlg{padding:18px;display:flex;flex-direction:column;gap:14px}
 .dlg h2{margin:0;font-size:17px;font-weight:700}
+#todayBody,#whyBody,#trendBody{display:flex;flex-direction:column;gap:10px}
 .dlg .sub{font-size:13px;color:var(--sub);margin-top:-10px}
 .step{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .step label{font-size:15px;font-weight:600}
@@ -540,7 +541,6 @@ body.rest-on #nums{opacity:.55}
       <button type="button" class="btn" id="bkLoad">백업 불러오기</button>
     </div>
     <input type="file" id="bkFile" accept=".json,application/json" hidden>
-    <button type="button" class="btn wide" id="listClose">닫기</button>
   </div>
 </dialog>
 
@@ -548,24 +548,19 @@ body.rest-on #nums{opacity:.55}
   <div class="dlg">
     <h2 id="todayT">오늘 운동 현황</h2>
     <div id="todayBody"></div>
-    <button type="button" class="btn wide" id="todayClose">닫기</button>
   </div>
 </dialog>
 <dialog id="whyDlg" aria-labelledby="whyT">
   <div class="dlg">
     <h2 id="whyT">판단 근거</h2>
     <div id="whyBody"></div>
-    <button type="button" class="btn wide" id="whyClose">닫기</button>
   </div>
 </dialog>
 <dialog id="trendDlg" aria-labelledby="trendT">
   <div class="dlg">
     <h2 id="trendT">8주 추세</h2>
     <div id="trendBody"></div>
-    <div class="btns">
-      <button type="button" class="btn" id="trendClose">닫기</button>
-      <button type="button" class="btn pri" id="trendHist">전체 기록 보기</button>
-    </div>
+    <button type="button" class="btn pri wide" id="trendHist">전체 기록 보기</button>
   </div>
 </dialog>
 
@@ -1291,7 +1286,7 @@ body.rest-on #nums{opacity:.55}
     $('whyBody').innerHTML = explHtml(sg) +
       '<p class="trend-more">추정 10RM = 무게 × (30 + 횟수) ÷ 40 · 1세트는 다음 세션 진도의 기준, 2·3세트는 직전 세트 실제 결과와 실제 휴식 시간으로 매번 다시 계산 · 오늘 예상보다 못 한 만큼 같은 근육 운동은 100%, 다른 운동은 50% 반영(최대 −6%)</p>';
     const ex = curEx();
-    $('whyBody').insertAdjacentHTML('beforeend', isBw(ex) ? '' : '<button type="button" class="btn wide" id="resetBtn" style="margin-top:4px">기술·자세를 바꿨어요 · 이 운동 기준 재설정</button>');
+    $('whyBody').insertAdjacentHTML('beforeend', isBw(ex) ? '' : '<button type="button" class="btn wide" id="resetBtn" style="margin-top:4px">기술·자세를 바꿨어요 · 기준 재설정</button>');
     const rb = $('resetBtn');
     if (rb) rb.addEventListener('click', () => {
       if (!confirm(EX[ex].short + ': 이전 기록을 진도 계산에서 빼고 오늘 1세트로 기준을 다시 잡을까요?')) return;
@@ -1622,9 +1617,7 @@ body.rest-on #nums{opacity:.55}
   };
   $('mood').addEventListener('click', headTap);
   $('mood').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); headTap(); } });
-  $('todayClose').addEventListener('click', () => $('todayDlg').close());
   $('why').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openWhy(); } });
-  $('whyClose').addEventListener('click', () => $('whyDlg').close());
   $('rTrend').addEventListener('click', openTrend);
   $('lpTrend').addEventListener('click', (e) => {
     if (!e.target.closest('#ltBtn')) return;
@@ -1632,7 +1625,14 @@ body.rest-on #nums{opacity:.55}
     try { localStorage.setItem('dumbbell-lt-open', trendOpen ? '1' : '0'); } catch (er) {}
     renderLeft(trend(curEx()));
   });
-  $('trendClose').addEventListener('click', () => $('trendDlg').close());
+
+  /* 창 바깥(어두운 배경)을 누르면 닫기 — 누르기 시작과 끝이 모두 바깥일 때만 */
+  document.querySelectorAll('dialog').forEach((d) => {
+    let down = false;
+    const out = (e) => { if (e.target !== d) return false; const r = d.getBoundingClientRect(); return e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom; };
+    d.addEventListener('pointerdown', (e) => { down = out(e); });
+    d.addEventListener('click', (e) => { if (down && out(e)) d.close(); down = false; });
+  });
 
   /* ---------- list (dialog + left page) ---------- */
   function openList() {
@@ -1642,7 +1642,6 @@ body.rest-on #nums{opacity:.55}
     showSync(syncing ? '저장 중…' : ''); drawRestCfg();
     $('list').showModal();
   }
-  $('listClose').addEventListener('click', () => $('list').close());
   const jump = (e, close) => {
     const b = e.target.closest('.xrow'); if (!b) return false;
     const i = Number(b.dataset.i);
