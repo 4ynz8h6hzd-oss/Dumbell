@@ -225,10 +225,11 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 @media (max-height:620px){.mood b{font-size:18px}.mood span{display:none}}
 .today{flex:none;margin:0 24px 8px;display:flex;align-items:center;gap:10px;padding:10px 14px;border:0;border-radius:14px;background:var(--plate);text-align:left;color:var(--ink);font:inherit;transition:background-color .5s,color .5s}
 .today>i{flex:none;width:8px;height:8px;border-radius:50%;background:currentColor;animation:breathe 2.8s ease-in-out infinite}
-.today b{flex:1;min-width:0;font-size:15px;font-weight:800;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.today span{flex:none;font-size:12px;font-weight:600;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
+.today b{flex:1;min-width:0;font-size:15px;font-weight:800;letter-spacing:-.01em;line-height:1.3}
+.today span:empty{display:none}.today span{flex:none;font-size:12px;font-weight:600;color:var(--sub);white-space:nowrap;font-variant-numeric:tabular-nums}
 .today.pos{color:#1E6E31;background:#EEF7F0}.today.neu{color:#0A4FA3;background:#EEF4FC}.today.neg{color:#9A3D00;background:#FDF2EA}.today.warn{color:#B0241A;background:#FCEDEC}
 .today.pop{animation:moodpop .5s ease-out}
+.today.fin b{font-size:17px}
 .trows{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}
 .trow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-bottom:.5px solid var(--line);font-size:13px}
 .trow b{font-weight:700}.trow em{font-style:normal;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
@@ -1129,23 +1130,36 @@ body.rest-on #nums{opacity:.55}
     const dvs = rows.filter((r) => r.dev !== null), avg = dvs.length ? dvs.reduce((a, r) => a + r.dev, 0) / dvs.length : 0;
     const rsAll = rows.filter((r) => r.rest !== null), rAvg = rsAll.length ? rsAll.reduce((a, r) => a + r.rest, 0) / rsAll.length : null;
     const mx = rows.reduce((a, r) => Math.max(a, r.max), 0), sets = rows.reduce((a, r) => a + r.xs.length, 0);
-    let st;
-    if (!rows.length) st = ['neu', '오늘 아직 시작 전', ''];
-    else if (mx > JUMP * 100) st = ['warn', '오늘 상승 과다 · 기록 확인', '최대 ' + sgn(mx) + '%'];
-    else if (avg > 5) st = ['warn', '오늘 무게·횟수가 많이 올랐어요 · 무리 주의', '평균 ' + sgn(avg) + '%'];
-    else if (rAvg !== null && rAvg < plan * 0.8) st = ['neg', '휴식이 짧아요 · 더 쉬세요', '평균 ' + secTxt(rAvg) + ' / ' + secTxt(plan)];
-    else if (avg < -4) st = ['neg', '오늘 하강 중 · 목표를 낮추는 중', '평균 ' + sgn(avg) + '%'];
-    else if (avg > 1) st = ['pos', '오늘 페이스 좋아요', '예상 대비 ' + sgn(avg) + '%'];
-    else st = ['neu', '오늘 예상대로 진행 중', '예상 대비 ' + sgn(avg) + '%'];
-    return { st, rows, avg, rAvg, plan, sets };
+    return { st: cueOf(rows, avg, rAvg, plan, mx), rows, avg, rAvg, plan, sets };
+  }
+  /* 지금 세트에서 할 행동 한 줄: 현재 운동·세트 우선, 그다음 오늘 전체. 마지막 세트로 갈수록 그 세트 얘기만 */
+  function cueOf(rows, avg, rAvg, plan, mx) {
+    const ex = curEx(), xs = isBw(ex) ? [] : todaySets(ex), n = xs.length, k = n + 1, fin = k === SETS;
+    const tag = n >= SETS ? '' : n ? k + '세트' + (fin ? '(마지막)' : '') + ' · ' : '';
+    const dv = (x) => (x && x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0), lst = xs[n - 1], ld = dv(lst);
+    let resting = false, el = 0; try { resting = !!rest && rest.end > Date.now(); } catch (e) {}
+    if (lst) el = (Date.now() - lst.ts) / 1000;
+    const iso = (EX[ex] && EX[ex].type) === 'i', curMax = xs.reduce((a, x) => Math.max(a, dv(x)), 0);
+    if (n < SETS && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 ' + sgn(curMax) + '% · 자세가 바뀐 것 같아요'];
+    if (n < SETS && n && ld < -1 && el < plan) return ['neg', tag + '휴식 끝까지 채우세요', '직전 세트 예상보다 ' + sgn(ld) + '%'];
+    if (n < SETS && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트 예상보다 ' + sgn(ld) + '%'];
+    if (rAvg !== null && rAvg < plan * 0.8) return ['neg', tag + '휴식 확실히 가져가세요', '오늘 평균 휴식 ' + secTxt(rAvg) + ' (계획 ' + secTxt(plan) + ')'];
+    if (mx > JUMP * 100) return ['warn', tag + '오늘 기록 하나가 너무 높아요 · 반동 확인', '최대 ' + sgn(mx) + '%'];
+    if (avg < -4) return ['neg', tag + '오늘 컨디션 저하 · 무리하지 말고 목표대로', '오늘 예상 대비 ' + sgn(avg) + '%'];
+    if (n >= SETS) return ['pos', '이 운동 끝 · 다음 운동 전에 숨 고르기', rows.length ? '오늘 예상 대비 ' + sgn(avg) + '%' : ''];
+    if (fin) return ['pos', tag + '1회 남을 때까지 · 자세 유지', iso ? '천천히, 수축에 집중' : ''];
+    if (n && iso) return ['neu', tag + '천천히 내리고 수축에 집중', ''];
+    if (n) return ['neu', tag + '같은 자세 · 같은 템포', ''];
+    if (!rows.length) return ['neu', '오늘 첫 운동 · 1세트는 목표 횟수까지만', ''];
+    return avg > 1 ? ['pos', '1세트 · 페이스 좋아요, 목표대로', '오늘 예상 대비 ' + sgn(avg) + '%'] : ['neu', '1세트 · 목표 횟수까지', '오늘 예상 대비 ' + sgn(avg) + '%'];
   }
   let todayKey = '';
   function renderToday() {
     const t = todayStat(), el = $('today'), k = t.st[0] + t.st[1];
-    el.className = 'today ' + t.st[0];
+    el.className = 'today ' + t.st[0] + (t.st[1].indexOf('(마지막)') > 0 ? ' fin' : '');
     if (todayKey && k !== todayKey) restart(el, 'pop');
     todayKey = k;
-    el.innerHTML = '<i aria-hidden="true"></i><b>' + esc(t.st[1]) + '</b><span>' + esc(t.st[2]) + '</span>';
+    el.innerHTML = '<i aria-hidden="true"></i><div style="min-width:0;flex:1"><b style="display:block">' + esc(t.st[1]) + '</b><span style="display:block;margin-top:2px">' + esc(t.st[2]) + '</span></div>';
   }
   function openToday() {
     const t = todayStat(), cls = (r) => (r.max > JUMP * 100 || r.dev > 5 ? 'warn' : r.dev < -4 || (r.rest !== null && r.rest < t.plan * 0.8) ? 'neg' : r.dev > 1 ? 'pos' : 'neu');
