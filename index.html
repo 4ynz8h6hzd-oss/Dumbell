@@ -160,10 +160,10 @@ button{cursor:pointer}
 /* 사이클 휠: 가운데 렌즈는 제자리, 운동 목록만 미끄러짐 (스크롤 없음) */
 #exList{--rh:48px;position:relative;display:block;flex:1 1 0;max-height:624px;min-height:200px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.3),#000 15%,#000 85%,rgba(0,0,0,.3));mask-image:linear-gradient(to bottom,rgba(0,0,0,.3),#000 15%,#000 85%,rgba(0,0,0,.3))}
 #exList{touch-action:none;-webkit-user-select:none;user-select:none;cursor:grab}#exList.drag{cursor:grabbing}
-#exList{perspective:1000px}
+#exList .wp{perspective:1000px}
 #exList .track,.pwheel .track{transform-style:preserve-3d}
-/* 블러는 줄마다가 아니라 바퀴 전체에 한 번 (GPU blur) */
-.wv{position:absolute;inset:0;perspective:inherit;perspective-origin:inherit}
+/* 블러는 줄마다가 아니라 바퀴 전체에 한 번 (GPU blur). 블러(.wv)와 원근(.wp)을 다른 요소에 — 같은 요소면 블러 걸릴 때 원통이 평평해짐 */
+.wv,.wp{position:absolute;inset:0}
 #exList .xrow,.pwheel .xrow{backface-visibility:hidden;-webkit-backface-visibility:hidden}
 #exList .track{position:absolute;left:0;right:0;top:calc(50% - var(--rh) / 2 - 24 * var(--rh));will-change:transform}
 #exList .xrow,#exList .xrow:last-of-type{height:var(--rh);min-height:0;padding:0 8px 0 12px;border:0;border-radius:0;background:transparent;box-shadow:none}
@@ -175,7 +175,7 @@ button{cursor:pointer}
 .ctx{touch-action:none}
 .pwheel{position:absolute;inset:0;z-index:6;--rh:54px;--ly:80px;overflow:hidden;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:opacity .16s ease-out;pointer-events:none}
 .pwheel[hidden]{display:none}.pwheel.out{opacity:0}
-.pwheel{perspective:2400px;perspective-origin:50% calc(var(--ly) + var(--rh) / 2)}
+.pwheel .wp{perspective:2400px;perspective-origin:50% calc(var(--ly) + var(--rh) / 2)}
 .pwheel .track{position:absolute;left:14px;right:14px;top:calc(var(--ly) - 24 * var(--rh));will-change:transform}
 .pwheel .xrow,.pwheel .xrow:last-of-type{grid-template-columns:28px minmax(0,1fr) 24px;height:var(--rh);min-height:0;padding:0 8px 0 12px;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:16px}
 .pwheel .xrow.cur .nm>span:first-child{font-weight:700}
@@ -488,7 +488,7 @@ body.rest-on #nums{opacity:.55}
   <aside class="pageL" id="pageL" aria-label="오늘 운동 순서와 추세">
     <div class="lp-head"><h2>오늘 운동</h2><span id="lpCount"></span></div>
     <button type="button" class="pill" id="histOpenL" style="align-self:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19h16M5 15l4-5 4 3 6-7"/></svg>지난 기록 · 그래프</button>
-    <div class="exlist" id="exList"><div class="wv"><div class="track" id="exTrack"></div></div><div class="lens" aria-hidden="true"></div></div>
+    <div class="exlist" id="exList"><div class="wv"><div class="wp"><div class="track" id="exTrack"></div></div></div><div class="lens" aria-hidden="true"></div></div>
     <div class="lp-trend" id="lpTrend"></div>
   </aside>
 
@@ -533,7 +533,7 @@ body.rest-on #nums{opacity:.55}
     </section>
 
     <div class="done" id="done" hidden></div>
-    <div class="pwheel" id="pWheel" hidden aria-hidden="true"><div class="wv"><div class="track" id="pTrack"></div></div><div class="lens"></div></div>
+    <div class="pwheel" id="pWheel" hidden aria-hidden="true"><div class="wv"><div class="wp"><div class="track" id="pTrack"></div></div></div><div class="lens"></div></div>
   </div>
 </div>
 
@@ -1542,7 +1542,7 @@ body.rest-on #nums{opacity:.55}
         if (dt > 0 && dt < 0.1) w.sv += ((w.off - w.po) / dt - w.sv) * 0.5; else w.sv = 0;
         w.po = w.off;
         const sd = REDUCED() ? 0 : Math.min(1, Math.abs(w.sv) / 3000), on = sd > 0.06;
-        const flt = on ? 'blur(' + sd.toFixed(2) + 'px)' : '', wv = el.parentNode;
+        const flt = on ? 'blur(' + sd.toFixed(2) + 'px)' : '', wv = el.parentNode.parentNode;
         if (wv.style.filter !== flt) wv.style.filter = flt;
         for (let j = 0; j < rows.length; j++) {
           const st = rows[j].style, p = j - c + m / w.h, th = p * rad, f = Math.max(0, Math.min(1, N + 0.2 - Math.abs(p)));
