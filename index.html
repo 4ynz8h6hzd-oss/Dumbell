@@ -1382,6 +1382,13 @@ body.rest-on #nums{opacity:.55}
       cmp = '추정 10RM ' + f1(base) + ' → ' + f1(got) + 'kg (' + sgn(pct(got, base)) + '%) · ' + (ok ? '목표 달성 ✓' : '목표 ' + f1(T0) + 'kg에 조금 못 미침 → 다음엔 천천히');
     }
     const ni = nextIncomplete(data.idx), addAdv = (() => { const a = setAdvice(ex); return a && a.kind === 'add' ? a : null; })();
+    /* 결정할 게 없으면(세트 추가 추천 없음 · 마지막 운동 아님) 완료 화면 없이 바로 다음 운동으로, 결과는 알림 한 줄 */
+    if (!addAdv && ni >= 0) {
+      buzz([30, 60, 30]); sfx('ex');
+      goIdx(ni, 'next');
+      toast(EX[ex].short + ' ' + N + '세트 끝' + (bw ? '' : ' · ' + (ok ? '목표 달성 ✓' : '목표에 조금 못 미침')));
+      return;
+    }
     let nextHtml;
     if (ni >= 0) {
       const nx = ORDER[ni], tsn = todaySets(nx);
