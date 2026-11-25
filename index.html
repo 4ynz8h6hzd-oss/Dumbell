@@ -662,12 +662,22 @@ body.rest-on #nums{opacity:.55}
   let trendOpen = (() => { try { const v = localStorage.getItem('dumbbell-lt-open'); return v === '1'; } catch (e) { return false; } })();
   const CHEV_D = '<svg class="chv" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
 
+  /* 무한 사이클: 13개 운동을 한 바퀴씩 돌고 다시 처음으로. 날짜가 바뀌어도 이어서 진행 (data.cyc = 이번 바퀴 상태)
+     세션 키(sk) = 그 운동 세션의 1세트 날짜. 다음 날 이어서 한 세트(2세트부터)는 sk로 원래 세션에 묶임, 같은 날 두 번째 바퀴는 'YYYY-MM-DD.2' */
+  const skey = (s) => s.sk || s.date;
   const todaySets = (ex) => { const t = today(); return data.sets.filter((s) => s.date === t && (!ex || s.ex === ex)).sort((a, b) => a.ts - b.ts); };
-  const doneCount = (ex) => todaySets(ex).length;
-  function sessions(ex, excludeToday) {
-    const t = today(), by = {};
-    data.sets.forEach((s) => { if (s.ex !== ex || (excludeToday && s.date === t)) return; (by[s.date] = by[s.date] || []).push(s); });
-    return Object.keys(by).sort().reverse().map((d) => ({ date: d, sets: by[d].sort((a, b) => a.ts - b.ts) }));
+  const newCyc = () => ({ id: uid(), s: {}, n: {} });
+  if (!data.cyc || !data.cyc.s) {
+    data.cyc = newCyc();
+    ORDER.forEach((e) => { if (todaySets(e).length) data.cyc.s[e] = today(); if (data.plan && data.plan.date === today() && data.plan[e]) data.cyc.n[e] = data.plan[e]; });
+  }
+  /* 이번 바퀴에서 이 운동 세션의 세트 */
+  const lapSets = (ex) => { const k = data.cyc.s[ex]; return k ? data.sets.filter((s) => s.ex === ex && skey(s) === k).sort((a, b) => a.ts - b.ts) : []; };
+  const doneCount = (ex) => lapSets(ex).length;
+  function sessions(ex, excludeCur) {
+    const cur = excludeCur ? data.cyc.s[ex] : null, by = {};
+    data.sets.forEach((s) => { const k = skey(s); if (s.ex !== ex || (cur && k === cur)) return; (by[k] = by[k] || []).push(s); });
+    return Object.values(by).map((xs) => xs.sort((a, b) => a.ts - b.ts)).sort((a, b) => b[0].ts - a[0].ts).map((xs) => ({ date: skey(xs[0]).slice(0, 10), sets: xs }));
   }
 
   /* ---------- progression: time-based (RATE per week), recovery & fatigue aware, nearest step ---------- */
@@ -903,7 +913,7 @@ body.rest-on #nums{opacity:.55}
     const expl = [
       ['직전 세트', (k - 1) + '세트 ' + last.w + 'kg × ' + last.r + '회' + (last.q === 1 ? ' (여유 있음 +1회)' : last.q === -1 ? ' (한계 −0.5회)' : '') + ' = 추정 10RM ' + f1(le) + 'kg' + (vs === null ? '' : ' · 예상 대비 ' + sgn(vs) + '%' + (vs < -1 ? ' (피로가 예상보다 큼)' : vs > 1 ? ' (예상보다 좋음)' : ' (예상대로)'))],
       ['세트당 피로', f1(100 * L) + '% (2분 휴식 기준) · ' + (n ? '이 운동 최근 기록 ' + n + '개로 학습' : '기록이 없어 기본값')],
-      ['휴식', '지금 ' + secTxt(el) + ' / 계획 ' + secTxt(rst) + ' · ' + secTxt(tUse) + ' 쉬면 직전 세트의 ' + Math.round(rec) + '%까지 회복 · 휴식은 끝까지 채우세요'],
+      ['휴식', '지금 ' + (el > 3600 ? agoTxt(el / 3600) : secTxt(el)) + ' / 계획 ' + secTxt(rst) + ' · ' + secTxt(tUse) + ' 쉬면 직전 세트의 ' + Math.round(rec) + '%까지 회복 · 휴식은 끝까지 채우세요'],
       ['방식', type === 'i' ? '고립 운동 → 무게를 낮춰 1세트 횟수(' + top.r + '회) 이상 · 천천히, 근육 수축에 집중 (MMC)' : type === 'c' ? '복합 운동 → 무게 유지, 횟수가 ' + RMIN + '회 아래로 떨어질 때만 1kg 내림' : '초경량 운동 → 무게 유지, 횟수만 조정'],
       ['결정', '예상 추정 10RM ' + f1(capAt(tUse)) + 'kg에서 가능한 횟수 → ' + p.w + 'kg × ' + p.r + '회 · 더 되면 1회 남을 때까지 하세요. 끝나고 \'여유·딱 맞음·한계\'를 눌러 주면 다음 세트와 다음 세션에 반영돼요']
     ];
@@ -913,13 +923,13 @@ body.rest-on #nums{opacity:.55}
       ['방식', type === 'i' ? '고립 운동이라 무게를 낮춰서라도 1세트만큼 · 천천히 근육 수축에 집중' : type === 'c' ? '복합 운동이라 무게 유지 · 횟수가 너무 줄 때만 1kg 내려요' : '가벼운 운동이라 무게 유지 · 횟수만 조정'],
       ['결정', p.w + 'kg × ' + p.r + '회 · 더 되면 1회 남을 때까지 하세요. 끝나고 여유·딱 맞음·한계를 눌러 주면 다음에 반영돼요']
     ];
-    const why = '직전 ' + last.w + '×' + last.r + (vs !== null && Math.abs(vs) > 1 ? ' (예상 ' + sgn(vs) + '%)' : '') + ' → 휴식 ' + secTxt(tUse) + ' 뒤 ' + Math.round(rec) + '% → ' + p.w + '×' + p.r;
+    const why = '직전 ' + last.w + '×' + last.r + (vs !== null && Math.abs(vs) > 1 ? ' (예상 ' + sgn(vs) + '%)' : '') + ' → 휴식 ' + (tUse > 3600 ? agoTxt(tUse / 3600) : secTxt(tUse)) + ' 뒤 ' + Math.round(rec) + '% → ' + p.w + '×' + p.r;
     const note = '';   /* '지금 시작하면 …'은 휴식을 줄이라는 신호로 읽혀서 화면에 띄우지 않음 */
     return { kind, w: p.w, r: p.r, step: pct(e10(p.w, p.r), le), delta, why, note, expl, plain, title: k + '세트 (백오프)', bo: true, cap: capAt(tUse), capEl: capAt(el), carry, last: '',
       vs, el, rst, early, rec, k, prevSet: last };
   }
   function suggestNow(ex) {
-    const ts = todaySets(ex);
+    const ts = lapSets(ex);
     return isBw(ex) || !ts.length || ts.length >= nSets(ex) ? suggest(ex) : backoff(ex, ts, Date.now());
   }
   const plainHtml = (sg) => '<ol class="steps">' + (sg.plain || sg.expl).map((x) => '<li><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></li>').join('') + '</ol>';
@@ -1087,17 +1097,25 @@ body.rest-on #nums{opacity:.55}
     const t = today();
     if (data.dayDate !== t) {
       data.dayDate = t;
-      const k = ORDER.findIndex((e) => doneCount(e) < nSets(e));
-      data.idx = k < 0 ? 0 : k;
+      /* 날짜가 바뀌어도 처음으로 돌아가지 않음: 바퀴를 다 돌았으면 새 바퀴, 아니면 이어서 */
+      if (allDone()) newLap();
+      else if (doneCount(curEx()) >= nSets(curEx())) { const k = nextIncomplete(data.idx); if (k >= 0) data.idx = k; }
       persist();
     }
   }
+  /* 새 바퀴: 마지막으로 끝낸 운동 다음부터 */
+  function newLap() {
+    let li = -1, lt = -1;
+    ORDER.forEach((e, i) => { const xs = lapSets(e); if (xs.length && xs[xs.length - 1].ts > lt) { lt = xs[xs.length - 1].ts; li = i; } });
+    data.cyc = newCyc();
+    data.idx = (li + 1) % ORDER.length;
+  }
   const curEx = () => ORDER[data.idx];
   /* 오늘 운동별 세트 수: 기본 3, 추천에 따라 2(생략) 또는 4(추가) */
-  const nSets = (ex) => (data.plan && data.plan.date === today() && data.plan[ex]) || SETS;
-  const setPlan = (ex, k) => { if (!data.plan || data.plan.date !== today()) data.plan = { date: today() }; data.plan[ex] = k; data.plan._last = { ex: ex, ts: Date.now() }; persist(); };
+  const nSets = (ex) => data.cyc.n[ex] || SETS;
+  const setPlan = (ex, k) => { data.cyc.n[ex] = k; data.cyc.last = { ex: ex, ts: Date.now() }; persist(); };
   /* 되돌리기: 세트 추가·생략도 원래(기본 3세트)로 */
-  const clearPlan = (ex) => { if (data.plan && data.plan.date === today()) { delete data.plan[ex]; if (data.plan._last && data.plan._last.ex === ex) delete data.plan._last; } };
+  const clearPlan = (ex) => { delete data.cyc.n[ex]; if (data.cyc.last && data.cyc.last.ex === ex) delete data.cyc.last; };
   const allDone = () => ORDER.every((e) => doneCount(e) >= nSets(e));
   function nextIncomplete(from) {
     for (let k = 1; k <= ORDER.length; k++) { const i = (from + k) % ORDER.length; if (doneCount(ORDER[i]) < nSets(ORDER[i])) return i; }
@@ -1108,14 +1126,14 @@ body.rest-on #nums{opacity:.55}
   const cur = { w: 10, r: 10 };
   let doneTimer = null, showingDone = false;
   function prefill() {
-    const ex = curEx(), ts = todaySets(ex);
+    const ex = curEx(), ts = lapSets(ex);
     if (isBw(ex)) { cur.w = 0; cur.r = 0; return; }
     cur.auto = true;
     if (ts.length >= nSets(ex)) { const l = ts[ts.length - 1]; cur.w = l.w; cur.r = l.r; return; }
     const sg = suggestNow(ex); cur.w = sg.w; cur.r = clampR(sg.r);
   }
   function goIdx(i, dir) {
-    if (i < 0 || i >= ORDER.length) { restart($('hero'), 'edge'); buzz([15, 40, 15]); sfx('edge'); return; }
+    i = (i + ORDER.length) % ORDER.length;   /* 사이클: 13번 다음은 1번 */
     if (i === data.idx) return;
     hideDone();
     data.idx = i; persist(); prefill(); render();
@@ -1160,7 +1178,7 @@ body.rest-on #nums{opacity:.55}
     const sg = suggestNow(ex);
     renderNums(ex, bw, sg, n);
     renderDelta(sg, bw);
-    const ts = todaySets(ex);
+    const ts = lapSets(ex);
     renderToday();
     if (bw) { renderWhy(sg); $('why').textContent = sg.why; $('rule').textContent = sg.last; }
     else {
@@ -1182,13 +1200,13 @@ body.rest-on #nums{opacity:.55}
     }
     $('ledger').innerHTML = lg;
     const ni = nextIncomplete(data.idx);
-    $('next').innerHTML = allDone() ? '오늘 운동 끝<b>' + total + '개 모두 완료</b>' : ni >= 0 && ni !== data.idx ? '다음<b>' + esc(EX[ORDER[ni]].short) + '</b>' : '';
+    $('next').innerHTML = allDone() ? '한 바퀴 끝<b>' + total + '개 모두 완료 · 다시 1번부터</b>' : ni >= 0 && ni !== data.idx ? '다음<b>' + esc(EX[ORDER[ni]].short) + '</b>' : '';
 
     /* pad */
-    $('kPrev').disabled = data.idx === 0;
-    $('kNext').disabled = data.idx === total - 1;
-    $('kPrev').setAttribute('aria-label', data.idx > 0 ? '이전 운동, ' + EX[ORDER[data.idx - 1]].name : '이전 운동 없음');
-    $('kNext').setAttribute('aria-label', data.idx < total - 1 ? '다음 운동, ' + EX[ORDER[data.idx + 1]].name : '다음 운동 없음');
+    $('kPrev').disabled = false;
+    $('kNext').disabled = false;
+    $('kPrev').setAttribute('aria-label', '이전 운동, ' + EX[ORDER[(data.idx + total - 1) % total]].name);
+    $('kNext').setAttribute('aria-label', '다음 운동, ' + EX[ORDER[(data.idx + 1) % total]].name);
     ['kWup', 'kWdn', 'kRup', 'kRdn'].forEach((id) => { $(id).disabled = bw; });
     $('kUndo').disabled = !todaySets().length;
     $('kWup').classList.toggle('hint', !bw && sg.kind === 'up' && cur.w < sg.w && n === 0);
@@ -1210,7 +1228,7 @@ body.rest-on #nums{opacity:.55}
   function moodOf(ex, sg, n) {
     const N = nSets(ex);
     if (isBw(ex)) return n >= N ? ['pos', N + '세트 끝', '수고했어요'] : ['neu', '맨몸 · 완료만 체크', ''];
-    const jump = todaySets(ex).map((x) => (x.P > 0 ? pct(e10(x.w, x.r), Math.max(x.P, x.Pr || 0)) : 0)).reduce((a, v) => Math.max(a, v), 0);
+    const jump = lapSets(ex).map((x) => (x.P > 0 ? pct(e10(x.w, x.r), Math.max(x.P, x.Pr || 0)) : 0)).reduce((a, v) => Math.max(a, v), 0);
     if (jump > JUMP * 100) return ['warn', '기록 확인 · 예상보다 너무 높아요', '실수라면 오늘 세트를 눌러 고쳐 주세요'];
     if (n >= N) return ['pos', N + '세트 끝 · 수고했어요', '다음 세션 1세트 ' + sg.w + '×' + sg.r];
     if (sg.bo) {
@@ -1282,10 +1300,12 @@ body.rest-on #nums{opacity:.55}
   }
   /* 지금 세트에서 할 행동 한 줄: 현재 운동·세트 우선, 그다음 오늘 전체. 마지막 세트로 갈수록 그 세트 얘기만 */
   function cueOf(rows, avg, rAvg, plan, mx) {
-    const ex = curEx(), xs = isBw(ex) ? [] : todaySets(ex), n = xs.length, k = n + 1, N = nSets(ex), fin = k === N;
+    const ex = curEx(), xs = isBw(ex) ? [] : lapSets(ex), n = xs.length, k = n + 1, N = nSets(ex), fin = k === N;
     const tag = n >= N ? '' : n ? k + '세트' + (fin ? '(마지막)' : '') + ' · ' : '';
     const adv = setAdvice(ex);
     if (adv && adv.kind === 'skip') return ['neg', k + '세트 생략 추천 · 눌러서 마치기', adv.why, 'skip', 1];
+    const stp = (n === 0 || n >= N) ? stopAdvice() : null;
+    if (stp) return ['neg', '오늘은 여기서 멈추는 걸 추천해요', stp + ' · 계속할지는 직접 정하세요', '', 1];
     const dv = (x) => (x && x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0), lst = xs[n - 1], ld = dv(lst);
     let resting = false, el = 0; try { resting = !!rest && rest.end > Date.now(); } catch (e) {}
     if (lst) el = (Date.now() - lst.ts) / 1000;
@@ -1338,7 +1358,7 @@ body.rest-on #nums{opacity:.55}
     const k = s.id + ':' + s.q + ':' + s.w + 'x' + s.r + ':' + curEx();
     if (k === fbKey && !el.hidden) return;
     fbKey = k;
-    const xs = todaySets(s.ex), i = xs.indexOf(s) + 1;
+    const xs = data.sets.filter((x) => x.ex === s.ex && skey(x) === skey(s)).sort((a, b) => a.ts - b.ts), i = xs.indexOf(s) + 1;
     el.innerHTML = '<span><b>방금 ' + (s.ex !== curEx() ? esc(EX[s.ex].short) + ' ' : '') + i + '세트 ' + s.w + '×' + s.r + '</b>여유가 어땠어요?</span>' +
       [[1, '여유'], [0, '딱 맞음'], [-1, '한계']].map((x) => '<button type="button" data-q="' + x[0] + '" aria-pressed="' + ((s.q === undefined ? 0 : s.q) === x[0]) + '">' + x[1] + '</button>').join('');
     if (el.hidden) { el.hidden = false; requestAnimationFrame(fitNums); }
@@ -1385,7 +1405,7 @@ body.rest-on #nums{opacity:.55}
     const rb = $('resetBtn');
     if (rb) rb.addEventListener('click', () => {
       if (!confirm(EX[ex].short + ': 이전 기록을 진도 계산에서 빼고 오늘 1세트로 기준을 다시 잡을까요?')) return;
-      const t0 = todaySets(ex)[0];
+      const t0 = lapSets(ex)[0];
       if (t0) { t0.R = 1; t0.u = Date.now(); } else { data.rp = data.rp || {}; data.rp[ex] = today(); }
       persist(); $('whyDlg').close(); prefill(); render(); toast('기준을 다시 잡았어요');
     });
@@ -1451,7 +1471,7 @@ body.rest-on #nums{opacity:.55}
     g.classList.remove('next', 'idle');
     if (showingDone) { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', '다음 운동 바로 시작'); return; }
     if (n >= N) {
-      if (allDone()) { g.classList.add('idle'); setGo('list'); g.setAttribute('aria-label', '오늘 운동 끝, 목록 보기'); }
+      if (allDone()) { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', '한 바퀴 끝, 새 바퀴 시작'); }
       else { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', N + '세트 끝, 다음 운동으로'); }
       return;
     }
@@ -1530,10 +1550,21 @@ body.rest-on #nums{opacity:.55}
     const ex = curEx(), n = doneCount(ex), bw = isBw(ex);
     if (showingDone) { advance(); return; }
     const N = nSets(ex);
-    if (n >= N) { if (allDone()) openList(); else goIdx(nextIncomplete(data.idx), 'next'); return; }
+    if (n >= N) {
+      if (allDone()) { const i0 = data.idx; newLap(); const i1 = data.idx; data.idx = i0; goIdx(i1, 'next'); if (i1 === i0) { persist(); prefill(); render(); } toast('새 바퀴 시작 · ' + EX[curEx()].short + '부터'); }
+      else goIdx(nextIncomplete(data.idx), 'next');
+      return;
+    }
     commitInputs();
     const sg = bw ? null : suggestNow(ex);
     const s = { id: uid(), ex, date: today(), ts: Date.now(), w: bw ? 0 : cur.w, r: bw ? 0 : cur.r };
+    /* 세션 키: 이어서 하는 세트는 이번 바퀴 세션에, 새 세션은 오늘 날짜(같은 날 이미 있으면 .2, .3…) */
+    if (n === 0) {
+      let k = s.date, j = 1; const used = new Set(data.sets.filter((x) => x.ex === ex).map(skey));
+      while (used.has(k)) k = s.date + '.' + (++j);
+      data.cyc.s[ex] = k;
+    }
+    if (data.cyc.s[ex] !== s.date) s.sk = data.cyc.s[ex];
     if (!bw && n === 0) s.T = s.P = Math.round(sg.T * 1000) / 1000;
     /* 기준 맞추기 1세트: 추천보다 더 하는 게 정상 → 예상(P)을 두지 않아 '예상보다 +%' 경고·피로 판단에서 빠짐 */
     if (!bw && n === 0 && calib(ex)) { delete s.P; s.C = 1; }
@@ -1565,7 +1596,7 @@ body.rest-on #nums{opacity:.55}
   $('kPrev').addEventListener('click', () => padNav(-1));
   $('kNext').addEventListener('click', () => padNav(1));
   $('kUndo').addEventListener('click', () => {
-    const all = todaySets(), s = all[all.length - 1], pl = data.plan && data.plan.date === today() && data.plan._last;
+    const all = todaySets(), s = all[all.length - 1], pl = data.cyc.last;
     /* 마지막 동작이 세트 추가·생략이면 그것부터 취소 */
     if (pl && (!s || pl.ts > s.ts)) {
       clearPlan(pl.ex); hideDone(); stopRest(); data.idx = ORDER.indexOf(pl.ex); persist();
@@ -1589,7 +1620,7 @@ body.rest-on #nums{opacity:.55}
 
   /* ---------- done moment → auto advance ---------- */
   function showDone(ex, sg) {
-    const N = nSets(ex), ts = todaySets(ex).slice(0, N), bw = isBw(ex);
+    const N = nSets(ex), ts = lapSets(ex).slice(0, N), bw = isBw(ex);
     let cmp, ok = true;
     if (bw) cmp = '맨몸 ' + N + '세트 완료';
     else {
@@ -1601,8 +1632,11 @@ body.rest-on #nums{opacity:.55}
       cmp = (got > base * 1.0005 ? '지난번보다 올랐어요' : got < base * 0.9995 ? '지난번보다 조금 내려갔어요' : '지난번과 같아요') + ' · ' + (ok ? '목표 달성 ✓' : '목표에 조금 못 미쳤어요 → 다음엔 천천히');
     }
     const ni = nextIncomplete(data.idx), addAdv = (() => { const a = setAdvice(ex); return a && a.kind === 'add' ? a : null; })();
-    /* 결정할 게 없으면(세트 추가 추천 없음 · 마지막 운동 아님) 완료 화면 없이 바로 다음 운동으로, 결과는 알림 한 줄 */
-    if (!addAdv && ni >= 0) {
+    /* 멈춤 추천 완료 화면은 하루 한 번만 (그 뒤엔 상단 한 줄로만 계속 안내) */
+    const stp = ni >= 0 && stopShown !== today() ? stopAdvice() : null;
+    if (stp) stopShown = today();
+    /* 결정할 게 없으면(세트 추가·멈춤 추천 없음 · 마지막 운동 아님) 완료 화면 없이 바로 다음 운동으로, 결과는 알림 한 줄 */
+    if (!addAdv && !stp && ni >= 0) {
       buzz([30, 60, 30]); sfx('ex');
       goIdx(ni, 'next');
       toast(EX[ex].short + ' ' + N + '세트 끝' + (bw ? '' : ' · ' + (ok ? '목표 달성 ✓' : '목표에 조금 못 미침')));
@@ -1610,17 +1644,17 @@ body.rest-on #nums{opacity:.55}
     }
     let nextHtml;
     if (ni >= 0) {
-      const nx = ORDER[ni], tsn = todaySets(nx);
+      const nx = ORDER[ni], tsn = lapSets(nx);
       let label = '맨몸', up = false;
       if (!isBw(nx)) { const s2 = tsn.length ? tsn[tsn.length - 1] : suggest(nx); label = s2.w + 'kg × ' + s2.r; up = !tsn.length && s2.kind === 'up'; }
       nextHtml = '<div class="dnext">' + icon(nx, 40, '') + '<div><small>다음 · ' + (ni + 1) + ' / ' + ORDER.length + '</small><b>' + esc(EX[nx].name) + '</b></div><em style="color:' + (up ? 'var(--green)' : 'var(--ink)') + '">' + label + (up ? ' ↑' : '') + '</em></div><div class="dprog"><i></i></div>';
     } else {
-      nextHtml = '<div class="dnext"><div><small>오늘 운동 끝 · ' + ORDER.length + '개 · ' + todaySets().length + '세트</small><b>전부 완료했어요</b></div><em>수고했어요</em></div>';
+      nextHtml = '<div class="dnext"><div><small>한 바퀴 끝 · ' + ORDER.length + '개 · 오늘 ' + todaySets().length + '세트</small><b>전부 완료했어요</b></div><em>다음엔 1번부터</em></div>';
     }
     $('done').innerHTML = '<div class="chk"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>' +
       '<h2>' + esc(EX[ex].short) + '<br>' + N + '세트 끝</h2>' +
       (bw ? '' : '<div class="dsets">' + ts.map((s, i) => '<div><small>' + (i + 1) + '세트</small><b>' + fmtSet(s) + '</b></div>').join('') + '</div>') +
-      '<p class="delta ' + (ok ? 'up' : 'retry') + '">' + esc(cmp) + '</p>' + (addAdv ? '<button type="button" class="btn wide addset" id="addSet">+1세트 더 하기 (추천) <small>' + esc(addAdv.why) + '</small></button>' : '') + (addAdv ? nextHtml.replace('<div class="dprog"><i></i></div>', '') : nextHtml);
+      '<p class="delta ' + (ok ? 'up' : 'retry') + '">' + esc(cmp) + '</p>' + (stp && !addAdv ? '<p class="delta retry">오늘은 여기서 멈추는 걸 추천해요 · ' + esc(stp) + '<br><small>계속할지는 직접 정하세요 · 가운데 버튼 = 다음 운동</small></p>' : '') + (addAdv ? '<button type="button" class="btn wide addset" id="addSet">+1세트 더 하기 (추천) <small>' + esc(addAdv.why) + '</small></button>' : '') + (addAdv ? nextHtml.replace('<div class="dprog"><i></i></div>', '') : nextHtml);
     const r = $('pageR').getBoundingClientRect(), bt = document.querySelector('.bottom').getBoundingClientRect().top - r.top;
     $('done').style.bottom = (r.height - bt) + 'px';
     $('done').hidden = false;
@@ -1628,7 +1662,8 @@ body.rest-on #nums{opacity:.55}
     renderGo();
     buzz([30, 60, 30]); sfx(ni >= 0 ? 'ex' : 'all');
     clearTimeout(doneTimer);
-    if (addAdv) {
+    if (addAdv || stp) {
+      if (!addAdv) return;   /* 멈춤 추천: 자동으로 넘기지 않고 직접 결정 */
       $('addSet').addEventListener('click', (e) => { e.stopPropagation(); setPlan(ex, N + 1); hideDone(); startRest(restCfg.set); prefill(); render(); toast('+1세트 · ' + (N + 1) + '세트로 진행'); });
       return;   /* 추천이 있으면 자동으로 넘기지 않음 */
     }
@@ -1639,7 +1674,7 @@ body.rest-on #nums{opacity:.55}
      생략: 마지막 세트 전, 직전 세트가 예상보다 −5% 넘게 못했거나 다음 세트 예상이 5회 미만 → 더 해도 자극보다 피로가 큼 (최소 2세트) */
   function setAdvice(ex) {
     if (isBw(ex)) return null;
-    const xs = todaySets(ex), n = xs.length, N = nSets(ex);
+    const xs = lapSets(ex), n = xs.length, N = nSets(ex);
     if (!n) return null;
     /* 종합 판단: 실제 휴식까지 반영한 예상(Pr) 대비. 짧게 쉬고도 해냈으면 그만큼 컨디션이 좋은 것 */
     const dv = (x) => (x.Pr > 0 ? pct(eff(x), x.Pr) : x.P > 0 ? pct(eff(x), x.P) : 0), worst = Math.min(...xs.map(dv)), best = Math.max(...xs.map(dv));
@@ -1655,6 +1690,24 @@ body.rest-on #nums{opacity:.55}
       if (l < -5) return { kind: 'skip', why: '직전 세트가 예상보다 많이 힘들었어요 · 더 하면 피로만 쌓여요' };
       if (b.r < RMIN && b.w <= MIN_W) return { kind: 'skip', why: '다음 세트 예상 ' + b.r + '회 · 효과보다 피로가 커요' };
     }
+    return null;
+  }
+  /* ---------- 멈춤 추천 (안내만): 오늘 최근 두 무게 운동이 모두 예상(P)보다 −3% 이하, 또는 4개 이상 했는데 오늘 평균 −4% 이하 ---------- */
+  const STOP_DEV = -3, STOP_AVG = -4;
+  let stopShown = '';
+  function stopAdvice() {
+    const rows = [];
+    ORDER.forEach((e) => {
+      if (isBw(e)) return;
+      const xs = todaySets(e).filter((x) => x.P > 0); if (!xs.length) return;
+      rows.push({ e, dev: xs.reduce((a, x) => a + pct(eff(x), x.P), 0) / xs.length, t: xs[xs.length - 1].ts });
+    });
+    if (rows.length < 2) return null;
+    rows.sort((a, b) => b.t - a.t);
+    const [a, b] = rows;
+    if (a.dev <= STOP_DEV && b.dev <= STOP_DEV) return '최근 두 운동 ' + EX[a.e].short + ' ' + sgn(a.dev) + '% · ' + EX[b.e].short + ' ' + sgn(b.dev) + '% · 예상보다 계속 낮아요';
+    const avg = rows.reduce((s, r) => s + r.dev, 0) / rows.length;
+    if (rows.length >= 4 && avg <= STOP_AVG) return '오늘 ' + rows.length + '개 운동 평균 예상보다 ' + sgn(avg) + '% · 피로가 쌓였어요';
     return null;
   }
   function advance() { clearTimeout(doneTimer); const ni = nextIncomplete(data.idx); hideDone(); if (ni >= 0) goIdx(ni, 'next'); else render(); }
@@ -1673,7 +1726,7 @@ body.rest-on #nums{opacity:.55}
     sw.dx = e.clientX - sw.x; sw.dy = e.clientY - sw.y;
     if (!sw.on && Math.abs(sw.dx) > 12 && Math.abs(sw.dx) > Math.abs(sw.dy) * 1.5) sw.on = true;
     if (sw.on) {
-      const edge = (sw.dx > 0 && data.idx === 0) || (sw.dx < 0 && data.idx === ORDER.length - 1);
+      const edge = false;
       const tx = 'translateX(' + (sw.dx * (edge ? 0.15 : 0.4)).toFixed(1) + 'px)';
       $('hero').style.transform = tx; $('ctx').style.transform = tx;
     }
@@ -1833,7 +1886,7 @@ body.rest-on #nums{opacity:.55}
     const head = {
       app: 'dumbbell-set-log', updated: new Date().toISOString(),
       timeZone: (Intl.DateTimeFormat().resolvedOptions().timeZone || ''),
-      note: '세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, P=그 세트의 예상 추정10RM(화면 추천 기준), Pr=실제 휴식까지 반영한 예상(세트 추가·생략 판단용), R=1이면 그 세트부터 기준 재설정(기술·자세 변경), C=1이면 시작 기준 맞추기 세트, q=세트 직후 여유 입력(1 여유 있음=1회 더로 계산, 0 딱 맞음, −1 한계=0.5회 덜로 계산, 없으면 딱 맞음), u=수정 시각. 추정10RM = w×(30+r)÷40',
+      note: '세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, P=그 세트의 예상 추정10RM(화면 추천 기준), Pr=실제 휴식까지 반영한 예상(세트 추가·생략 판단용), R=1이면 그 세트부터 기준 재설정(기술·자세 변경), C=1이면 시작 기준 맞추기 세트, q=세트 직후 여유 입력(1 여유 있음=1회 더로 계산, 0 딱 맞음, −1 한계=0.5회 덜로 계산, 없으면 딱 맞음), sk=세션 키(다른 날 이어서 한 세트나 같은 날 두 번째 바퀴일 때만, 그 세션 1세트의 date 또는 date.2), u=수정 시각. 추정10RM = w×(30+r)÷40',
       exercises: Object.fromEntries(ORDER.map((e) => [e, EX[e].name + (isBw(e) ? ' (맨몸)' : ' (시작 10RM ' + EX[e].start + 'kg)')])),
       order: ORDER
     };
@@ -1902,7 +1955,7 @@ body.rest-on #nums{opacity:.55}
       let added = 0;
       arr.forEach((s) => {
         if (!s || !EX[s.ex] || typeof s.date !== 'string' || have.has(s.id)) return;
-        data.sets.push({ id: String(s.id || uid()), ex: s.ex, date: s.date, ts: Number(s.ts) || Date.now(), w: isBw(s.ex) ? 0 : clampW(s.w), r: isBw(s.ex) ? 0 : clampR(s.r), ...(typeof s.T === 'number' ? { T: s.T } : {}), ...(s.sample ? { sample: true } : {}) });
+        data.sets.push({ id: String(s.id || uid()), ex: s.ex, date: s.date, ts: Number(s.ts) || Date.now(), w: isBw(s.ex) ? 0 : clampW(s.w), r: isBw(s.ex) ? 0 : clampR(s.r), ...(typeof s.T === 'number' ? { T: s.T } : {}), ...(typeof s.sk === 'string' ? { sk: s.sk } : {}), ...(s.sample ? { sample: true } : {}) });
         have.add(s.id); added++;
       });
       persist(); prefill(); render(); $('list').close();
