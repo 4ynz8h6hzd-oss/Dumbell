@@ -156,18 +156,18 @@ button{cursor:pointer}
 .lp-trend[hidden],.rtrend[hidden]{display:none!important}
 .chv{flex:none;color:var(--mute);transition:transform .2s}
 [aria-expanded="true"]>.chv,[aria-expanded="true"] .chv{transform:rotate(180deg)}
-/* 진행 현황: 목록 위 요약 + 줄마다 주 속도 */
-.lp-pace{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;font-weight:600;color:var(--sub);font-variant-numeric:tabular-nums}
-.lp-pace .pg{color:var(--ink)}
-.lp-pace span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
-.lp-pace i{width:8px;height:8px;border-radius:2px}
-.lp-pace .z{opacity:.4}
-.pc-cap i{background:#6E56CF}.pc-fast i{background:#C4281C}.pc-up i{background:#248A3D}.pc-flat i{background:#B07A00}.pc-down i{background:#C26A00}.pc-hold i{background:#C7C7CC}
-.pageL .xrow{grid-template-columns:18px 24px minmax(0,1fr);min-height:46px;padding:5px 4px}
+.pageL .xrow .ti{width:24px;height:24px;border-radius:8px}.pageL .xrow .ti svg{width:14px;height:14px}
+.pageL .xrow{grid-template-columns:18px 24px minmax(0,1fr) 24px;min-height:46px;padding:5px 4px}
 .xrow .nm{display:flex;flex-direction:column;gap:1px;min-width:0}
 .xrow .meta{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:500}
 .xrow .meta em{font-size:12px}
-.xrow b.pc{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.xrow b.pc{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;flex:none}
+.xrow b.pc svg{display:block}
+.ti{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;flex:none}
+.ti-up{background:#E3F3E7;color:#248A3D}.ti-fast{background:#FDE7E5;color:#C4281C}.ti-flat{background:#FBF0D9;color:#9A6B00}.ti-down{background:#FCEBDD;color:#B05A00}.ti-hold{background:#F2F2F7;color:#8E8E93}.ti-cap{background:#ECE8FA;color:#6E56CF}
+.rtrend .wd{display:flex;flex-direction:column;gap:6px;flex:none}
+.rtrend .wd div{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;white-space:nowrap}
+.rtrend .wd small{width:44px;font-size:12px;font-weight:500;color:var(--sub)}
 .xrow b.pc.tk-hold{font-weight:500;color:var(--faint)}
 .xrow.ok b.pc{opacity:.75}
 .cal{margin:0;display:flex;flex-direction:column;gap:2px;font-size:12px;line-height:1.45;color:var(--sub);font-variant-numeric:tabular-nums}
@@ -455,7 +455,6 @@ body.rest-on #nums{opacity:.55}
     <div class="lp-head"><h2>오늘 운동</h2><span id="lpCount"></span></div>
     <button type="button" class="pill" id="histOpenL" style="align-self:flex-start"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19h16M5 15l4-5 4 3 6-7"/></svg>지난 기록 · 그래프</button>
     <div class="bars daybars" id="lpBars" aria-hidden="true" style="width:100%"></div>
-    <div class="lp-pace" id="lpPace"></div>
     <div class="exlist" id="exList"></div>
     <div class="lp-trend" id="lpTrend"></div>
   </aside>
@@ -808,11 +807,11 @@ body.rest-on #nums{opacity:.55}
     const up = pick.e > last.e + 1e-9;
     const note = mode === 'break' ? Math.round(hrs / 24) + '일 만이라 조금 가볍게 다시 시작해요'
       : mode === 'deload' ? '2번 연속 목표를 못 채워서 한 번 쉬어가요'
-      : mode === 'fatigue' ? (fDrop ? '지난번 세트마다 횟수가 평소보다 많이 줄었어요 · 이번엔 유지' : '최근 7일 운동량이 평소의 ' + loadX.toFixed(1) + '배예요 · 이번엔 유지')
+      : mode === 'fatigue' ? (fDrop ? '지난번 세트마다 횟수가 평소보다 많이 줄었어요 · 이번엔 유지' : '최근 일주일 운동량이 평소보다 많아요 · 이번엔 유지')
       : low && pick.w < last.w ? '지난번 ' + last.r + '회라 ' + RMIN + '회보다 적어요 · 1kg 내려서 횟수를 확보해요'
       : mode === 'easy' ? '지난번 목표를 못 채워서 이번엔 천천히 올려요'
       : !up && adjAct && pen > 0.004 ? '회복 ' + REC_H + '시간 중 ' + Math.max(0, Math.round(hrs)) + '시간 · 무리하지 않게 잡았어요'
-      : !up ? '주 ' + RATE * 100 + '% 속도 · 이 기록 ' + Math.floor(lvlDays) + '일째, 며칠 더 쌓이면 올려요' : '';
+      : !up ? '아직 이 무게에 익숙해지는 중 · 며칠 더 하면 올려요' : '';
     const why = '지난 세션(' + md(last.date) + ') 첫 세트 ' + last.w + '×' + last.r + ' = 추정 10RM ' + f1(last.e) + 'kg' +
       (mode === 'break' || mode === 'deload' ? ' → 3% 낮춤' : ' → 이 레벨 ' + lvlDays.toFixed(1) + '일째, 주 ' + RATE * 100 + '% 속도' + (mode === 'easy' ? '의 절반' : '') + ' ' + sgn(g * 100) + '%') +
       (mode === 'fatigue' ? ' → 피로 신호로 0%' : '') +
@@ -927,7 +926,7 @@ body.rest-on #nums{opacity:.55}
         flat: '최근 기록이 제자리예요. 잠, 식사, 쉬는 날을 점검해 보세요.',
         down: '최근 기록이 내려가요. 피로가 쌓였을 수 있어요. 목표를 계속 못 채우면 앱이 무게를 낮춰요.' }[kind] +
         (days < 14 ? ' 기록이 ' + days + '일치라 속도는 참고용이에요.' : '');
-      ev = { kind, label: { fast: '빠른 상승 · 확인', up: '향상 중', flat: '정체', down: '하락' }[kind], slope, mx, my, wk,
+      ev = { kind, label: { fast: '빠른 상승 · 확인', up: '향상 중', flat: '정체', down: '하락' }[kind], slope, mx, my, wk, mo, moOk: m30.length >= 2 && lp.x - m30[0].x >= 14,
         short: f1(lp.y) + 'kg · 주 ' + pctI(wk),
         msg,
         stats: [['월 속도', m30.length >= 2 && lp.x - m30[0].x >= 14 ? sgn(mo) + '%' : '— (2주부터)'], ['주 속도', sgn(wk) + '%']],
@@ -953,12 +952,17 @@ body.rest-on #nums{opacity:.55}
     const o = c.over, tag = o >= 3 ? '⚠ 목표 경로보다 ' + sgn(o) + '% 앞섬 · 시작 기준이 가벼웠거나 기록 확인 필요' : o <= -3 ? '목표 경로보다 ' + sgn(o) + '% 뒤처짐' : '목표 경로대로 가는 중';
     return '<span class="cal"><span>시작 기준 ' + c.start + 'kg → 첫 기록 ' + f1(c.first) + ' → 지금 <b>' + f1(c.now) + '</b> · 목표 경로 ' + f1(c.exp) + '</span><em class="' + (o >= 3 ? 'tk-fast' : o <= -3 ? 'tk-down' : 'tk-up') + '">' + tag + '</em></span>';
   }
-  /* 오늘 운동 전체의 진행 현황 */
-  function paceSummary() {
-    const cnt = { cap: 0, fast: 0, up: 0, flat: 0, down: 0, hold: 0 };
-    ORDER.forEach((e) => { if (!isBw(e)) cnt[trend(e).ev.kind]++; });
-    const L = { cap: '장비 한계', fast: '⚠ 주의', up: '향상', flat: '정체', down: '하락', hold: '보류' };
-    return '<span class="pg">목표 주 ' + RATE * 100 + '%</span>' + ['cap', 'fast', 'up', 'flat', 'down', 'hold'].map((k) => '<span class="pc-' + k + (cnt[k] ? '' : ' z') + '"><i></i>' + L[k] + ' ' + cnt[k] + '</span>').join('');
+  const TI = { up: 'M7 17L17 7M9 7h8v8', fast: 'M12 4L2.5 20h19zM12 10v4M12 17h.01', flat: 'M5 12h14M13 6l6 6-6 6', down: 'M7 7l10 10M17 9v8H9', hold: 'M7 12h.01M12 12h.01M17 12h.01', cap: 'M5 5h14M12 19V9M8 13l4-4 4 4' };
+  const tIcon = (k) => '<span class="ti ti-' + k + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + TI[k] + '"/></svg></span>';
+  const wkKind = (v) => v >= FAST ? 'fast' : v >= THRESH ? 'up' : v < -THRESH ? 'down' : 'flat';
+  const WK_TXT = { fast: '너무 빨라요 · 반동 의심', up: '알맞은 속도로 오름', flat: '제자리', down: '내려가는 중' };
+  const MO_TXT = { fast: '너무 빨라요 · 기록 확인', up: '향상 중', flat: '정체', down: '하락 중' };
+  function wordsHtml(ev) {
+    if (!ev.stats) return '<div>' + tIcon(ev.kind === 'up' ? 'up' : 'hold') + esc(ev.short) + '</div>';
+    const mk = wkKind(ev.mo * 7 / 30), c = ev.cal, o = c ? c.over : 0, ck = o >= 3 ? 'fast' : o <= -3 ? 'down' : 'up';
+    return '<div><small>이번 주</small>' + tIcon(wkKind(ev.wk)) + WK_TXT[wkKind(ev.wk)] + '</div>' +
+      '<div><small>이번 달</small>' + (ev.moOk ? tIcon(mk) + MO_TXT[mk] : tIcon('hold') + '2주 더 쌓이면 판단') + '</div>' +
+      (c ? '<div><small>목표</small>' + tIcon(ck) + (o >= 3 ? '목표보다 앞서요 · 기록 확인' : o <= -3 ? '목표보다 조금 느려요' : '목표대로 가는 중') + '</div>' : '');
   }
   const COL = { cap: '#6E56CF', fast: '#C4281C', up: '#248A3D', flat: '#B07A00', down: '#C26A00', hold: '#8E8E93' };
   /* status block: verdict sentence + 3 numbers + speed scale */
@@ -1088,7 +1092,7 @@ body.rest-on #nums{opacity:.55}
     void ts;
 
     const t = trend(ex);
-    $('trend').innerHTML = '<b class="tk-' + t.ev.kind + '">' + t.ev.label + '</b>' + (t.bw ? '<svg aria-hidden="true"></svg>' : chart(t, false)) + '<span>' + esc(t.ev.short) + '</span>';
+    $('trend').innerHTML = '<b class="tk-' + t.ev.kind + '">' + t.ev.label + '</b>' + (t.bw ? '<svg aria-hidden="true"></svg>' : chart(t, false)) + '<span>' + esc(t.ev.wk !== undefined ? WK_TXT[wkKind(t.ev.wk)] : t.ev.short) + '</span>';
     $('trend').setAttribute('aria-label', t.ev.label + ', ' + t.ev.sum + ', 자세히 보기');
 
     /* ledger */
@@ -1124,12 +1128,13 @@ body.rest-on #nums{opacity:.55}
     void sec; return t < 60 ? '방금' : (d ? d + '일 ' + h + '시간 ' + m + '분' : h ? h + '시간 ' + m + '분' : m + '분') + ' 전'; };
   const setsTxt = (xs) => xs[0].w + '×' + xs.map((x, i) => (i && x.w !== xs[0].w ? x.w + '×' : '') + x.r).join('·');
   /* 긍정 · 중립 · 부정 한 줄. 메인 화면엔 정수 %만, 실제 무게×횟수를 바꾸지 않는 1% 남짓 조정은 말하지 않음 (덤벨 들기 전 괜한 부정 문구 방지) */
+  const devTxt = (v) => (v > 1 ? '오늘 예상보다 잘 되고 있어요' : v < -1 ? '오늘 예상보다 조금 힘든 날이에요' : '오늘 예상대로예요');
   const chgTxt = (a, b) => (a.w !== b.w ? Math.abs(a.w - b.w) + 'kg ' + (b.w < a.w ? '낮춤' : '올림') : Math.abs(a.r - b.r) + '회 ' + (b.r < a.r ? '줄임' : '늘림'));
   function moodOf(ex, sg, n) {
     const N = nSets(ex);
     if (isBw(ex)) return n >= N ? ['pos', N + '세트 끝', '수고했어요'] : ['neu', '맨몸 · 완료만 체크', ''];
     const jump = todaySets(ex).map((x) => (x.P > 0 ? pct(e10(x.w, x.r), Math.max(x.P, x.Pr || 0)) : 0)).reduce((a, v) => Math.max(a, v), 0);
-    if (jump > JUMP * 100) return ['warn', '기록 확인 · 예상보다 ' + pctI(jump), '실수라면 오늘 세트를 눌러 고쳐 주세요'];
+    if (jump > JUMP * 100) return ['warn', '기록 확인 · 예상보다 너무 높아요', '실수라면 오늘 세트를 눌러 고쳐 주세요'];
     if (n >= N) return ['pos', N + '세트 끝 · 수고했어요', '다음 세션 1세트 ' + sg.w + '×' + sg.r];
     if (sg.bo) {
       if (sg.vs === null || Math.abs(sg.vs) < 1.5) return ['neu', '예상대로예요', '페이스 유지'];
@@ -1137,13 +1142,13 @@ body.rest-on #nums{opacity:.55}
     }
     if (sg.reset) return ['neu', '기준 재설정 · 오늘 1세트가 새 기준', '편하게 하고 실제 결과를 입력하세요'];
     if (!sg.prev) return ['neu', '첫 기록이에요', '입력한 10RM으로 시작'];
-    if (sg.mode === 'break') return ['neu', '오랜만이에요 · 가볍게', Math.round(sg.hrs / 24) + '일 만이라 3% 낮춤'];
-    if (sg.mode === 'deload') return ['neu', '한 번 쉬어가요 · 3% 낮춤', '2번 연속 목표 미달'];
-    if (sg.mode === 'fatigue') return ['neu', '이번엔 유지해요', (sg.fDrop ? '지난번 2·3세트가 예상보다 덜 나왔어요' : '최근 7일 운동량이 평소의 ' + sg.loadX.toFixed(1) + '배예요')];
+    if (sg.mode === 'break') return ['neu', '오랜만이에요 · 가볍게', Math.round(sg.hrs / 24) + '일 만이라 조금 가볍게 시작해요'];
+    if (sg.mode === 'deload') return ['neu', '한 번 쉬어가요 · 조금 가볍게', '2번 연속 목표를 못 채웠어요'];
+    if (sg.mode === 'fatigue') return ['neu', '이번엔 유지해요', (sg.fDrop ? '지난번 2·3세트가 예상보다 덜 나왔어요' : '최근 일주일 운동량이 평소보다 많아요')];
     if (sg.maxed) return ['neu', '장비 한계 · 템포로 진도', MAX_W + 'kg ' + sg.prev.r + '회 · 3초 내리기로 바꾸고 판단 근거에서 기준 재설정'];
     if (sg.adjAct && sg.dayF < 1) return ['neu', '앞선 운동 피로 반영 · ' + chgTxt(sg.pick0, sg), '같은 근육을 앞에서 써서 조금 낮췄어요'];
     if (sg.adjAct && sg.pen > 0.004) return ['neu', '회복 중 · ' + chgTxt(sg.pick0, sg), '지난 운동 ' + Math.round(sg.hrs) + '시간 전 · ' + REC_H + '시간 전엔 살짝 낮춰요'];
-    if (sg.up) return ['pos', '올릴 차례예요', sg.atMax ? '최대 덤벨이라 횟수로 진도' : '회복 완료 · 주 ' + RATE * 100 + '% 속도'];
+    if (sg.up) return ['pos', '올릴 차례예요', sg.atMax ? '최대 덤벨이라 횟수로 진도' : '충분히 쉬었어요 · 이번에 한 단계 올려요'];
     if (sg.mode === 'easy') return ['neu', '천천히 올려요', '지난번 목표에 조금 못 미쳤어요'];
     return ['neu', '이 무게 다지기', sg.note || ''];
   }
@@ -1164,7 +1169,7 @@ body.rest-on #nums{opacity:.55}
       let resting = false; try { resting = !!rest && rest.end > Date.now(); } catch (e) {}
       if (lx && n === 0 && !resting) {
         const xs = todaySets(lx.ex), dv = xs.filter((x) => x.P > 0), dev = dv.length ? dv.reduce((a, x) => a + Math.min(0, eff(x) / x.P - 1), 0) / dv.length : 0;
-        l2 = '직전 운동 ' + EX[lx.ex].short + ' ' + setsTxt(xs) + ' · ' + agoLive(now - xs[xs.length - 1].ts) + (dev <= -0.015 ? ' · 예상보다 ' + pctI(100 * dev) : ' · 예상대로');
+        l2 = '직전 운동 ' + EX[lx.ex].short + ' ' + setsTxt(xs) + ' · ' + agoLive(now - xs[xs.length - 1].ts) + (dev <= -0.015 ? ' · 예상보다 힘들었어요' : ' · 예상대로');
       }
     }
     $('why').innerHTML = l1 + more;
@@ -1209,24 +1214,24 @@ body.rest-on #nums{opacity:.55}
     if (lst) el = (Date.now() - lst.ts) / 1000;
     const iso = (EX[ex] && EX[ex].type) === 'i', curMax = xs.reduce((a, x) => Math.max(a, dv(x)), 0);
     const cal = !n && calib(ex), calSub = '처음 ' + CALIB_N + '세션은 시작 기준을 맞추는 중 · 추천보다 더 되면 더 하세요';
-    if (n < N && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 ' + pctI(curMax) + ' · 자세가 바뀐 것 같아요', '', 1];
+    if (n < N && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 훨씬 잘 나왔어요 · 자세가 바뀐 것 같아요', '', 1];
     /* 휴식 중: 숫자 없이 '더 쉬세요' / 끝나면 '시작하세요' (운동 사이 휴식도 같음) */
     const rTot = (() => { try { return rest ? rest.total / 1000 : 0; } catch (e) { return 0; } })();
     if (n < N && resting) return n && ld < -3 ? ['neg', tag + '조금 더 쉬는 게 좋아요', '직전 세트가 힘들었어요 · 휴식 30초 늘렸어요', '', 1] : ['neu', (n ? tag : '1세트 전 · ') + '조금 더 쉬세요', cal ? '이번 1세트는 여유 있으면 1회 남을 때까지' : '', '', 1];
-    if (n < N && n && el < plan * 0.8 && !resting && rTot === 0 && ld < -1) return ['neg', tag + '휴식 끝까지 채우세요', '직전 세트 예상보다 ' + pctI(ld), '', 1];
-    if (n < N && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트 예상보다 ' + pctI(ld), '', 1];
+    if (n < N && n && el < plan * 0.8 && !resting && rTot === 0 && ld < -1) return ['neg', tag + '휴식 끝까지 채우세요', '직전 세트가 예상보다 힘들었어요', '', 1];
+    if (n < N && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트가 예상보다 너무 잘 나왔어요', '', 1];
     let justDone = false; try { justDone = !!rest && rest.end <= Date.now() && Date.now() - rest.end < 60000; } catch (e) {}
     if (n < N && justDone) return ['pos', (n ? tag : '1세트 · ') + '지금 시작하세요', fin ? '1회 남을 때까지 · 자세 유지' : cal ? '여유 있으면 1회 남을 때까지' : '', '', 1];
-    if (rAvg !== null && rAvg < plan * 0.8) return ['neg', tag + '휴식 확실히 가져가세요', '오늘 평균 휴식 ' + secTxt(rAvg) + ' (계획 ' + secTxt(plan) + ')', '', 1];
-    if (mx > JUMP * 100) return ['warn', tag + '오늘 기록 하나가 너무 높아요 · 반동 확인', '최대 ' + pctI(mx), '', 1];
-    if (avg < -4) return ['neg', tag + '오늘 컨디션 저하 · 무리하지 말고 목표대로', '오늘 예상 대비 ' + sgn(avg) + '%'];
-    if (n >= N) return ['pos', '이 운동 끝 · 다음 운동 전에 숨 고르기', rows.length ? '오늘 예상 대비 ' + sgn(avg) + '%' : ''];
+    if (rAvg !== null && rAvg < plan * 0.8) return ['neg', tag + '휴식 확실히 가져가세요', '오늘 휴식이 계획보다 짧아요', '', 1];
+    if (mx > JUMP * 100) return ['warn', tag + '오늘 기록 하나가 너무 높아요 · 반동 확인', '예상보다 훨씬 높은 세트가 있어요', '', 1];
+    if (avg < -4) return ['neg', tag + '오늘 컨디션 저하 · 무리하지 말고 목표대로', devTxt(avg)];
+    if (n >= N) return ['pos', '이 운동 끝 · 다음 운동 전에 숨 고르기', rows.length ? devTxt(avg) : ''];
     if (cal) return ['pos', '1세트 · 여유 있으면 1회 남을 때까지', calSub, '', 1];
     if (fin) return ['pos', tag + '1회 남을 때까지 · 자세 유지', iso ? '천천히, 수축에 집중' : '', '', 1];
     if (n && iso) return ['neu', tag + '천천히 내리고 수축에 집중', ''];
     if (n) return ['neu', tag + '같은 자세 · 같은 템포', ''];
     if (!rows.length) return ['neu', '오늘 첫 운동 · 1세트는 목표 횟수까지만', ''];
-    return avg > 1 ? ['pos', '1세트 · 페이스 좋아요, 목표대로', '오늘 예상 대비 ' + sgn(avg) + '%'] : ['neu', '1세트 · 목표 횟수까지', '오늘 예상 대비 ' + sgn(avg) + '%'];
+    return avg > 1 ? ['pos', '1세트 · 페이스 좋아요, 목표대로', devTxt(avg)] : ['neu', '1세트 · 목표 횟수까지', devTxt(avg)];
   }
   /* 상단 한 줄: 지금 할 행동(휴식·생략·반동 등)이 있으면 그것, 없으면 진도 멘트. 판단 문장은 화면에 하나만 */
   let headSkip = false;
@@ -1332,12 +1337,11 @@ body.rest-on #nums{opacity:.55}
     $('exList').innerHTML = rowsHtml(true);
     /* C: 한 줄로 접히는 추세 (1안 가로·2안) */
     $('lpTrend').innerHTML = '<button type="button" class="lt-line" id="ltBtn" aria-expanded="' + trendOpen + '"><span class="r1"><b class="tk-' + ev.kind + '">' + head + '</b>' + CHEV_D + '</span>' +
-      '<span class="r2">' + (t.bw ? '' : chart(t, false)) + '<span>' + esc(ev.short) + '</span></span></button>' +
+      '<span class="r2">' + (t.bw ? '' : chart(t, false)) + '<span>' + esc(ev.wk !== undefined ? WK_TXT[wkKind(ev.wk)] : ev.short) + '</span></span></button>' +
       (trendOpen ? '<div class="lt-body">' + calLine(ev) + verdictHtml(t) + chart(t, true) + '</div>' : '');
-    $('lpPace').innerHTML = paceSummary();
     /* B: 오른쪽 카드 (1안 세로) */
     $('rTrend').innerHTML = '<span class="r1"><b class="tk-' + ev.kind + '">' + head + '</b><span>자세히 ›</span></span>' +
-      '<span class="r2">' + (ev.stats ? '<span class="st"><div><small>주 속도</small><b>' + esc(wk) + '</b></div><div><small>월 속도</small><b>' + esc(mo.replace(' (2주부터)', '')) + '</b></div></span>' : '<span class="st"><div><small>추세</small><b>' + esc(ev.short) + '</b></div></span>') + (t.bw ? '' : chart(t, false)) + '</span>' + calLine(ev);
+      '<span class="r2"><span class="wd">' + wordsHtml(ev) + '</span>' + (t.bw ? '' : chart(t, false)) + '</span>';
     $('rTrend').setAttribute('aria-label', ev.label + ', ' + ev.sum + ', 자세히 보기');
     requestAnimationFrame(scrollCur);
   }
@@ -1351,7 +1355,7 @@ body.rest-on #nums{opacity:.55}
   function rowHtml(e, i, left) {
     const c = doneCount(e), here = i === data.idx;
     let pc = '';
-    if (left) { if (isBw(e)) pc = ''; else { const ev = trend(e).ev; pc = '<b class="pc tk-' + ev.kind + '">' + (ev.wk === undefined ? '—' : (ev.kind === 'fast' ? '⚠' : '') + sgn(ev.wk) + '%') + '</b>'; } }
+    if (left) { if (isBw(e)) pc = ''; else { const ev = trend(e).ev; pc = tIcon(ev.kind); } }
     let tail;
     const Ne = nSets(e);
     if (c >= Ne) tail = left ? '✓' : c + '/' + Ne + ' ✓';
@@ -1359,7 +1363,7 @@ body.rest-on #nums{opacity:.55}
     else if (c > 0) tail = c + '/' + Ne;
     else if (isBw(e)) tail = '맨몸';
     else { const s = suggest(e); tail = s.w + '×' + s.r + (s.kind === 'up' ? ' ↑' : ''); }
-    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= Ne ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= Ne ? 'done' : '') + (left ? '<span class="nm"><span>' + esc(EX[e].name) + '</span><span class="meta">' + pc + '<em>' + tail + '</em></span></span>' : '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em>') + '</button>';
+    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= Ne ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= Ne ? 'done' : '') + (left ? '<span class="nm"><span>' + esc(EX[e].name) + '</span><span class="meta"><em>' + tail + '</em></span></span>' + pc : '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em>') + '</button>';
   }
   function rowsHtml(left) { return ORDER.map((e, i) => rowHtml(e, i, left)).join(''); }
 
