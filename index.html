@@ -1291,13 +1291,13 @@ body.rest-on #nums{opacity:.55}
   const chgTxt = (a, b) => (a.w !== b.w ? Math.abs(a.w - b.w) + 'kg ' + (b.w < a.w ? '낮춤' : '올림') : Math.abs(a.r - b.r) + '회 ' + (b.r < a.r ? '줄임' : '늘림'));
   function moodOf(ex, sg, n) {
     const N = nSets(ex);
-    if (isBw(ex)) return n >= N ? ['pos', N + '세트 끝', '수고했어요'] : ['neu', '맨몸 · 완료만 체크', ''];
+    if (isBw(ex)) return n >= N ? ['pos', '이 운동 끝 · 수고했어요', ''] : ['neu', '맨몸 · 완료만 체크', ''];
     const jump = lapSets(ex).map((x) => (x.P > 0 ? pct(e10(x.w, x.r), Math.max(x.P, x.Pr || 0)) : 0)).reduce((a, v) => Math.max(a, v), 0);
     if (jump > JUMP * 100) return ['warn', '기록 확인 · 예상보다 너무 높아요', '실수라면 오늘 세트를 눌러 고쳐 주세요'];
-    if (n >= N) return ['pos', N + '세트 끝 · 수고했어요', '다음 세션 1세트 ' + sg.w + '×' + sg.r];
+    if (n >= N) return ['pos', '이 운동 끝 · 수고했어요', '다음 세션 1세트 ' + sg.w + '×' + sg.r];
     if (sg.bo) {
-      if (sg.vs === null || Math.abs(sg.vs) < 1.5) return ['neu', '예상대로예요', '페이스 유지'];
-      return sg.vs > 0 ? ['pos', '예상보다 좋아요', '다음 세트도 1회 남을 때까지'] : ['neu', '피로가 예상보다 커요', '그만큼 횟수를 낮췄어요'];
+      if (sg.vs === null || Math.abs(sg.vs) < DEV_TH) return ['neu', '예상대로예요', ''];
+      return sg.vs > 0 ? ['pos', '예상보다 좋아요', '더 되면 1회 남을 때까지'] : ['neu', '피로가 예상보다 커요', '그만큼 횟수를 낮췄어요'];
     }
     if (sg.reset) return ['neu', '기준 재설정 · 오늘 1세트가 새 기준', '편하게 하고 실제 결과를 입력하세요'];
     if (!sg.prev) return ['neu', '첫 기록이에요', '입력한 10RM으로 시작'];
@@ -1308,8 +1308,8 @@ body.rest-on #nums{opacity:.55}
     if (sg.adjAct && sg.dayF < 1) return ['neu', '앞선 운동 피로 반영 · ' + chgTxt(sg.pick0, sg), '같은 근육을 앞에서 써서 조금 낮췄어요'];
     if (sg.adjAct && sg.pen > 0.004) return ['neu', '회복 중 · ' + chgTxt(sg.pick0, sg), '지난 운동 ' + Math.round(sg.hrs) + '시간 전 · ' + REC_H + '시간 전엔 살짝 낮춰요'];
     if (sg.up) return ['pos', '올릴 차례예요', sg.atMax ? '최대 덤벨이라 횟수로 진도' : '충분히 쉬었어요 · 이번에 한 단계 올려요'];
-    if (sg.mode === 'easy') return ['neu', '천천히 올려요', '지난번 목표에 조금 못 미쳤어요'];
-    return ['neu', '이 무게 다지기', sg.note || ''];
+    if (sg.mode === 'easy') return ['neu', sg.w === sg.prev.w && sg.r === sg.prev.r ? '지난번 횟수 넘기기' : '조금만 올려요 · ' + chgTxt(sg.prev, sg), '지난번 목표에 조금 못 미쳤어요'];
+    return ['neu', '지난번 횟수 넘기기', sg.note || '지난번 ' + sg.prev.w + '×' + sg.prev.r];
   }
   let whySg = null, moodKey = '';
   function renderWhy(sg) {
@@ -1362,57 +1362,46 @@ body.rest-on #nums{opacity:.55}
     const mx = rows.reduce((a, r) => Math.max(a, r.max), 0), sets = rows.reduce((a, r) => a + r.xs.length, 0);
     return { st: cueOf(rows, avg, rAvg, plan, mx), rows, avg, rAvg, plan, sets };
   }
-  /* 지금 세트에서 할 행동 한 줄: 현재 운동·세트 우선, 그다음 오늘 전체. 마지막 세트로 갈수록 그 세트 얘기만 */
+  /* 지금 세트에서 할 행동 한 줄: 현재 운동·세트 우선, 그다음 오늘 전체. 헤드라인은 할 일 하나(무게×횟수는 큰 숫자·변화 줄이 보여줌), 근거 숫자는 아래 줄 */
+  const DEV_TH = 3;   /* 예상 대비 판정 ±3% (1회 ≈ 2.5%라 그 안은 입력 오차 수준) */
   function cueOf(rows, avg, rAvg, plan, mx) {
     const ex = curEx(), xs = isBw(ex) ? [] : lapSets(ex), n = xs.length, k = n + 1, N = nSets(ex), fin = k === N;
-    const tag = '';   /* 세트 번호는 진행 막대로 보이니 문구에서 뺌 */
     const adv = setAdvice(ex);
     if (adv && adv.kind === 'skip') return ['neg', '마지막 세트 생략 추천 · 눌러서 마치기', adv.why, 'skip', 1];
     const stp = (n === 0 || n >= N) ? stopAdvice() : null;
-    if (stp) return ['neg', '오늘은 여기서 멈추는 걸 추천해요', stp + ' · 계속할지는 직접 정하세요', '', 1];
-    const dv = (x) => (x && x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0), lst = xs[n - 1], ld = dv(lst);
-    let resting = false, el = 0; try { resting = !!rest && rest.end > Date.now(); } catch (e) {}
-    if (lst) el = (Date.now() - lst.ts) / 1000;
-    const iso = (EX[ex] && EX[ex].type) === 'i', curMax = xs.reduce((a, x) => Math.max(a, dv(x)), 0);
+    if (stp) return ['neg', '오늘은 여기서 멈추는 걸 추천해요', stp + ' · 선택은 직접', '', 1];
+    const dv = (x) => (x && x.P > 0 ? pct(eff(x), x.P) : 0), lst = xs[n - 1];
+    const iso = (EX[ex] && EX[ex].type) === 'i', curMax = xs.reduce((a, x) => Math.max(a, dv(x)), 0), jump = n < N && n && curMax > JUMP * 100;
     const cal = !n && calib(ex), calSub = '처음 ' + CALIB_N + '세션은 시작 기준을 맞추는 중 · 추천보다 더 되면 더 하세요';
-    if (n < N && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 훨씬 잘 나왔어요 · 자세가 바뀐 것 같아요', '', 1];
-    /* 휴식 중: 휴식이 실제 문제일 때만(직전 세트 힘듦) '더 쉬세요', 아니면 아래 일반 조언 / 끝나면 '시작하세요' */
-    const rTot = (() => { try { return rest ? rest.total / 1000 : 0; } catch (e) { return 0; } })();
-    if (n < N && n && el < plan * 0.8 && !resting && rTot === 0 && ld < -1) return ['neg', '직전 세트 예상 대비 ' + pctI(ld) + ' · 휴식 끝까지 채우기', secTxt(el) + ' 쉼 / 계획 ' + secTxt(plan), '', 1];
-    if (n < N && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트가 예상보다 너무 잘 나왔어요', '', 1];
+    /* 휴식 끝난 직후(백오프만): '지금 시작' 우선. 1세트 전엔 진도 문장(올릴 차례 등)을 가리지 않음 */
     let justDone = false; try { justDone = !!rest && rest.end <= Date.now() && Date.now() - rest.end < 60000; } catch (e) {}
-    if (n < N && justDone) { const c = n ? boCue(ex, xs, fin, iso) : null;
-      return ['pos', '지금 시작하세요' + (c ? ' · ' + c[5] : ''), c ? c[2] : fin ? '1회 남을 때까지 · 자세 유지' : cal ? '여유 있으면 1회 남을 때까지' : '', '', 1]; }
-    if (mx > JUMP * 100) return ['warn', tag + '오늘 기록 하나가 너무 높아요 · 반동 확인', '예상보다 훨씬 높은 세트가 있어요', '', 1];
+    if (n && n < N && justDone) { const c = boCue(ex, xs, fin, iso); return ['pos', '지금 시작하세요', jump ? '다음 세트는 멈췄다 올리기' : c ? c[2] : '', '', 1]; }
+    if (jump) return ['warn', '반동 잡기 · 멈췄다 올리기', lst.w + '×' + lst.r + ' 예상 대비 ' + pctI(curMax) + ' · 자세가 바뀐 것 같아요', '', 1];
+    if (mx > JUMP * 100) return ['warn', '오늘 기록 하나가 너무 높아요 · 반동 확인', '예상보다 훨씬 높은 세트가 있어요', '', 1];
     if (n && n < N) { const c = boCue(ex, xs, fin, iso); if (c) return c; }
-    if (avg < -4) return ['neg', '오늘 컨디션 저하 · 무리하지 말고 목표대로', '오늘 평균 예상 대비 ' + pctI(avg)];
-    if (n >= N) return ['pos', '이 운동 끝 · 다음 운동 전에 숨 고르기', rows.length ? devTxt(avg) : ''];
     if (cal) return ['pos', '여유 있으면 1회 남을 때까지', calSub, '', 1];
-    if (!rows.length) return ['neu', '오늘 첫 운동 · 목표 횟수까지만', ''];
-    return avg > 1 ? ['pos', '페이스 좋아요, 목표대로', devTxt(avg)] : ['neu', '목표 횟수까지', devTxt(avg)];
+    /* 나머지는 진도 문장(moodOf)이 헤드라인, 여기선 오늘 컨디션이 확실히 낮을 때만 아래 줄 */
+    return ['neu', '', avg < -4 ? '오늘 평균 예상 대비 ' + pctI(avg) : ''];
   }
-  /* 백오프 세트 한 줄: 직전 세트 실제 결과(예상 대비·여유 입력)·직전 휴식·이번 추천 변화로 그 상황에 맞는 말.
-     휴식 얘기는 '휴식이 짧았고 그 세트가 예상보다 떨어졌을 때'만 */
+  /* 백오프 세트 한 줄: 직전 세트 실제 결과(예상 대비·여유 입력)·직전 휴식으로 그 상황에 맞는 할 일 하나.
+     휴식 얘기는 '예상(P)보다 떨어졌지만 실제 휴식 반영 예상(Pr)만큼은 했을 때' = 짧은 휴식이 원인일 때만 */
   function boCue(ex, xs, fin, iso) {
     const sg = suggestNow(ex); if (!sg || !sg.bo) return null;
-    const n = xs.length, lst = xs[n - 1], vs = sg.vs, rst = sg.rst, last = lst.w + '×' + lst.r;
+    const n = xs.length, lst = xs[n - 1], vs = sg.vs, last = lst.w + '×' + lst.r;
     const prevRest = n >= 2 ? (lst.ts - xs[n - 2].ts) / 1000 : null;
-    const qTxt = lst.q === -1 ? ' · 한계 입력 반영' : lst.q === 1 ? ' · 여유 입력 반영' : '';
-    const chg = sg.w < lst.w ? (lst.w - sg.w) + 'kg 낮춰 ' + sg.r + '회' : sg.r < lst.r ? (lst.r - sg.r) + '회 줄여 ' + sg.r + '회' : sg.r > lst.r ? (sg.r - lst.r) + '회 늘려 ' + sg.r + '회' : '같은 ' + sg.r + '회';
-    const tail = fin ? ' · 마지막은 1회 남을 때까지' : '';
-    const vTxt = vs === null ? '' : ' 예상 대비 ' + pctI(vs);
-    if (vs !== null && vs < -2 && prevRest !== null && prevRest > 20 && prevRest < rst * 0.8)
-      return ['neg', '휴식 ' + secTxt(prevRest) + '로 짧아서 떨어졌어요 · 이번엔 ' + secTxt(rst) + ' 채우기', last + vTxt + qTxt, '', 1, chg];
-    if (vs !== null && vs < -2) return ['neg', '피로가 예상보다 커요 · ' + chg, last + vTxt + qTxt + tail, '', 1, chg];
-    if (vs !== null && vs > 2) return ['pos', '직전 세트 예상보다 좋아요 · ' + chg, last + vTxt + qTxt + tail, '', 1, chg];
-    const how = iso && sg.w < lst.w ? '가벼워진 만큼 천천히 · 수축에 집중' : fin ? '1회 남을 때까지 · 자세 유지' : iso ? '천천히 내리고 수축에 집중' : '같은 자세 · 같은 템포';
-    return ['neu', (vs === null ? '피로 반영 · ' : '예상대로 · ') + chg + ' · ' + how, sg.why + qTxt, '', 1, chg];
+    const qTxt = lst.q === -1 ? ' · 한계 반영' : lst.q === 1 ? ' · 여유 반영' : '';
+    const restHurt = vs !== null && vs <= -DEV_TH && lst.Pr > 0 && lst.Pr < lst.P && pct(eff(lst), lst.Pr) > -DEV_TH && prevRest !== null;
+    if (restHurt) return ['neg', '이번 휴식 ' + secTxt(sg.rst) + ' 다 채우기', '직전 휴식 ' + secTxt(prevRest) + ' · ' + last + ' ' + pctI(vs) + qTxt, '', 1];
+    if (vs !== null && vs <= -DEV_TH) return ['neg', '피로가 예상보다 커요', last + ' 예상 대비 ' + pctI(vs) + qTxt + ' · 횟수 낮췄어요', '', 1];
+    if (vs !== null && vs >= DEV_TH) return ['pos', fin ? '좋아요 · 더 되면 1회 남을 때까지' : '좋아요 · 더 되면 더 하기', last + ' 예상 대비 ' + pctI(vs) + qTxt, '', 1];
+    const how = fin ? '더 되면 1회 남을 때까지' : iso && sg.w < lst.w ? '가벼워진 만큼 수축에 집중' : iso ? '천천히 내리고 수축에 집중' : '같은 자세 · 같은 템포';
+    return ['neu', how, '직전 ' + last + (vs === null ? '' : ' · 예상대로') + qTxt, '', 1];
   }
   /* 상단 한 줄: 지금 할 행동(휴식·생략·반동 등)이 있으면 그것, 없으면 진도 멘트. 판단 문장은 화면에 하나만 */
   let headSkip = false;
   function renderToday() {
     const ex = curEx(), n = doneCount(ex), st = todayStat().st, m = moodOf(ex, suggestNow(ex), n);
-    const h = st[4] ? [st[0], st[1], st[2] || m[2]] : [m[0], m[1], m[2] || (isBw(ex) ? '' : st[2])];
+    const h = st[4] ? [st[0], st[1], st[2] || m[2]] : [m[0], m[1], (isBw(ex) ? '' : st[2]) || m[2]];
     headSkip = st[3] === 'skip';
     const mo = $('mood'), key = h[0] + h[1].replace(/[−+]?[\d.]+%/, '');
     if (mo.className.indexOf(h[0]) < 0 || key !== moodKey) { mo.className = 'mood ' + h[0]; if (moodKey) restart(mo, 'pop'); }
@@ -1781,8 +1770,8 @@ body.rest-on #nums{opacity:.55}
     if (n + 1 < N) startRest(restCfg.set + (hard ? 30 : 0)); else if (nextIncomplete(data.idx) >= 0) startRest(restCfg.ex); else stopRest();
     if (n + 1 === N) { render(); showDone(ex, sg); return; }
     { const pw = cur.w, pr = cur.r; sfx(n === 0 ? 'set1' : 'set2'); prefill(); render(); bumpNums(pw, pr); }
-    const jp = !bw && s.P > 0 ? pct(e10(s.w, s.r), s.P) : 0;
-    toast(jp > JUMP * 100 ? '⚠ 예상보다 너무 높아요 · 기록을 확인해 주세요' : restShort && jp < -2 ? '휴식 ' + secTxt(sg.el) + '로 짧아서 예상 대비 ' + pctI(jp) + ' · 다음은 끝까지 쉬세요' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
+    const jp = !bw && s.P > 0 ? pct(eff(s), s.P) : 0, restHurt = restShort && jp <= -DEV_TH && s.Pr > 0 && pct(eff(s), s.Pr) > -DEV_TH;
+    toast(jp > JUMP * 100 ? '⚠ 예상보다 너무 높아요 · 기록을 확인해 주세요' : restHurt ? '휴식 ' + secTxt(sg.el) + ' · 예상 대비 ' + pctI(jp) + ' · 다음은 끝까지' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
   });
   /* 세트 진행 중(1세트 이상, 마지막 전)엔 «·» 한 번 더 눌러야 이동: kg 버튼 옆이라 잘못 눌림 방지 */
   let navArm = '';
@@ -1932,9 +1921,9 @@ body.rest-on #nums{opacity:.55}
     if (rows.length < 2) return null;
     rows.sort((a, b) => b.t - a.t);
     const [a, b] = rows;
-    if (a.dev <= STOP_DEV && b.dev <= STOP_DEV) return '최근 두 운동 ' + EX[a.e].short + ' ' + sgn(a.dev) + '% · ' + EX[b.e].short + ' ' + sgn(b.dev) + '% · 예상보다 계속 낮아요';
+    if (a.dev <= STOP_DEV && b.dev <= STOP_DEV) return '최근 두 운동 ' + EX[a.e].short + ' ' + sgn(a.dev) + '% · ' + EX[b.e].short + ' ' + sgn(b.dev) + '%';
     const avg = rows.reduce((s, r) => s + r.dev, 0) / rows.length;
-    if (rows.length >= 4 && avg <= STOP_AVG) return '오늘 ' + rows.length + '개 운동 평균 예상보다 ' + sgn(avg) + '% · 피로가 쌓였어요';
+    if (rows.length >= 4 && avg <= STOP_AVG) return '오늘 ' + rows.length + '개 운동 평균 예상보다 ' + sgn(avg) + '%';
     return null;
   }
   function advance() { clearTimeout(doneTimer); const ni = nextIncomplete(data.idx); hideDone(); if (ni >= 0) goIdx(ni, 'next'); else render(); }
