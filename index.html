@@ -661,6 +661,8 @@ body.rest-on #nums{opacity:.55}
     /* 횟수가 범위(rmax)를 넘었으면(기준 맞추기·튄 기록 인정 후) +1kg로는 못 내려옴 → 최대 +4kg까지 후보 */
     const ws = r0 ? [w0 - 1, w0, w0 + 1] : [w0 - 1, w0];
     if (r0 > rmax) for (let W = w0 + 2; W <= Math.min(MAX_W, w0 + 4); W++) ws.push(W);
+    /* 최대 덤벨(MAX_W)에 도달하면 무게는 고정, 횟수로만 조절 (디로드·복귀·재설정에서도 23kg로 내리지 않음) */
+    if (w0 >= MAX_W) ws.splice(0, ws.length, MAX_W);
     for (const W of ws) {   /* lightening (r0 = 0): never pick a heavier dumbbell */
       if (W < MIN_W || W > MAX_W) continue;
       if (r0 && W < w0 && target >= e0) continue;   /* 올리는 중엔 가벼운 덤벨로 내려가지 않음 (출렁임 방지) */
