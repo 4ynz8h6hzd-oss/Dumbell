@@ -924,7 +924,9 @@ body.rest-on #nums{opacity:.55}
   const lossAt = (L120, t) => Math.min(L_MAX, L120 * gRest(t) / gRest(120));
   const repsAt = (C, W) => Math.round(40 * C / W - 30);   /* 반올림: 내림이면 추천대로 할수록 학습 피로가 커지는 하향 루프가 생김 */
   const secTxt = (sec) => { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ':' + pad2(sec % 60); };
-  const planRest = () => { try { return rest ? rest.total / 1000 : restCfg.set || 90; } catch (e) { return 90; } };
+  /* 계획 휴식: id를 주면 그 세트 저장 때 정해진 값(+30초·±15초 포함)으로 고정 — 타이머가 닫혀도 안 바뀜 */
+  const planRest = (id) => { try { if (id !== undefined && restPlan && restPlan.id === id) return restPlan.sec; return rest ? rest.total / 1000 : restCfg.set || 90; } catch (e) { return 90; } };
+  const LONG_GAP = 1800;   /* 이만큼(30분) 넘게 쉬었을 때만 실제 휴식만큼 회복 더 반영 (다른 날 이어 하기 등) */
   /* learned per-set loss of estimated 10RM, normalised to 120 s rest (최근 EVAL_N 세션, 기본값 쪽으로 수축) */
   function fatigue(ex) {
     const raw = [], flag = (x) => x.P > 0 && e10(x.w, x.r) / x.P - 1 > JUMP;
@@ -942,9 +944,9 @@ body.rest-on #nums{opacity:.55}
     return { L: ((n ? n * median(obs) : 0) + 2 * L_PRIOR) / (n + 2), n };
   }
   function backoff(ex, ts, now) {
-    const top = ts[0], last = ts[ts.length - 1], k = ts.length + 1, type = EX[ex].type || 'f', rst = planRest();
-    /* 휴식 끝난 뒤에도 계획 휴식 기준 횟수로 고정 (세트 도중 +1 방지). 계획의 2배 넘게 쉰 긴 휴식만 회복 더 반영 */
-    const el = (now - last.ts) / 1000, tUse = el > 2 * rst ? el : rst;
+    const top = ts[0], last = ts[ts.length - 1], k = ts.length + 1, type = EX[ex].type || 'f', rst = planRest(last.id);
+    /* 추천은 직전 세트 저장 순간 확정: 계획 휴식을 채운다는 가정 → 휴식 중·끝·세트 도중 시간이 흘러도 안 바뀜. 30분 넘는 긴 공백만 회복 더 반영 */
+    const el = (now - last.ts) / 1000, tUse = el > LONG_GAP ? el : rst;
     const { L, n } = fatigue(ex);
     const base = typeof last.P === 'number' && last.P > 0 ? Math.min(eff(last), last.P * (1 + JUMP)) : eff(last);
     /* 직전 휴식이 계획보다 짧았으면 덜 회복된 피로의 절반이 다음 세트까지 이어짐 */
@@ -2628,6 +2630,10 @@ body.rest-on #nums{opacity:.55}
   const RESTK = 'dumbbell-rest', RUNK = 'dumbbell-rest-run', OVER_MAX = 10 * 60e3;
   const restCfg = (() => { const d = { set: 90, ex: 120 }; try { const c = JSON.parse(lsGet(RESTK) || '{}'); if (Number.isFinite(c.set)) d.set = c.set; if (Number.isFinite(c.ex)) d.ex = c.ex; } catch (e) {} return d; })();
   let rest = (() => { try { const r = JSON.parse(lsGet(RUNK) || 'null'); return r && r.end > 0 && r.total > 0 ? r : null; } catch (e) { return null; } })();
+  /* 직전 세트에 정해진 계획 휴식 {id, sec} — 추천 고정용 (data.json과 무관) */
+  const PLANK = 'dumbbell-rest-plan';
+  let restPlan = (() => { try { const r = JSON.parse(lsGet(PLANK) || 'null'); return r && r.sec > 0 ? r : null; } catch (e) { return null; } })();
+  const savePlan = () => lsSet(PLANK, restPlan ? JSON.stringify(restPlan) : '');
   let restTick = null, restRang = !!(rest && rest.end <= Date.now()), actx = null, beeps = [], wake = null;
   const mmss = (sec) => Math.floor(sec / 60) + ':' + pad2(sec % 60);
   function audio() {
@@ -2673,6 +2679,7 @@ body.rest-on #nums{opacity:.55}
     if (!(sec > 0)) { stopRest(); return; }
     audio();
     rest = { end: Date.now() + sec * 1000, total: sec * 1000 }; restRang = false;
+    { const ls = data.sets.reduce((m, x) => (!m || x.ts > m.ts ? x : m), null); restPlan = ls ? { id: ls.id, sec } : null; savePlan(); }
     saveRun(); scheduleBeep(); drawRest();
   }
   function stopRest() { clearTimeout(restTick); closeRMenu(); if (!rest && $('water').hidden) return; rest = null; saveRun(); cancelBeep(); drawRest(); render(); }
@@ -2681,6 +2688,7 @@ body.rest-on #nums{opacity:.55}
     const left = rest.end - Date.now(); if (left <= 0) return;
     const nl = Math.max(1000, left + d * 1000);
     rest.end = Date.now() + nl; rest.total = Math.max(rest.total + d * 1000, nl);
+    if (restPlan) { restPlan.sec = rest.total / 1000; savePlan(); }
     saveRun(); scheduleBeep(); drawRest(); buzz(8);
   }
   $('kGo').insertAdjacentHTML('beforeend', '<svg class="rring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" fill="none" stroke="#DCE9F9" stroke-width="6"/><circle id="rArc" cx="50" cy="50" r="46" fill="none" stroke="#0A66D1" stroke-width="6" stroke-linecap="round" pathLength="100"/></svg><span class="rlbl" aria-hidden="true"><small>휴식 중</small></span>');
