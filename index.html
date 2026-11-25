@@ -657,7 +657,10 @@ body.rest-on #nums{opacity:.55}
       if (r0 && !(W === w0 && R === r0) && (pct(e, e0) < MIN_STEP)) return;
       out.push({ w: W, r: R, e }); };
     if (r0) add(w0, r0);
-    for (const W of r0 ? [w0 - 1, w0, w0 + 1] : [w0 - 1, w0]) {   /* lightening: never pick a heavier dumbbell */
+    /* 횟수가 범위(rmax)를 넘었으면(기준 맞추기·튄 기록 인정 후) +1kg로는 못 내려옴 → 최대 +4kg까지 후보 */
+    const ws = r0 ? [w0 - 1, w0, w0 + 1] : [w0 - 1, w0];
+    if (r0 > rmax) for (let W = w0 + 2; W <= Math.min(MAX_W, w0 + 4); W++) ws.push(W);
+    for (const W of ws) {   /* lightening (r0 = 0): never pick a heavier dumbbell */
       if (W < MIN_W || W > MAX_W) continue;
       if (r0 && W < w0 && target >= e0) continue;   /* 올리는 중엔 가벼운 덤벨로 내려가지 않음 (출렁임 방지) */
       const upOk = !upMin || w0 + 1 > MAX_W || 40 * target / (w0 + 1) - 30 >= upMin - 1e-9;   /* 한 단계 무거운 덤벨로 최소 횟수 가능? */
@@ -710,6 +713,9 @@ body.rest-on #nums{opacity:.55}
     return i < 0 ? ss : ss.slice(0, i + 1);
   }
   const resetPending = (ex) => !!(data.rp && data.rp[ex] === today());
+  /* 시작 기준 맞추기: 운동별 처음 CALIB_N 세션(기준 재설정 후 포함)의 1세트는 여유 있으면 1회 남을 때까지 → 입력한 10RM이 낮아도 빨리 따라잡음 */
+  const CALIB_N = 2;
+  const calib = (ex) => !isBw(ex) && sessCut(ex, true).length < CALIB_N;
   function suggest(ex, nowMs) {
     const now = nowMs || Date.now(), ssAll = sessions(ex, true), ss = sessCut(ex, true);
     if (!isBw(ex) && resetPending(ex) && ssAll.length) {
@@ -1159,18 +1165,20 @@ body.rest-on #nums{opacity:.55}
     let resting = false, el = 0; try { resting = !!rest && rest.end > Date.now(); } catch (e) {}
     if (lst) el = (Date.now() - lst.ts) / 1000;
     const iso = (EX[ex] && EX[ex].type) === 'i', curMax = xs.reduce((a, x) => Math.max(a, dv(x)), 0);
+    const cal = !n && calib(ex), calSub = '처음 ' + CALIB_N + '세션은 시작 기준을 맞추는 중 · 추천보다 더 되면 더 하세요';
     if (n < N && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 ' + sgn(curMax) + '% · 자세가 바뀐 것 같아요'];
     /* 휴식 중: 숫자 없이 '더 쉬세요' / 끝나면 '시작하세요' (운동 사이 휴식도 같음) */
     const rTot = (() => { try { return rest ? rest.total / 1000 : 0; } catch (e) { return 0; } })();
-    if (n < N && resting) return n && ld < -3 ? ['neg', tag + '조금 더 쉬는 게 좋아요', '직전 세트가 힘들었어요 · 휴식 30초 늘렸어요'] : ['neu', (n ? tag : '1세트 전 · ') + '조금 더 쉬세요', ''];
+    if (n < N && resting) return n && ld < -3 ? ['neg', tag + '조금 더 쉬는 게 좋아요', '직전 세트가 힘들었어요 · 휴식 30초 늘렸어요'] : ['neu', (n ? tag : '1세트 전 · ') + '조금 더 쉬세요', cal ? '이번 1세트는 여유 있으면 1회 남을 때까지' : ''];
     if (n < N && n && el < plan * 0.8 && !resting && rTot === 0 && ld < -1) return ['neg', tag + '휴식 끝까지 채우세요', '직전 세트 예상보다 ' + sgn(ld) + '%'];
     if (n < N && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트 예상보다 ' + sgn(ld) + '%'];
     let justDone = false; try { justDone = !!rest && rest.end <= Date.now() && Date.now() - rest.end < 60000; } catch (e) {}
-    if (n < N && justDone) return ['pos', (n ? tag : '1세트 · ') + '지금 시작하세요', fin ? '1회 남을 때까지 · 자세 유지' : ''];
+    if (n < N && justDone) return ['pos', (n ? tag : '1세트 · ') + '지금 시작하세요', fin ? '1회 남을 때까지 · 자세 유지' : cal ? '여유 있으면 1회 남을 때까지' : ''];
     if (rAvg !== null && rAvg < plan * 0.8) return ['neg', tag + '휴식 확실히 가져가세요', '오늘 평균 휴식 ' + secTxt(rAvg) + ' (계획 ' + secTxt(plan) + ')'];
     if (mx > JUMP * 100) return ['warn', tag + '오늘 기록 하나가 너무 높아요 · 반동 확인', '최대 ' + sgn(mx) + '%'];
     if (avg < -4) return ['neg', tag + '오늘 컨디션 저하 · 무리하지 말고 목표대로', '오늘 예상 대비 ' + sgn(avg) + '%'];
     if (n >= N) return ['pos', '이 운동 끝 · 다음 운동 전에 숨 고르기', rows.length ? '오늘 예상 대비 ' + sgn(avg) + '%' : ''];
+    if (cal) return ['pos', '1세트 · 여유 있으면 1회 남을 때까지', calSub];
     if (fin) return ['pos', tag + '1회 남을 때까지 · 자세 유지', iso ? '천천히, 수축에 집중' : ''];
     if (n && iso) return ['neu', tag + '천천히 내리고 수축에 집중', ''];
     if (n) return ['neu', tag + '같은 자세 · 같은 템포', ''];
@@ -1354,6 +1362,8 @@ body.rest-on #nums{opacity:.55}
     const sg = bw ? null : suggestNow(ex);
     const s = { id: uid(), ex, date: today(), ts: Date.now(), w: bw ? 0 : cur.w, r: bw ? 0 : cur.r };
     if (!bw && n === 0) s.T = s.P = Math.round(sg.T * 1000) / 1000;
+    /* 기준 맞추기 1세트: 추천보다 더 하는 게 정상 → 예상(P)을 두지 않아 '예상보다 +%' 경고·피로 판단에서 빠짐 */
+    if (!bw && n === 0 && calib(ex)) { delete s.P; s.C = 1; }
     if (!bw && n === 0 && resetPending(ex)) { s.R = 1; delete data.rp[ex]; }
     /* 예상치 = 화면에 보여준 추천과 같은 기준(계획 휴식을 채운다는 가정). 추천대로 하면 '예상대로' */
     if (!bw && n > 0 && sg.cap) s.P = Math.round(e10(s.w, s.w === sg.w ? sg.r : Math.max(1, repsAt(sg.cap, s.w))) * 1000) / 1000;
