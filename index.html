@@ -1322,7 +1322,7 @@ body.rest-on #nums{opacity:.55}
     if (sg.bo) {
       l1 = sg.k - 1 + '세트 ' + sg.prevSet.w + '×' + sg.prevSet.r + ' 완료';
     } else {
-      if (sg.prev) { const hh = Math.floor((now - sg.prev.end) / 3600000); l1 = '이 운동 지난번 ' + sg.prev.all[0].w + '×' + sg.prev.all[0].r + ' <span class="ago">' + (hh < 1 ? '방금' : hh + '시간 전') + '</span>'; }
+      if (sg.prev) { const hh = Math.floor((now - sg.prev.end) / 3600000); l1 = '이 운동 지난번 ' + sg.prev.all[0].w + 'kg × ' + sg.prev.all[0].r + '회 <span class="ago">' + (hh < 1 ? '방금' : hh + '시간 전') + '</span>'; }
       else l1 = esc(sg.why);
       /* 직전에 끝낸 다른 운동 */
       const t = todaySets().filter((x) => x.ex !== ex && !isBw(x.ex)), lx = t.length ? t[t.length - 1] : null;
