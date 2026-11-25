@@ -1778,7 +1778,7 @@ body.rest-on #nums{opacity:.55}
     let lo = 0, hi = 1, t = x; for (let k = 0; k < 20; k++) { t = (lo + hi) / 2; if (f(t, x1, x2) < x) lo = t; else hi = t; }
     return f(t, y1, y2);
   };
-  const NAV_EASE = bez(0.35, 0, 0.15, 1), NAV_SLOW = 150, NAV_FAST = 8, NAV_RAMP = 700, NAV_TICK = 24;
+  const NAV_EASE = bez(0.35, 0, 0.15, 1), NAV_SLOW = 150, NAV_FAST = 8, NAV_RAMP = 350, NAV_TICK = 24;
   [['kPrev', -1], ['kNext', 1]].forEach(([id, d]) => {
     const b = $(id); let t = null, t0 = 0;
     const stop = () => { clearTimeout(t); t = null; b.classList.remove('pressed'); };
