@@ -230,6 +230,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .today.pos{color:#1E6E31;background:#EEF7F0}.today.neu{color:#0A4FA3;background:#EEF4FC}.today.neg{color:#9A3D00;background:#FDF2EA}.today.warn{color:#B0241A;background:#FCEDEC}
 .today.pop{animation:moodpop .5s ease-out}
 .today.fin b{font-size:17px}
+.addset{margin:4px 0 0;display:flex;flex-direction:column;gap:2px;background:#E6F4EA;color:#1E6E31;font-weight:800}.addset small{font-size:12px;font-weight:600;opacity:.8}
 .trows{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}
 .trow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-bottom:.5px solid var(--line);font-size:13px}
 .trow b{font-weight:700}.trow em{font-style:normal;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
@@ -841,7 +842,7 @@ body.rest-on #nums{opacity:.55}
   }
   function suggestNow(ex) {
     const ts = todaySets(ex);
-    return isBw(ex) || !ts.length || ts.length >= SETS ? suggest(ex) : backoff(ex, ts, Date.now());
+    return isBw(ex) || !ts.length || ts.length >= nSets(ex) ? suggest(ex) : backoff(ex, ts, Date.now());
   }
   const explHtml = (sg) => '<ol class="steps">' + sg.expl.map((x) => '<li><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></li>').join('') + '</ol>';
 
@@ -945,15 +946,18 @@ body.rest-on #nums{opacity:.55}
     const t = today();
     if (data.dayDate !== t) {
       data.dayDate = t;
-      const k = ORDER.findIndex((e) => doneCount(e) < SETS);
+      const k = ORDER.findIndex((e) => doneCount(e) < nSets(e));
       data.idx = k < 0 ? 0 : k;
       persist();
     }
   }
   const curEx = () => ORDER[data.idx];
-  const allDone = () => ORDER.every((e) => doneCount(e) >= SETS);
+  /* 오늘 운동별 세트 수: 기본 3, 추천에 따라 2(생략) 또는 4(추가) */
+  const nSets = (ex) => (data.plan && data.plan.date === today() && data.plan[ex]) || SETS;
+  const setPlan = (ex, k) => { if (!data.plan || data.plan.date !== today()) data.plan = { date: today() }; data.plan[ex] = k; persist(); };
+  const allDone = () => ORDER.every((e) => doneCount(e) >= nSets(e));
   function nextIncomplete(from) {
-    for (let k = 1; k <= ORDER.length; k++) { const i = (from + k) % ORDER.length; if (doneCount(ORDER[i]) < SETS) return i; }
+    for (let k = 1; k <= ORDER.length; k++) { const i = (from + k) % ORDER.length; if (doneCount(ORDER[i]) < nSets(ORDER[i])) return i; }
     return -1;
   }
 
@@ -964,7 +968,7 @@ body.rest-on #nums{opacity:.55}
     const ex = curEx(), ts = todaySets(ex);
     if (isBw(ex)) { cur.w = 0; cur.r = 0; return; }
     cur.auto = true;
-    if (ts.length >= SETS) { const l = ts[ts.length - 1]; cur.w = l.w; cur.r = l.r; return; }
+    if (ts.length >= nSets(ex)) { const l = ts[ts.length - 1]; cur.w = l.w; cur.r = l.r; return; }
     const sg = suggestNow(ex); cur.w = sg.w; cur.r = clampR(sg.r);
   }
   function goIdx(i, dir) {
@@ -999,16 +1003,16 @@ body.rest-on #nums{opacity:.55}
 
   function render() {
     const ex = curEx(), n = doneCount(ex), bw = isBw(ex), total = ORDER.length;
-    const doneEx = ORDER.filter((e) => doneCount(e) >= SETS).length;
+    const doneEx = ORDER.filter((e) => doneCount(e) >= nSets(e)).length, N = nSets(ex);
     $('dayPos').innerHTML = '운동 ' + (data.idx + 1) + ' / ' + total + ' <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
-    const bars = ORDER.map((e, i) => { const c = doneCount(e); return '<i class="' + (i === data.idx ? 'c' : c >= SETS ? 'd' : c > 0 ? 'p' : '') + '"></i>'; }).join('');
+    const bars = ORDER.map((e, i) => { const c = doneCount(e); return '<i class="' + (i === data.idx ? 'c' : c >= nSets(e) ? 'd' : c > 0 ? 'p' : '') + '"></i>'; }).join('');
     $('dayBars').innerHTML = bars; $('lpBars').innerHTML = bars;
     $('lpCount').textContent = (data.idx + 1) + '번째 · ' + doneEx + ' / ' + total + ' 완료';
     $('exName').textContent = EX[ex].name;
     $('exTile').innerHTML = icon(ex, 40, '');
-    let sb = ''; for (let k = 0; k < SETS; k++) sb += '<i class="' + (k < n ? 'd' : k === n ? 'c' : '') + '"></i>';
+    let sb = ''; for (let k = 0; k < N; k++) sb += '<i class="' + (k < n ? 'd' : k === n ? 'c' : '') + '"></i>';
     $('setBars').innerHTML = sb;
-    $('setTxt').textContent = n >= SETS ? '3세트 끝' : '세트 ' + (n + 1) + ' / ' + SETS;
+    $('setTxt').textContent = n >= N ? N + '세트 끝' : '세트 ' + (n + 1) + ' / ' + N;
 
     const sg = suggestNow(ex);
     renderNums(ex, bw, sg, n);
@@ -1027,7 +1031,7 @@ body.rest-on #nums{opacity:.55}
 
     /* ledger */
     let lg = '';
-    for (let k = 0; k < SETS; k++) {
+    for (let k = 0; k < Math.max(N, ts.length); k++) {
       const s = ts[k];
       if (s) lg += '<button type="button" class="lrow" data-id="' + s.id + '" aria-label="' + (k + 1) + '세트 ' + fmtSet(s) + ', 수정"><small>' + (k + 1) + '</small><b>' + (bw ? '완료 ✓' : s.w + ' × ' + s.r) + '</b></button>';
       else if (k === ts.length) lg += '<div class="lrow c"><small>' + (k + 1) + '</small><b>지금</b></div>';
@@ -1059,10 +1063,11 @@ body.rest-on #nums{opacity:.55}
   const setsTxt = (xs) => xs[0].w + '×' + xs.map((x, i) => (i && x.w !== xs[0].w ? x.w + '×' : '') + x.r).join('·');
   /* 긍정 · 중립 · 부정 한 줄 */
   function moodOf(ex, sg, n) {
-    if (isBw(ex)) return n >= SETS ? ['pos', '3세트 끝', '수고했어요'] : ['neu', '맨몸 · 완료만 체크', ''];
+    const N = nSets(ex);
+    if (isBw(ex)) return n >= N ? ['pos', N + '세트 끝', '수고했어요'] : ['neu', '맨몸 · 완료만 체크', ''];
     const jump = todaySets(ex).map((x) => (x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0)).reduce((a, v) => Math.max(a, v), 0);
     if (jump > JUMP * 100) return ['warn', '기록 확인 · 예상보다 ' + sgn(jump) + '%', '실수라면 오늘 세트를 눌러 고쳐 주세요'];
-    if (n >= SETS) return ['pos', '3세트 끝 · 수고했어요', '다음 세션 1세트 ' + sg.w + '×' + sg.r];
+    if (n >= N) return ['pos', N + '세트 끝 · 수고했어요', '다음 세션 1세트 ' + sg.w + '×' + sg.r];
     if (sg.bo) {
       if (sg.vs === null || Math.abs(sg.vs) <= 1) return ['neu', '예상대로예요', '페이스 유지'];
       return sg.vs > 0 ? ['pos', '예상보다 좋아요 ' + sgn(sg.vs) + '%', '다음 세트도 1회 남을 때까지'] : ['neg', '피로가 예상보다 커요 ' + sgn(sg.vs) + '%', '그만큼 횟수를 낮췄어요'];
@@ -1134,19 +1139,21 @@ body.rest-on #nums{opacity:.55}
   }
   /* 지금 세트에서 할 행동 한 줄: 현재 운동·세트 우선, 그다음 오늘 전체. 마지막 세트로 갈수록 그 세트 얘기만 */
   function cueOf(rows, avg, rAvg, plan, mx) {
-    const ex = curEx(), xs = isBw(ex) ? [] : todaySets(ex), n = xs.length, k = n + 1, fin = k === SETS;
-    const tag = n >= SETS ? '' : n ? k + '세트' + (fin ? '(마지막)' : '') + ' · ' : '';
+    const ex = curEx(), xs = isBw(ex) ? [] : todaySets(ex), n = xs.length, k = n + 1, N = nSets(ex), fin = k === N;
+    const tag = n >= N ? '' : n ? k + '세트' + (fin ? '(마지막)' : '') + ' · ' : '';
+    const adv = setAdvice(ex);
+    if (adv && adv.kind === 'skip') return ['neg', k + '세트 생략 추천 · 눌러서 마치기', adv.why, 'skip'];
     const dv = (x) => (x && x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0), lst = xs[n - 1], ld = dv(lst);
     let resting = false, el = 0; try { resting = !!rest && rest.end > Date.now(); } catch (e) {}
     if (lst) el = (Date.now() - lst.ts) / 1000;
     const iso = (EX[ex] && EX[ex].type) === 'i', curMax = xs.reduce((a, x) => Math.max(a, dv(x)), 0);
-    if (n < SETS && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 ' + sgn(curMax) + '% · 자세가 바뀐 것 같아요'];
-    if (n < SETS && n && ld < -1 && el < plan) return ['neg', tag + '휴식 끝까지 채우세요', '직전 세트 예상보다 ' + sgn(ld) + '%'];
-    if (n < SETS && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트 예상보다 ' + sgn(ld) + '%'];
+    if (n < N && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 ' + sgn(curMax) + '% · 자세가 바뀐 것 같아요'];
+    if (n < N && n && ld < -1 && el < plan) return ['neg', tag + '휴식 끝까지 채우세요', '직전 세트 예상보다 ' + sgn(ld) + '%'];
+    if (n < N && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트 예상보다 ' + sgn(ld) + '%'];
     if (rAvg !== null && rAvg < plan * 0.8) return ['neg', tag + '휴식 확실히 가져가세요', '오늘 평균 휴식 ' + secTxt(rAvg) + ' (계획 ' + secTxt(plan) + ')'];
     if (mx > JUMP * 100) return ['warn', tag + '오늘 기록 하나가 너무 높아요 · 반동 확인', '최대 ' + sgn(mx) + '%'];
     if (avg < -4) return ['neg', tag + '오늘 컨디션 저하 · 무리하지 말고 목표대로', '오늘 예상 대비 ' + sgn(avg) + '%'];
-    if (n >= SETS) return ['pos', '이 운동 끝 · 다음 운동 전에 숨 고르기', rows.length ? '오늘 예상 대비 ' + sgn(avg) + '%' : ''];
+    if (n >= N) return ['pos', '이 운동 끝 · 다음 운동 전에 숨 고르기', rows.length ? '오늘 예상 대비 ' + sgn(avg) + '%' : ''];
     if (fin) return ['pos', tag + '1회 남을 때까지 · 자세 유지', iso ? '천천히, 수축에 집중' : ''];
     if (n && iso) return ['neu', tag + '천천히 내리고 수축에 집중', ''];
     if (n) return ['neu', tag + '같은 자세 · 같은 템포', ''];
@@ -1189,7 +1196,7 @@ body.rest-on #nums{opacity:.55}
     const ex = curEx(), n = doneCount(ex);
     if (showingDone || document.hidden) return;
     renderToday();
-    if (isBw(ex) || n >= SETS) return;
+    if (isBw(ex) || n >= nSets(ex)) return;
     const sg = suggestNow(ex);
     renderWhy(sg); renderDelta(sg, false);
     if (cur.auto && (cur.w !== sg.w || cur.r !== sg.r)) { const pw = cur.w, pr = cur.r; cur.w = sg.w; cur.r = sg.r; syncInputs(); fitNums(); bumpNums(pw, pr); buzz(8); }
@@ -1231,22 +1238,23 @@ body.rest-on #nums{opacity:.55}
     let pc = '';
     if (left) { if (isBw(e)) pc = ''; else { const ev = trend(e).ev; pc = '<b class="pc tk-' + ev.kind + '">' + (ev.wk === undefined ? '—' : (ev.kind === 'fast' ? '⚠' : '') + sgn(ev.wk) + '%') + '</b>'; } }
     let tail;
-    if (c >= SETS) tail = left ? '✓' : '3/3 ✓';
-    else if (here) tail = left ? (c ? c + '/3' : '지금') : c + '/3 지금';
-    else if (c > 0) tail = c + '/3';
+    const Ne = nSets(e);
+    if (c >= Ne) tail = left ? '✓' : c + '/' + Ne + ' ✓';
+    else if (here) tail = left ? (c ? c + '/' + Ne : '지금') : c + '/' + Ne + ' 지금';
+    else if (c > 0) tail = c + '/' + Ne;
     else if (isBw(e)) tail = '맨몸';
     else { const s = suggest(e); tail = s.w + '×' + s.r + (s.kind === 'up' ? ' ↑' : ''); }
-    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= SETS ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= SETS ? 'done' : '') + (left ? '<span class="nm"><span>' + esc(EX[e].name) + '</span><span class="meta">' + pc + '<em>' + tail + '</em></span></span>' : '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em>') + '</button>';
+    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= Ne ? ' ok' : '') + '" data-i="' + i + '"><i>' + (i + 1) + '</i>' + icon(e, 28, c >= Ne ? 'done' : '') + (left ? '<span class="nm"><span>' + esc(EX[e].name) + '</span><span class="meta">' + pc + '<em>' + tail + '</em></span></span>' : '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em>') + '</button>';
   }
   function rowsHtml(left) { return ORDER.map((e, i) => rowHtml(e, i, left)).join(''); }
 
   function renderGo() {
-    const g = $('kGo'), n = doneCount(curEx());
+    const g = $('kGo'), n = doneCount(curEx()), N = nSets(curEx());
     g.classList.remove('next', 'idle');
     if (showingDone) { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', '다음 운동 바로 시작'); return; }
-    if (n >= SETS) {
+    if (n >= N) {
       if (allDone()) { g.classList.add('idle'); setGo('list'); g.setAttribute('aria-label', '오늘 운동 끝, 목록 보기'); }
-      else { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', '3세트 끝, 다음 운동으로'); }
+      else { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', N + '세트 끝, 다음 운동으로'); }
       return;
     }
     setGo('check'); g.setAttribute('aria-label', (n + 1) + '세트 완료');
@@ -1323,7 +1331,8 @@ body.rest-on #nums{opacity:.55}
     if (lpFired) { lpFired = false; return; }   /* 휴식 메뉴를 연 길게 누르기는 세트 저장 안 함 */
     const ex = curEx(), n = doneCount(ex), bw = isBw(ex);
     if (showingDone) { advance(); return; }
-    if (n >= SETS) { if (allDone()) openList(); else goIdx(nextIncomplete(data.idx), 'next'); return; }
+    const N = nSets(ex);
+    if (n >= N) { if (allDone()) openList(); else goIdx(nextIncomplete(data.idx), 'next'); return; }
     commitInputs();
     const sg = bw ? null : suggestNow(ex);
     const s = { id: uid(), ex, date: today(), ts: Date.now(), w: bw ? 0 : cur.w, r: bw ? 0 : cur.r };
@@ -1332,8 +1341,8 @@ body.rest-on #nums{opacity:.55}
     if (!bw && n > 0 && sg.cap) s.P = Math.round(e10(s.w, Math.max(1, repsAt(sg.cap, s.w))) * 1000) / 1000;
     data.sets.push(s); persist();
     restart($('kGo'), 'pop'); buzz(30);
-    if (n + 1 < SETS) startRest(restCfg.set); else if (nextIncomplete(data.idx) >= 0) startRest(restCfg.ex); else stopRest();
-    if (n + 1 === SETS) { render(); showDone(ex, sg); return; }
+    if (n + 1 < N) startRest(restCfg.set); else if (nextIncomplete(data.idx) >= 0) startRest(restCfg.ex); else stopRest();
+    if (n + 1 === N) { render(); showDone(ex, sg); return; }
     { const pw = cur.w, pr = cur.r; sfx(n === 0 ? 'set1' : 'set2'); prefill(); render(); bumpNums(pw, pr); }
     const jp = !bw && s.P > 0 ? pct(e10(s.w, s.r), s.P) : 0;
     toast(jp > JUMP * 100 ? '⚠ 예상보다 ' + sgn(jp) + '% · 기록을 확인해 주세요' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
@@ -1356,9 +1365,9 @@ body.rest-on #nums{opacity:.55}
 
   /* ---------- done moment → auto advance ---------- */
   function showDone(ex, sg) {
-    const ts = todaySets(ex).slice(0, SETS), bw = isBw(ex);
+    const N = nSets(ex), ts = todaySets(ex).slice(0, N), bw = isBw(ex);
     let cmp, ok = true;
-    if (bw) cmp = '맨몸 ' + SETS + '세트 완료';
+    if (bw) cmp = '맨몸 ' + N + '세트 완료';
     else {
       const prev = sessions(ex, true)[0];
       const base = prev ? e10(prev.sets[0].w, prev.sets[0].r) : EX[ex].start;
@@ -1367,7 +1376,7 @@ body.rest-on #nums{opacity:.55}
       ok = !(T0 > got + 1e-9);
       cmp = '추정 10RM ' + f1(base) + ' → ' + f1(got) + 'kg (' + sgn(pct(got, base)) + '%) · ' + (ok ? '목표 달성 ✓' : '목표 ' + f1(T0) + 'kg에 조금 못 미침 → 다음엔 천천히');
     }
-    const ni = nextIncomplete(data.idx);
+    const ni = nextIncomplete(data.idx), addAdv = (() => { const a = setAdvice(ex); return a && a.kind === 'add' ? a : null; })();
     let nextHtml;
     if (ni >= 0) {
       const nx = ORDER[ni], tsn = todaySets(nx);
@@ -1378,9 +1387,9 @@ body.rest-on #nums{opacity:.55}
       nextHtml = '<div class="dnext"><div><small>오늘 운동 끝 · ' + ORDER.length + '개 · ' + todaySets().length + '세트</small><b>전부 완료했어요</b></div><em>수고했어요</em></div>';
     }
     $('done').innerHTML = '<div class="chk"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>' +
-      '<h2>' + esc(EX[ex].short) + '<br>3세트 끝</h2>' +
+      '<h2>' + esc(EX[ex].short) + '<br>' + N + '세트 끝</h2>' +
       (bw ? '' : '<div class="dsets">' + ts.map((s, i) => '<div><small>' + (i + 1) + '세트</small><b>' + fmtSet(s) + '</b></div>').join('') + '</div>') +
-      '<p class="delta ' + (ok ? 'up' : 'retry') + '">' + esc(cmp) + '</p>' + nextHtml;
+      '<p class="delta ' + (ok ? 'up' : 'retry') + '">' + esc(cmp) + '</p>' + (addAdv ? '<button type="button" class="btn wide addset" id="addSet">+1세트 더 하기 (추천) <small>' + esc(addAdv.why) + '</small></button>' : '') + (addAdv ? nextHtml.replace('<div class="dprog"><i></i></div>', '') : nextHtml);
     const r = $('pageR').getBoundingClientRect(), bt = document.querySelector('.bottom').getBoundingClientRect().top - r.top;
     $('done').style.bottom = (r.height - bt) + 'px';
     $('done').hidden = false;
@@ -1388,7 +1397,32 @@ body.rest-on #nums{opacity:.55}
     renderGo();
     buzz([30, 60, 30]); sfx(ni >= 0 ? 'ex' : 'all');
     clearTimeout(doneTimer);
+    if (addAdv) {
+      $('addSet').addEventListener('click', (e) => { e.stopPropagation(); setPlan(ex, N + 1); hideDone(); startRest(restCfg.set); prefill(); render(); toast('+1세트 · ' + (N + 1) + '세트로 진행'); });
+      return;   /* 추천이 있으면 자동으로 넘기지 않음 */
+    }
     if (ni >= 0) doneTimer = setTimeout(advance, DONE_MS);
+  }
+  /* ---------- 세트 추가 / 생략 추천 ----------
+     추가: 끝난 세트가 모두 예상 이상이고 평균 +1% 이상, 1세트 목표 달성, 회복·누적 피로·오늘 피로 문제 없음 → 볼륨 1세트 더가 이득 (최대 4세트)
+     생략: 마지막 세트 전, 직전 세트가 예상보다 −5% 넘게 못했거나 다음 세트 예상이 5회 미만 → 더 해도 자극보다 피로가 큼 (최소 2세트) */
+  function setAdvice(ex) {
+    if (isBw(ex)) return null;
+    const xs = todaySets(ex), n = xs.length, N = nSets(ex);
+    if (!n) return null;
+    const dv = (x) => (x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0), worst = Math.min(...xs.map(dv)), best = Math.max(...xs.map(dv));
+    if (n >= N && N === SETS) {
+      const s1 = suggest(ex), day = dayFatigue(ex);
+      const avg = xs.reduce((a, x) => a + dv(x), 0) / n;
+      if (worst >= 0 && avg >= 1 && best <= JUMP * 100 && s1.mode !== 'fatigue' && s1.mode !== 'deload' && !(s1.pen > 0.004) && day.f === 1 && xs[n - 1].r >= RMIN + 1)
+        return { kind: 'add', why: '3세트 모두 예상보다 좋음(평균 ' + sgn(avg) + '%) · 회복 충분' };
+    }
+    if (n === N - 1 && n >= 2) {
+      const l = dv(xs[n - 1]), b = backoff(ex, xs, Date.now() + 1e9);
+      if (l < -5) return { kind: 'skip', why: '직전 세트 예상보다 ' + sgn(l) + '% · 더 하면 피로만 쌓여요' };
+      if (b.r < RMIN && b.w <= MIN_W) return { kind: 'skip', why: '다음 세트 예상 ' + b.r + '회 · 효과보다 피로가 커요' };
+    }
+    return null;
   }
   function advance() { clearTimeout(doneTimer); const ni = nextIncomplete(data.idx); hideDone(); if (ni >= 0) goIdx(ni, 'next'); else render(); }
   function hideDone() { clearTimeout(doneTimer); showingDone = false; $('done').hidden = true; }
@@ -1434,7 +1468,14 @@ body.rest-on #nums{opacity:.55}
   }
   $('trend').addEventListener('click', openTrend);
   $('why').addEventListener('click', openWhy);
-  $('today').addEventListener('click', openToday);
+  $('today').addEventListener('click', () => {
+    const ex = curEx(), a = setAdvice(ex);
+    if (a && a.kind === 'skip') {
+      if (!confirm(EX[ex].short + ' 마지막 세트를 생략하고 마칠까요?')) return;
+      const n = doneCount(ex); setPlan(ex, n); stopRest(); render(); showDone(ex, suggest(ex)); return;
+    }
+    openToday();
+  });
   $('todayClose').addEventListener('click', () => $('todayDlg').close());
   $('why').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openWhy(); } });
   $('whyClose').addEventListener('click', () => $('whyDlg').close());
