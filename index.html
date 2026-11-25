@@ -1365,7 +1365,7 @@ body.rest-on #nums{opacity:.55}
   /* 지금 세트에서 할 행동 한 줄: 현재 운동·세트 우선, 그다음 오늘 전체. 마지막 세트로 갈수록 그 세트 얘기만 */
   function cueOf(rows, avg, rAvg, plan, mx) {
     const ex = curEx(), xs = isBw(ex) ? [] : lapSets(ex), n = xs.length, k = n + 1, N = nSets(ex), fin = k === N;
-    const tag = n >= N ? '' : n ? k + '세트' + (fin ? '(마지막)' : '') + ' · ' : '';
+    const tag = '';   /* 세트 번호는 진행 막대로 보이니 문구에서 뺌 */
     const adv = setAdvice(ex);
     if (adv && adv.kind === 'skip') return ['neg', k + '세트 생략 추천 · 눌러서 마치기', adv.why, 'skip', 1];
     const stp = (n === 0 || n >= N) ? stopAdvice() : null;
@@ -1376,23 +1376,23 @@ body.rest-on #nums{opacity:.55}
     const iso = (EX[ex] && EX[ex].type) === 'i', curMax = xs.reduce((a, x) => Math.max(a, dv(x)), 0);
     const cal = !n && calib(ex), calSub = '처음 ' + CALIB_N + '세션은 시작 기준을 맞추는 중 · 추천보다 더 되면 더 하세요';
     if (n < N && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 훨씬 잘 나왔어요 · 자세가 바뀐 것 같아요', '', 1];
-    /* 휴식 중: 숫자 없이 '더 쉬세요' / 끝나면 '시작하세요' (운동 사이 휴식도 같음) */
+    /* 휴식 중: 휴식이 실제 문제일 때만(직전 세트 힘듦) '더 쉬세요', 아니면 아래 일반 조언 / 끝나면 '시작하세요' */
     const rTot = (() => { try { return rest ? rest.total / 1000 : 0; } catch (e) { return 0; } })();
-    if (n < N && resting) return n && ld < -3 ? ['neg', tag + '조금 더 쉬는 게 좋아요', '직전 세트가 힘들었어요 · 휴식 30초 늘렸어요', '', 1] : ['neu', (n ? tag : '1세트 전 · ') + '조금 더 쉬세요', cal ? '이번 1세트는 여유 있으면 1회 남을 때까지' : '', '', 1];
+    if (n < N && resting && n && ld < -3) return ['neg', '조금 더 쉬는 게 좋아요', '직전 세트가 힘들었어요 · 휴식 30초 늘렸어요', '', 1];
     if (n < N && n && el < plan * 0.8 && !resting && rTot === 0 && ld < -1) return ['neg', tag + '휴식 끝까지 채우세요', '직전 세트가 예상보다 힘들었어요', '', 1];
     if (n < N && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트가 예상보다 너무 잘 나왔어요', '', 1];
     let justDone = false; try { justDone = !!rest && rest.end <= Date.now() && Date.now() - rest.end < 60000; } catch (e) {}
-    if (n < N && justDone) return ['pos', (n ? tag : '1세트 · ') + '지금 시작하세요', fin ? '1회 남을 때까지 · 자세 유지' : cal ? '여유 있으면 1회 남을 때까지' : '', '', 1];
+    if (n < N && justDone) return ['pos', '지금 시작하세요', fin ? '1회 남을 때까지 · 자세 유지' : cal ? '여유 있으면 1회 남을 때까지' : '', '', 1];
     if (rAvg !== null && rAvg < plan * 0.8) return ['neg', tag + '휴식 확실히 가져가세요', '오늘 휴식이 계획보다 짧아요', '', 1];
     if (mx > JUMP * 100) return ['warn', tag + '오늘 기록 하나가 너무 높아요 · 반동 확인', '예상보다 훨씬 높은 세트가 있어요', '', 1];
     if (avg < -4) return ['neg', tag + '오늘 컨디션 저하 · 무리하지 말고 목표대로', devTxt(avg)];
     if (n >= N) return ['pos', '이 운동 끝 · 다음 운동 전에 숨 고르기', rows.length ? devTxt(avg) : ''];
-    if (cal) return ['pos', '1세트 · 여유 있으면 1회 남을 때까지', calSub, '', 1];
+    if (cal) return ['pos', '여유 있으면 1회 남을 때까지', calSub, '', 1];
     if (fin) return ['pos', tag + '1회 남을 때까지 · 자세 유지', iso ? '천천히, 수축에 집중' : '', '', 1];
     if (n && iso) return ['neu', tag + '천천히 내리고 수축에 집중', ''];
     if (n) return ['neu', tag + '같은 자세 · 같은 템포', ''];
-    if (!rows.length) return ['neu', '오늘 첫 운동 · 1세트는 목표 횟수까지만', ''];
-    return avg > 1 ? ['pos', '1세트 · 페이스 좋아요, 목표대로', devTxt(avg)] : ['neu', '1세트 · 목표 횟수까지', devTxt(avg)];
+    if (!rows.length) return ['neu', '오늘 첫 운동 · 목표 횟수까지만', ''];
+    return avg > 1 ? ['pos', '페이스 좋아요, 목표대로', devTxt(avg)] : ['neu', '목표 횟수까지', devTxt(avg)];
   }
   /* 상단 한 줄: 지금 할 행동(휴식·생략·반동 등)이 있으면 그것, 없으면 진도 멘트. 판단 문장은 화면에 하나만 */
   let headSkip = false;
