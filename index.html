@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>덤벨 세트 기록</title>
@@ -15,7 +15,7 @@
    COLOUR/TYPE: 흰 바탕, 잉크 #1C1C1E, 행동=파랑, 향상=초록 / 시스템 산세리프 4단계
    LAYOUT: 접힘=한 열 압축, 기본=한 열, 펼침=두 페이지(가운데 접힘선 비움) */
 :root{--bg:#FFFFFF;--ink:#1C1C1E;--sub:#6C6C70;--mute:#8E8E93;--faint:#C7C7CC;--line:#E5E5EA;--plate:#F2F2F7;--blue:#0A66D1;--green:#248A3D;--greenTxt:#1E6E31;--pad:min(234px,62vw)}
-*{box-sizing:border-box;min-width:0}
+*{box-sizing:border-box;min-width:0;touch-action:manipulation}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%;overflow:hidden}
 button,input{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -233,7 +233,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .today.pos{color:#1E6E31;background:#EEF7F0}.today.neu{color:#0A4FA3;background:#EEF4FC}.today.neg{color:#9A3D00;background:#FDF2EA}.today.warn{color:#B0241A;background:#FCEDEC}
 .today.pop{animation:moodpop .5s ease-out}
 .today.fin b{font-size:17px}
-.fb{flex:none;margin:0 24px 8px;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-radius:14px;background:var(--plate)}
+.fb{flex:none;margin:10px 14px 0 24px;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-radius:14px;background:var(--plate)}
 .fb[hidden]{display:none}
 .fb>span{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--sub);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fb>span b{display:block;font-size:13px;color:var(--ink)}
@@ -250,7 +250,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 @keyframes bumpDn{0%{transform:translateY(-.25em) scale(.85);opacity:.3;color:#0A66D1}45%{transform:translateY(.06em) scale(1.08);opacity:1;color:#0A66D1}100%{transform:none}}
 .mood.pop{animation:moodin .55s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes moodin{0%{transform:translateY(10px);opacity:0}60%{transform:translateY(-2px);opacity:1}100%{transform:none}}
-@media (max-height:620px){.today{padding:7px 12px;margin-bottom:4px}.today span{display:none}.fb{margin-bottom:4px}.fb button{height:32px}}
+@media (max-height:620px){.today{padding:7px 12px;margin-bottom:4px}.today span{display:none}.fb{margin-top:6px}.fb button{height:32px}}
 .hero>*{flex:none}
 .hero.t1 .rule,.hero.t1 .mood span{display:none}
 .hero.t2 .why{display:none}
@@ -467,9 +467,9 @@ body.rest-on #nums{opacity:.55}
       <p class="rule" id="rule"></p>
     </section>
 
-    <div class="fb" id="fb" hidden role="group" aria-label="방금 세트 여유"></div>
     <button type="button" class="trend" id="trend"></button>
     <button type="button" class="rtrend" id="rTrend"></button>
+    <div class="fb" id="fb" hidden role="group" aria-label="방금 세트 여유"></div>
 
     <section class="bottom">
       <div class="side">
@@ -1008,7 +1008,9 @@ body.rest-on #nums{opacity:.55}
   const curEx = () => ORDER[data.idx];
   /* 오늘 운동별 세트 수: 기본 3, 추천에 따라 2(생략) 또는 4(추가) */
   const nSets = (ex) => (data.plan && data.plan.date === today() && data.plan[ex]) || SETS;
-  const setPlan = (ex, k) => { if (!data.plan || data.plan.date !== today()) data.plan = { date: today() }; data.plan[ex] = k; persist(); };
+  const setPlan = (ex, k) => { if (!data.plan || data.plan.date !== today()) data.plan = { date: today() }; data.plan[ex] = k; data.plan._last = { ex: ex, ts: Date.now() }; persist(); };
+  /* 되돌리기: 세트 추가·생략도 원래(기본 3세트)로 */
+  const clearPlan = (ex) => { if (data.plan && data.plan.date === today()) { delete data.plan[ex]; if (data.plan._last && data.plan._last.ex === ex) delete data.plan._last; } };
   const allDone = () => ORDER.every((e) => doneCount(e) >= nSets(e));
   function nextIncomplete(from) {
     for (let k = 1; k <= ORDER.length; k++) { const i = (from + k) % ORDER.length; if (doneCount(ORDER[i]) < nSets(ORDER[i])) return i; }
@@ -1250,7 +1252,7 @@ body.rest-on #nums{opacity:.55}
     fbKey = k;
     const xs = todaySets(s.ex), i = xs.indexOf(s) + 1;
     el.innerHTML = '<span><b>방금 ' + (s.ex !== curEx() ? esc(EX[s.ex].short) + ' ' : '') + i + '세트 ' + s.w + '×' + s.r + '</b>여유가 어땠어요?</span>' +
-      [[1, '여유'], [0, '딱 맞음'], [-1, '한계']].map((x) => '<button type="button" data-q="' + x[0] + '" aria-pressed="' + (s.q === x[0]) + '">' + x[1] + '</button>').join('');
+      [[1, '여유'], [0, '딱 맞음'], [-1, '한계']].map((x) => '<button type="button" data-q="' + x[0] + '" aria-pressed="' + ((s.q === undefined ? 0 : s.q) === x[0]) + '">' + x[1] + '</button>').join('');
     if (el.hidden) { el.hidden = false; requestAnimationFrame(fitNums); }
   }
   $('fb').addEventListener('click', (e) => {
@@ -1474,8 +1476,14 @@ body.rest-on #nums{opacity:.55}
   $('kPrev').addEventListener('click', () => padNav(-1));
   $('kNext').addEventListener('click', () => padNav(1));
   $('kUndo').addEventListener('click', () => {
-    const all = todaySets(); if (!all.length) return;
-    const s = all[all.length - 1];
+    const all = todaySets(), s = all[all.length - 1], pl = data.plan && data.plan.date === today() && data.plan._last;
+    /* 마지막 동작이 세트 추가·생략이면 그것부터 취소 */
+    if (pl && (!s || pl.ts > s.ts)) {
+      clearPlan(pl.ex); hideDone(); stopRest(); data.idx = ORDER.indexOf(pl.ex); persist();
+      render(); buzz(10); sfx('undo'); toast('되돌렸어요 · ' + EX[pl.ex].short + ' ' + SETS + '세트로'); return;
+    }
+    if (!s) return;
+    clearPlan(s.ex);
     data.sets = data.sets.filter((x) => x.id !== s.id); tomb(s.id);
     hideDone(); stopRest();
     data.idx = ORDER.indexOf(s.ex);
@@ -1484,6 +1492,9 @@ body.rest-on #nums{opacity:.55}
     cur.auto = false;
     render(); buzz(10); sfx('undo'); toast('되돌렸어요 · ' + EX[s.ex].short + ' ' + fmtSet(s));
   });
+  /* iOS 핀치·더블탭 확대 막기 */
+  ['gesturestart', 'gesturechange'].forEach((t) => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
+  document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
   $('kList').addEventListener('click', openList);
   $('dayPos').addEventListener('click', openList);
 
