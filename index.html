@@ -1613,7 +1613,7 @@ body.rest-on #nums{opacity:.55}
   const rowH = (tr) => (tr && tr.firstElementChild ? tr.firstElementChild.offsetHeight : 0);
   let lwCommit = false, padRoll = false;
   const lw = mkWheel({
-    fit: true, spd: 1.3, vmax: 16, glide: 0.2, el: () => $('exTrack'), R: () => $('exList').clientHeight / 2 / WTH,   /* 목록에 들어가는 줄들이 원통 ±WTH rad에 들어가게 (줄 간격 그대로) */
+    fit: true, spd: 1.3, vmax: 16, glide: 0.2, el: () => $('exTrack'), R: () => 6.5 * lw.h / WTH,   /* 13줄이 원통 ±WTH rad에 들어가는 반경 — 줄 높이에만 묶음(목록 높이는 아래 추세 내용·화면 높이 따라 켤 때마다 달라져서) */
     commit: (st) => { lwCommit = true; const i0 = data.idx; goIdx(data.idx + st, st < 0 ? 'prev' : 'next', 0, true); lwCommit = false; if (data.idx !== i0) lw.moved = true; return st * lw.h; },
   });
   /* 운동이 바뀌면(패드·스와이프·목록) 바퀴도 같은 물리로 굴러서 지금 운동이 렌즈로 */
@@ -2725,7 +2725,7 @@ body.rest-on #nums{opacity:.55}
     wup: (t) => { const o = sfxBus(0.3); sub(t, 62, 50, 0.3 * fg(), 0.35, o); metal(t, 330, 0.035 * fg(), 0.5, o); stone(t, 90, 0.14 * og(), 0.1, o); },   /* 무거워질수록 낮게 */
     wdn: (t) => { const o = sfxBus(0.3); sub(t, 82, 92, 0.26 * fg(), 0.3, o); metal(t, 440, 0.035 * fg(), 0.45, o); stone(t, 120, 0.12 * og(), 0.1, o); },
     edge: (t) => { const o = sfxBus(0.2); cavity(t, 46, 0.5 * fg(), 0.5, o); stone(t, 60, 0.25 * og(), 0.14, o); },
-    tick: (t) => { const o = sfxBus(0); sOsc(t, 2100, 1500, 0.012, 0.005, 0.026, o, 0.02); stone(t, 420, 0.02 * og(), 0.02, o); },   /* 어택 약하게: 클릭 작고 살짝 늦게 차오름 */
+    tick: (t) => { const o = sfxBus(0); sOsc(t, 2100, 1500, 0.014, 0.005, 0.026, o, 0.02); stone(t, 420, 0.02 * og(), 0.02, o); },   /* 어택 약하게: 클릭 작고 살짝 늦게 차오름 */
     nav: (t) => { const o = sfxBus(0.4); hum(t, 73, 0.1 * fg(), 0.5, o, 0.03); breath(t, 0.07 * og(), 0.35, o, 380, 900, 0.06); metal(t, 587, 0.02 * fg(), 0.6, o, 0.02); },
     set1: (t) => { const o = sfxBus(0.5, 0.18); sub(t, 55, 46, 0.42 * fg(), 0.7, o); cavity(t, 110, 0.35 * fg(), 1.2, o); metal(t, 220, 0.05 * fg(), 1.6, o); stone(t, 70, 0.3 * og(), 0.18, o); breath(t, 0.05 * og(), 0.5, o, 500, 1200, 0.01); },
     set2: (t) => { const o = sfxBus(0.5, 0.18); sub(t, 62, 52, 0.42 * fg(), 0.7, o); cavity(t, 123, 0.35 * fg(), 1.2, o); metal(t, 247, 0.05 * fg(), 1.6, o); stone(t, 78, 0.3 * og(), 0.18, o); breath(t, 0.05 * og(), 0.5, o, 520, 1250, 0.01); },
