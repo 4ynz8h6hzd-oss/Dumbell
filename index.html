@@ -1386,7 +1386,7 @@ body.rest-on #nums{opacity:.55}
     const ex = curEx(), xs = isBw(ex) ? [] : lapSets(ex), n = xs.length, k = n + 1, N = nSets(ex), fin = k === N;
     const adv = setAdvice(ex);
     if (adv && adv.kind === 'skip') return ['neg', '마지막 세트 생략 추천 · 눌러서 마치기', adv.why, 'skip', 1];
-    if (adv && adv.kind === 'add') return ['pos', '1세트 더 추천 · 할지는 직접', adv.why, '', 1];
+    if (adv && adv.kind === 'add') return ['pos', '1세트 더 추천 · 넘기려면 »', adv.why, '', 1];
     const stp = (n === 0 || n >= N) ? stopAdvice() : null;
     if (stp) return ['neg', '오늘은 여기서 멈추는 걸 추천해요', stp + ' · 선택은 직접', '', 1];
     const dv = (x) => (x && x.P > 0 ? pct(eff(x), x.P) : 0), lst = xs[n - 1];
@@ -1704,6 +1704,7 @@ body.rest-on #nums{opacity:.55}
     const g = $('kGo'), n = doneCount(curEx()), N = nSets(curEx());
     g.classList.remove('next', 'idle');
     if (showingDone) { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', '다음 운동 바로 시작'); return; }
+    if (n >= N && addAdvOf(curEx())) { setGo('plus'); g.setAttribute('aria-label', '1세트 더 하기'); return; }
     if (n >= N) {
       if (allDone()) { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', '한 바퀴 끝, 새 바퀴 시작'); }
       else { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', N + '세트 끝, 다음 운동으로'); }
@@ -1712,7 +1713,7 @@ body.rest-on #nums{opacity:.55}
     setGo('check'); g.setAttribute('aria-label', (n + 1) + '세트 완료');
   }
   function setGo(kind) {
-    const p = kind === 'list' ? 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' : SVG_ARROW[kind];
+    const p = kind === 'plus' ? 'M12 5v14M5 12h14' : kind === 'list' ? 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01' : SVG_ARROW[kind];
     $('goIc').innerHTML = '<path d="' + p + '"/>';
   }
 
@@ -1785,6 +1786,7 @@ body.rest-on #nums{opacity:.55}
     const ex = curEx(), n = doneCount(ex), bw = isBw(ex);
     if (showingDone) { advance(); return; }
     const N = nSets(ex);
+    if (n >= N && addAdvOf(ex)) { $('addK').click(); return; }   /* 세트 추가 추천 중: 가운데 = 1세트 더 (다음 운동은 »)*/
     if (n >= N) {
       if (allDone()) { const i0 = data.idx; newLap(); const i1 = data.idx; data.idx = i0; goIdx(i1, 'next'); if (i1 === i0) { persist(); prefill(); render(); } toast('새 바퀴 시작 · ' + EX[curEx()].short + '부터'); }
       else goIdx(nextIncomplete(data.idx), 'next');
