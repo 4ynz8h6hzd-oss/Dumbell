@@ -168,6 +168,9 @@ button{cursor:pointer}
 .wd{display:flex;flex-direction:column;gap:6px}.rtrend .wd{flex:none}
 .wd div{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;white-space:nowrap}
 .wd small{width:44px;flex:none;font-size:12px;font-weight:500;color:var(--sub)}
+.wd .spn{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.wd .sc{font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:10px;font-variant-numeric:tabular-nums}
+.sc-up{background:#E3F3E7;color:#1E7A35}.sc-dn,.sc-nil{background:#F2F2F7;color:#6C6C72}.sc-min{background:#FCEBDD;color:#9A4A00}
 .nmore{font-size:13px;color:var(--sub)}
 .nmore summary{cursor:pointer;font-weight:600;padding:8px 0;list-style:none;color:var(--blue)}
 .nmore summary::-webkit-details-marker{display:none}
@@ -1009,14 +1012,13 @@ body.rest-on #nums{opacity:.55}
     ev.spd = { r: rt.r, log: rt.log, ok: old, d: Math.round((rt.r - r4) * 1000) / 10, fit: gf };
     return { pts, ev, bw: false };
   }
-  /* 내 속도 판정: [아이콘, 문구] */
+  /* 내 속도 판정: [칩 종류, 칩 문구, 설명 문장]. 방향 화살표 대신 숫자+변화 칩 (무게 하락으로 읽히지 않게, 상승폭 감소는 경고색 아님) */
   function spdVerdict(sp) {
-    const R = '주 ' + rp(sp.r);
-    if (sp.r <= RATE_MIN + 1e-9) return ['down', R + ' · 최저 속도 · 프로그램 점검'];
-    if (!sp.ok) return ['hold', R + ' · 4주 쌓이면 판단'];
-    if (sp.d >= SPEED_TH) return ['up', R + ' · 4주 전보다 ' + sgn(sp.d) + '%p 빨라지는 중'];
-    if (sp.d <= -SPEED_TH) return ['down', R + ' · 4주 전보다 ' + sgn(sp.d) + '%p 느려지는 중'];
-    return ['up', R + ' · 유지'];
+    if (sp.r <= RATE_MIN + 1e-9) return ['min', '최저 · 프로그램 점검', '상승폭이 바닥(주 ' + rp(RATE_MIN) + ')이에요 · 템포·운동·횟수 구간을 바꿔볼 때'];
+    if (!sp.ok) return ['nil', '4주 쌓이면 판단', '기록 4주부터 상승폭 변화를 봐요'];
+    if (sp.d >= SPEED_TH) return ['up', '4주 ' + sgn(sp.d) + '%p', '4주 전보다 상승폭이 ' + sp.d.toFixed(1) + '%p 커졌어요'];
+    if (sp.d <= -SPEED_TH) return ['dn', '4주 ' + sgn(sp.d) + '%p', '4주 전보다 상승폭이 ' + Math.abs(sp.d).toFixed(1) + '%p 줄었어요 · 경력이 쌓이면 자연스러운 변화'];
+    return ['nil', '4주 변화 없음', '4주 전과 상승폭이 비슷해요'];
   }
   /* 내 속도 숫자: 90일 평활 추세 + 목표 속도 조정 이력 */
   function calLine(ev) {
@@ -1025,7 +1027,7 @@ body.rest-on #nums{opacity:.55}
     return '<span class="cal">' + (f ? '<span>최근 ' + Math.round(f.days) + '일 ' + f.n + '세션 평활: ' + f1(f.s0) + ' → <b>' + f1(f.now) + '</b>kg (주 ' + sgn(f.wk * 100) + '%)</span>' : '') +
       '<span>내 속도(목표 속도) 주 ' + rp(sp.r) + (sp.log.length ? ' · 조정 ' + sp.log.slice(-3).map((l) => xmd(l.x) + ' ' + rp(l.from) + '→' + rp(l.to)).join(', ') : ' · 기본값(아직 조정 없음)') +
       ' · 매주 90일 추세가 이보다 ' + RATE_BAND * 100 + '%p 넘게 빠르면 +0.1, 느리면 −0.1 (' + rp(RATE_MIN) + '~' + rp(RATE_MAX) + ') · 추천 무게 진도에 사용</span>' +
-      '<em class="tk-' + v[0] + '">' + v[1] + '</em></span>';
+      '<em class="' + (v[0] === 'min' ? 'tk-down' : v[0] === 'up' ? 'tk-up' : 'tk-hold') + '">' + v[2] + '</em></span>';
   }
   const TI = { up: 'M7 17L17 7M9 7h8v8', fast: 'M12 4L2.5 20h19zM12 10v4M12 17h.01', flat: 'M5 12h14M13 6l6 6-6 6', down: 'M7 7l10 10M17 9v8H9', hold: 'M7 12h.01M12 12h.01M17 12h.01', cap: 'M5 5h14M12 19V9M8 13l4-4 4 4' };
   const tIcon = (k) => '<span class="ti ti-' + k + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + TI[k] + '"/></svg></span>';
@@ -1037,7 +1039,7 @@ body.rest-on #nums{opacity:.55}
     const mk = wkKind(ev.mo * 7 / 30), v = ev.spd ? spdVerdict(ev.spd) : null;
     return '<div><small>이번 주</small>' + tIcon(wkKind(ev.wk)) + WK_TXT[wkKind(ev.wk)] + '</div>' +
       '<div><small>이번 달</small>' + (ev.moOk ? tIcon(mk) + MO_TXT[mk] : tIcon('hold') + '2주 더 쌓이면 판단') + '</div>' +
-      (v ? '<div><small>내 속도</small>' + tIcon(v[0]) + v[1] + '</div>' : '');
+      (v ? '<div><small>내 속도</small><b class="spn">주 ' + rp(ev.spd.r) + '</b><span class="sc sc-' + v[0] + '">' + v[1] + '</span></div>' : '');
   }
   const COL = { cap: '#6E56CF', fast: '#C4281C', up: '#248A3D', flat: '#B07A00', down: '#C26A00', hold: '#8E8E93' };
   /* status block: verdict sentence + 3 numbers + speed scale */
