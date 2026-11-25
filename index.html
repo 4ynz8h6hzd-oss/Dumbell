@@ -654,7 +654,8 @@ body.rest-on #nums{opacity:.55}
     const rmax = w0 <= 10 ? RMAX_LIGHT : RMAX, seen = {}, out = [], e0 = r0 ? e10(w0, r0) : 0;
     const add = (W, R) => { const k = W + 'x' + R, e = e10(W, R);
       if (seen[k]) return; seen[k] = 1;
-      if (r0 && !(W === w0 && R === r0) && (pct(e, e0) < MIN_STEP)) return;
+      /* 무거운 덤벨로 올라가는 건 추정치 차이가 작아도 진짜 진도 (예: 5×15 → 6×8 = +1.3%): MIN_STEP 미만이라 막으면 범위 끝(rmax)에서 멈춤 */
+      if (r0 && W <= w0 && !(W === w0 && R === r0) && (pct(e, e0) < MIN_STEP)) return;
       out.push({ w: W, r: R, e }); };
     if (r0) add(w0, r0);
     /* 횟수가 범위(rmax)를 넘었으면(기준 맞추기·튄 기록 인정 후) +1kg로는 못 내려옴 → 최대 +4kg까지 후보 */
