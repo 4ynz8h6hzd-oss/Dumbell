@@ -91,6 +91,18 @@ button{cursor:pointer}
 .lab{font-size:12px;font-weight:600;color:var(--mute);padding-bottom:6px}
 .lrow{display:flex;justify-content:space-between;align-items:baseline;width:100%;padding:8px 0;border:0;border-top:.5px solid var(--line);background:transparent;font-variant-numeric:tabular-nums;text-align:left}
 .lrow:last-of-type{border-bottom:.5px solid var(--line)}
+/* +1 세트 더: 패드 왼쪽 특별 버튼 (초록 그라데이션 + 숨쉬는 테두리) */
+.addk{position:relative;margin-top:10px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:14px 16px;border:0;border-radius:24px;color:#fff;text-align:left;
+  background:linear-gradient(145deg,#2E9B4F,#1E6E31);box-shadow:0 8px 24px rgba(30,110,49,.28);animation:addIn .35s cubic-bezier(.2,.9,.3,1.2) both}
+.addk[hidden]{display:none}
+.addk::after{content:'';position:absolute;inset:-4px;border-radius:28px;border:2px solid rgba(46,155,79,.45);animation:addPulse 1.8s ease-out infinite;pointer-events:none}
+.addk .plus{font-size:34px;font-weight:900;line-height:1;letter-spacing:-.03em}
+.addk b{font-size:17px;font-weight:800}
+.addk small{font-size:11px;font-weight:600;opacity:.85}
+.addk:active{transform:scale(.96)}
+@keyframes addIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:none}}
+@keyframes addPulse{0%{opacity:.9;transform:scale(1)}100%{opacity:0;transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.addk,.addk::after{animation:none}}
 .lrow small{font-size:12px;color:var(--mute)}
 .lrow b{font-size:17px}
 .lrow.c small,.lrow.c b{color:var(--blue)}
@@ -286,7 +298,6 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .fb>span{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--ink);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fb button{flex:none;min-width:52px;height:36px;padding:0 10px;border:0;border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:700;box-shadow:0 0 0 1px var(--line) inset}
 .fb button[aria-pressed="true"]{background:var(--blue);color:#fff;box-shadow:none}
-.addset{margin:4px 0 0;display:flex;flex-direction:column;gap:2px;background:#E6F4EA;color:#1E6E31;font-weight:800}.addset small{font-size:12px;font-weight:600;opacity:.8}
 .trows{display:flex;flex-direction:column;gap:2px;margin:6px 0 12px}
 .trow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-bottom:.5px solid var(--line);font-size:13px}
 .trow b{font-weight:700}.trow em{font-style:normal;font-weight:800;font-variant-numeric:tabular-nums;text-align:right}
@@ -432,7 +443,9 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .pageL{display:flex;flex-direction:column;gap:14px;min-height:0;overflow:hidden;padding:calc(20px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom)) 16px;border-right:.5px solid var(--line)}
   .pageR .bottom{flex-direction:column;align-items:stretch;gap:12px;padding:12px 14px 0 24px}
   .pageR .side{max-width:none;flex:none}
-  .pageR #ledger{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .pageR #ledger{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px}   /* 세트 추가해도 한 줄 */
+  .pageR .bottom{position:relative}
+  .pageR .addk{position:absolute;left:24px;bottom:0;margin:0;width:min(200px,calc(100% - var(--pad) - 60px));height:calc(var(--pad) * .62);bottom:calc(var(--pad) * .19)}
   .pageR .lrow,.pageR .lrow:last-of-type{border:0;background:var(--plate);border-radius:12px;padding:8px 10px;flex-direction:column;align-items:flex-start;gap:2px}
   .pageR .lrow.c,.pageR .lrow.c:last-of-type{background:rgba(10,102,209,.06);box-shadow:inset 0 0 0 1px rgba(10,102,209,.16),0 2px 12px rgba(10,102,209,.08);padding-left:12px}
   .pageR #next{display:none}
@@ -453,7 +466,8 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 @media (min-width:560px) and (min-height:480px) and (max-height:760px){
   .pageR .bottom{flex-direction:row;align-items:flex-end}
   .pageR .side{flex:1;align-self:flex-end}
-  .pageR #ledger{grid-template-columns:minmax(0,1fr)}
+  .pageR #ledger{grid-auto-flow:row;grid-template-columns:minmax(0,1fr)}
+  .pageR .addk{position:relative;left:auto;bottom:auto;width:auto;height:auto;margin-top:10px}
   .pageR .lrow,.pageR .lrow:last-of-type{flex-direction:row;align-items:baseline;gap:10px}
   .hero{gap:8px}
 }
@@ -527,6 +541,7 @@ body.rest-on #nums{opacity:.55}
         <span class="lab">오늘 세트</span>
         <div id="ledger"></div>
         <p class="next" id="next"></p>
+        <button type="button" class="addk" id="addK" hidden><span class="plus" aria-hidden="true">+1</span><b>세트 더</b><small>추천</small></button>
       </div>
       <div class="pad" id="pad" role="group" aria-label="엄지 패드">
         <button type="button" class="k cor" id="kPrev" aria-label="이전 운동"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg></button>
@@ -1368,6 +1383,7 @@ body.rest-on #nums{opacity:.55}
     const ex = curEx(), xs = isBw(ex) ? [] : lapSets(ex), n = xs.length, k = n + 1, N = nSets(ex), fin = k === N;
     const adv = setAdvice(ex);
     if (adv && adv.kind === 'skip') return ['neg', '마지막 세트 생략 추천 · 눌러서 마치기', adv.why, 'skip', 1];
+    if (adv && adv.kind === 'add') return ['pos', '1세트 더 추천 · 할지는 직접', adv.why, '', 1];
     const stp = (n === 0 || n >= N) ? stopAdvice() : null;
     if (stp) return ['neg', '오늘은 여기서 멈추는 걸 추천해요', stp + ' · 선택은 직접', '', 1];
     const dv = (x) => (x && x.P > 0 ? pct(eff(x), x.P) : 0), lst = xs[n - 1];
@@ -1385,17 +1401,28 @@ body.rest-on #nums{opacity:.55}
   }
   /* 백오프 세트 한 줄: 직전 세트 실제 결과(예상 대비·여유 입력)·직전 휴식으로 그 상황에 맞는 할 일 하나.
      휴식 얘기는 '예상(P)보다 떨어졌지만 실제 휴식 반영 예상(Pr)만큼은 했을 때' = 짧은 휴식이 원인일 때만 */
+  /* 직전 세트를 '목표 횟수 대비 몇 회'로 판정 (%는 무게마다 1회 크기가 달라서). 목표 = 저장된 예상 P의 횟수, 휴식 반영 목표 = Pr의 횟수.
+     2회 이상 차이, 또는 1회 차이 + 그 방향 여유 입력(한계/여유)일 때만 '피로 큼'/'좋음'. 1회 차이는 아래 줄에만 */
+  function repJudge(x) {
+    if (!(x && x.P > 0)) return null;
+    const tgt = repsAt(x.P, x.w), d = x.r - tgt, q = x.q || 0;
+    const miss = d <= -2 || (d <= -1 && q === -1), good = d >= 2 || (d >= 1 && q === 1);
+    const tgtR = x.Pr > 0 && x.Pr < x.P ? repsAt(x.Pr, x.w) : null;
+    return { d, miss, good, restHurt: miss && tgtR !== null && x.r + (q === 1 ? 1 : 0) >= tgtR,
+      txt: d === 0 ? '목표대로' : '목표보다 ' + Math.abs(d) + '회 ' + (d < 0 ? '적음' : '많음') };
+  }
+  /* 백오프 세트 한 줄: 직전 세트 실제 결과(목표 대비 횟수·여유 입력)·직전 휴식으로 그 상황에 맞는 할 일 하나.
+     휴식 얘기는 '목표엔 못 미쳤지만 실제 휴식 반영 목표(Pr)만큼은 했을 때' = 짧은 휴식이 원인일 때만 */
   function boCue(ex, xs, fin, iso) {
     const sg = suggestNow(ex); if (!sg || !sg.bo) return null;
-    const n = xs.length, lst = xs[n - 1], vs = sg.vs, last = lst.w + '×' + lst.r;
+    const n = xs.length, lst = xs[n - 1], last = lst.w + '×' + lst.r, j = repJudge(lst);
     const prevRest = n >= 2 ? (lst.ts - xs[n - 2].ts) / 1000 : null;
-    const qTxt = lst.q === -1 ? ' · 한계 반영' : lst.q === 1 ? ' · 여유 반영' : '';
-    const restHurt = vs !== null && vs <= -DEV_TH && lst.Pr > 0 && lst.Pr < lst.P && pct(eff(lst), lst.Pr) > -DEV_TH && prevRest !== null;
-    if (restHurt) return ['neg', '이번 휴식 ' + secTxt(sg.rst) + ' 다 채우기', '직전 휴식 ' + secTxt(prevRest) + ' · ' + last + ' ' + pctI(vs) + qTxt, '', 1];
-    if (vs !== null && vs <= -DEV_TH) return ['neg', '피로가 예상보다 커요', last + ' 예상 대비 ' + pctI(vs) + qTxt + ' · 횟수 낮췄어요', '', 1];
-    if (vs !== null && vs >= DEV_TH) return ['pos', fin ? '좋아요 · 더 되면 1회 남을 때까지' : '좋아요 · 더 되면 더 하기', last + ' 예상 대비 ' + pctI(vs) + qTxt, '', 1];
+    const qTxt = lst.q === -1 ? ' · 한계' : lst.q === 1 ? ' · 여유' : '';
+    if (j && j.restHurt && prevRest !== null) return ['neg', '이번 휴식 ' + secTxt(sg.rst) + ' 다 채우기', '직전 휴식 ' + secTxt(prevRest) + ' · ' + last + ' ' + j.txt + qTxt, '', 1];
+    if (j && j.miss) return ['neg', '피로가 예상보다 커요', last + ' ' + j.txt + qTxt + ' · 횟수 낮췄어요', '', 1];
+    if (j && j.good) return ['pos', fin ? '좋아요 · 더 되면 1회 남을 때까지' : '좋아요 · 더 되면 더 하기', last + ' ' + j.txt + qTxt, '', 1];
     const how = fin ? '더 되면 1회 남을 때까지' : iso && sg.w < lst.w ? '가벼워진 만큼 수축에 집중' : iso ? '천천히 내리고 수축에 집중' : '같은 자세 · 같은 템포';
-    return ['neu', how, '직전 ' + last + (vs === null ? '' : ' · 예상대로') + qTxt, '', 1];
+    return ['neu', how, '직전 ' + last + (j ? ' · ' + j.txt : '') + qTxt, '', 1];
   }
   /* 상단 한 줄: 지금 할 행동(휴식·생략·반동 등)이 있으면 그것, 없으면 진도 멘트. 판단 문장은 화면에 하나만 */
   let headSkip = false;
@@ -1655,7 +1682,11 @@ body.rest-on #nums{opacity:.55}
   }
   function rowsHtml(left) { return rotOrder().map(([i, k]) => rowHtml(ORDER[i], i, left, k)).join(''); }
 
+  /* 세트 추가 추천: 완료 화면 대신 엄지 패드 왼쪽 버튼으로 (가운데 버튼 = 다음 운동, 왼쪽 = 1세트 더) */
+  const addAdvOf = (ex) => { const a = !isBw(ex) && doneCount(ex) >= nSets(ex) ? setAdvice(ex) : null; return a && a.kind === 'add' ? a : null; };
+  function renderAdd() { const b = $('addK'), on = !!addAdvOf(curEx()); b.hidden = !on; $('next').style.display = on ? 'none' : ''; }
   function renderGo() {
+    renderAdd();
     const g = $('kGo'), n = doneCount(curEx()), N = nSets(curEx());
     g.classList.remove('next', 'idle');
     if (showingDone) { g.classList.add('next'); setGo('side'); g.setAttribute('aria-label', '다음 운동 바로 시작'); return; }
@@ -1770,8 +1801,8 @@ body.rest-on #nums{opacity:.55}
     if (n + 1 < N) startRest(restCfg.set + (hard ? 30 : 0)); else if (nextIncomplete(data.idx) >= 0) startRest(restCfg.ex); else stopRest();
     if (n + 1 === N) { render(); showDone(ex, sg); return; }
     { const pw = cur.w, pr = cur.r; sfx(n === 0 ? 'set1' : 'set2'); prefill(); render(); bumpNums(pw, pr); }
-    const jp = !bw && s.P > 0 ? pct(eff(s), s.P) : 0, restHurt = restShort && jp <= -DEV_TH && s.Pr > 0 && pct(eff(s), s.Pr) > -DEV_TH;
-    toast(jp > JUMP * 100 ? '⚠ 예상보다 너무 높아요 · 기록을 확인해 주세요' : restHurt ? '휴식 ' + secTxt(sg.el) + ' · 예상 대비 ' + pctI(jp) + ' · 다음은 끝까지' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
+    const jp = !bw && s.P > 0 ? pct(eff(s), s.P) : 0, rj = !bw && n > 0 ? repJudge(s) : null, restHurt = restShort && rj && rj.restHurt;
+    toast(jp > JUMP * 100 ? '⚠ 예상보다 너무 높아요 · 기록을 확인해 주세요' : restHurt ? '휴식 ' + secTxt(sg.el) + ' · ' + rj.txt + ' · 다음은 끝까지' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
   });
   /* 세트 진행 중(1세트 이상, 마지막 전)엔 «·» 한 번 더 눌러야 이동: kg 버튼 옆이라 잘못 눌림 방지 */
   let navArm = '';
@@ -1809,6 +1840,10 @@ body.rest-on #nums{opacity:.55}
     ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
     b.addEventListener('click', (e) => { if (e.detail === 0) padNav(d); });
     b.addEventListener('contextmenu', (e) => e.preventDefault());
+  });
+  $('addK').addEventListener('click', () => {
+    const ex = curEx(), N = nSets(ex); if (!addAdvOf(ex)) return;
+    setPlan(ex, N + 1); hideDone(); buzz(20); startRest(restCfg.set); prefill(); render(); toast('+1세트 · ' + (N + 1) + '세트로 진행');
   });
   $('kUndo').addEventListener('click', () => {
     flushSwap();
@@ -1852,6 +1887,8 @@ body.rest-on #nums{opacity:.55}
     const stp = ni >= 0 && stopShown !== today() ? stopAdvice() : null;
     if (stp) stopShown = today();
     /* 결정할 게 없으면(세트 추가·멈춤 추천 없음 · 마지막 운동 아님) 완료 화면 없이 바로 다음 운동으로, 결과는 알림 한 줄 */
+    /* 세트 추가 추천만 있으면 완료 화면 없이 이 운동에 머묾: 패드 왼쪽 '+1 세트 더' 또는 가운데 버튼으로 다음 운동 */
+    if (addAdv && !stp && ni >= 0) { buzz([30, 60, 30]); sfx('ex'); render(); toast(EX[ex].short + ' ' + N + '세트 끝 · 1세트 더 추천'); return; }
     if (!addAdv && !stp && ni >= 0) {
       buzz([30, 60, 30]); sfx('ex');
       goIdx(ni, 'next');
@@ -1870,7 +1907,7 @@ body.rest-on #nums{opacity:.55}
     $('done').innerHTML = '<div class="chk"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>' +
       '<h2>' + esc(EX[ex].short) + '<br>' + N + '세트 끝</h2>' +
       (bw ? '' : '<div class="dsets">' + ts.map((s, i) => '<div><small>' + (i + 1) + '세트</small><b>' + fmtSet(s) + '</b></div>').join('') + '</div>') +
-      '<p class="delta ' + (ok ? 'up' : 'retry') + '">' + esc(cmp) + '</p>' + (stp && !addAdv ? '<p class="delta retry">오늘은 여기서 멈추는 걸 추천해요 · ' + esc(stp) + '<br><small>계속할지는 직접 정하세요 · 가운데 버튼 = 다음 운동</small></p>' : '') + (addAdv ? '<button type="button" class="btn wide addset" id="addSet">+1세트 더 하기 (추천) <small>' + esc(addAdv.why) + '</small></button>' : '') + (addAdv ? nextHtml.replace('<div class="dprog"><i></i></div>', '') : nextHtml);
+      '<p class="delta ' + (ok ? 'up' : 'retry') + '">' + esc(cmp) + '</p>' + (stp && !addAdv ? '<p class="delta retry">오늘은 여기서 멈추는 걸 추천해요 · ' + esc(stp) + '<br><small>계속할지는 직접 정하세요 · 가운데 버튼 = 다음 운동</small></p>' : '') + (addAdv ? nextHtml.replace('<div class="dprog"><i></i></div>', '') : nextHtml);
     const r = $('pageR').getBoundingClientRect(), bt = document.querySelector('.bottom').getBoundingClientRect().top - r.top;
     $('done').style.bottom = (r.height - bt) + 'px';
     $('done').hidden = false;
@@ -1879,9 +1916,7 @@ body.rest-on #nums{opacity:.55}
     buzz([30, 60, 30]); sfx(ni >= 0 ? 'ex' : 'all');
     clearTimeout(doneTimer);
     if (addAdv || stp) {
-      if (!addAdv) return;   /* 멈춤 추천: 자동으로 넘기지 않고 직접 결정 */
-      $('addSet').addEventListener('click', (e) => { e.stopPropagation(); setPlan(ex, N + 1); hideDone(); startRest(restCfg.set); prefill(); render(); toast('+1세트 · ' + (N + 1) + '세트로 진행'); });
-      return;   /* 추천이 있으면 자동으로 넘기지 않음 */
+      return;   /* 멈춤·추가 추천이 있으면 자동으로 넘기지 않고 직접 결정 (추가는 패드 왼쪽 버튼) */
     }
     if (ni >= 0) doneTimer = setTimeout(advance, DONE_MS);
   }
