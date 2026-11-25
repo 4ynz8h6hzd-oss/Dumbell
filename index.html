@@ -1433,11 +1433,11 @@ body.rest-on #nums{opacity:.55}
     fbTick(s, el);
     if (el.hidden) { el.hidden = false; requestAnimationFrame(fitNums); }
   }
-  /* 남은 시간: 아래 막대가 줄어들고 문구에 분 표시 — 다음 세트를 기록해도 바뀜 */
+  /* 남은 시간: 아래 막대가 줄어듦 — 다음 세트를 기록해도 바뀜 */
   function fbTick(s, el) {
-    const left = Math.max(0, FB_MS - (Date.now() - s.ts)), m = Math.ceil(left / 60e3), t = el.querySelector('span'), bar = el.querySelector('i');
+    const left = Math.max(0, FB_MS - (Date.now() - s.ts)), t = el.querySelector('span'), bar = el.querySelector('i');
     if (bar) bar.style.transform = 'scaleX(' + (s.q !== undefined ? 0 : left / FB_MS) + ')';
-    if (t && t.lastChild) t.lastChild.textContent = s.q !== undefined ? '기록했어요' : '여유는? · ' + (m > 1 ? m + '분 뒤 닫힘' : '곧 닫힘');
+    if (t && t.lastChild) t.lastChild.textContent = s.q !== undefined ? '기록했어요' : '여유가 어땠어요?';
   }
   $('fb').addEventListener('click', (e) => {
     const b = e.target.closest('[data-q]'), s = fbSet(); if (!b || !s) return;
