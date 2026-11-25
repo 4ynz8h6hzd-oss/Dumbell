@@ -99,7 +99,6 @@ button{cursor:pointer}
 .lrow.c::before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:0 2px 2px 0;background:var(--blue)}
 .lrow.c+.lrow{border-top-color:transparent}
 .lrow.e b{color:var(--faint)}
-.lrow .pv{display:none;font-style:normal;font-size:12px;font-weight:600;color:var(--mute)}
 #next{margin:14px 0 0;font-size:12px;line-height:1.5;color:var(--mute)}
 #next b{display:block;color:var(--ink);font-weight:600}
 
@@ -438,7 +437,6 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .pageR .lrow,.pageR .lrow:last-of-type{border:0;background:var(--plate);border-radius:12px;padding:8px 10px;flex-direction:column;align-items:flex-start;gap:2px}
   .pageR .lrow.c,.pageR .lrow.c:last-of-type{background:rgba(10,102,209,.06);box-shadow:inset 0 0 0 1px rgba(10,102,209,.16),0 2px 12px rgba(10,102,209,.08);padding-left:12px}
   .pageR #next{display:none}
-  .pageR .lrow .pv{display:block}
   .pageR .pad{align-self:flex-end}
   .pageR{max-width:none;margin:0;width:100%}
   .pageR .trend{display:none}
@@ -450,11 +448,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 @media (min-width:560px) and (min-height:860px){
   .rtrend{display:flex}
   .lp-trend{display:none}
-  /* 세로로 긴 큰 화면: 원통을 왼쪽 칸 높이만큼 키움 (줄 높이는 fitWheel) */
-  #exList{max-height:none}
-  #exList{container-type:inline-size}
-  #exList .xrow{font-size:min(calc(var(--rh) * .21),5.4cqi)}#exList .xrow em{font-size:min(calc(var(--rh) * .16),4.4cqi)}#exList .xrow .ic{width:calc(var(--rh) * .42);height:calc(var(--rh) * .42)}
-  .pageL #exList .xrow{grid-template-columns:calc(var(--rh) * .42) minmax(0,1fr) 28px;gap:calc(var(--rh) * .14)}
+  #exList{margin:auto 0}   /* 추세가 오른쪽으로 빠져 남는 세로 공간: 원통을 그 가운데로 */
 }
 /* 펼친 가로 화면: 엄지 패드가 잘리지 않게 세트 칸을 패드 왼쪽으로 */
 @media (min-width:560px) and (min-height:480px) and (max-height:760px){
@@ -462,7 +456,6 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
   .pageR .side{flex:1;align-self:flex-end}
   .pageR #ledger{grid-template-columns:minmax(0,1fr)}
   .pageR .lrow,.pageR .lrow:last-of-type{flex-direction:row;align-items:baseline;gap:10px}
-  .pageR .lrow .pv{margin-left:auto}
   .hero{gap:8px}
 }
 /* rest timer: 레이아웃은 그대로, 배경이 차오르고 버튼·숫자·안내줄로 표시 */
@@ -1264,12 +1257,11 @@ body.rest-on #nums{opacity:.55}
 
     /* ledger */
     let lg = '';
-    const pvS = bw ? [] : ((sessions(ex, true)[0] || {}).sets || []);   /* 지난번 같은 세트 (큰 화면에서만 보임) */
     for (let k = 0; k < Math.max(N, ts.length); k++) {
-      const s = ts[k], pv = pvS[k] ? '<i class="pv">지난 ' + pvS[k].w + '×' + pvS[k].r + '</i>' : '';
-      if (s) lg += '<button type="button" class="lrow" data-id="' + s.id + '" aria-label="' + (k + 1) + '세트 ' + fmtSet(s) + ', 수정"><small>' + (k + 1) + '</small><b>' + (bw ? '완료 ✓' : s.w + ' × ' + s.r) + '</b>' + pv + '</button>';
-      else if (k === ts.length) lg += '<div class="lrow c"><small>' + (k + 1) + '</small><b>지금</b>' + pv + '</div>';
-      else lg += '<div class="lrow e"><small>' + (k + 1) + '</small><b>—</b>' + pv + '</div>';
+      const s = ts[k];
+      if (s) lg += '<button type="button" class="lrow" data-id="' + s.id + '" aria-label="' + (k + 1) + '세트 ' + fmtSet(s) + ', 수정"><small>' + (k + 1) + '</small><b>' + (bw ? '완료 ✓' : s.w + ' × ' + s.r) + '</b></button>';
+      else if (k === ts.length) lg += '<div class="lrow c"><small>' + (k + 1) + '</small><b>지금</b></div>';
+      else lg += '<div class="lrow e"><small>' + (k + 1) + '</small><b>—</b></div>';
     }
     $('ledger').innerHTML = lg;
     const ni = nextIncomplete(data.idx);
@@ -1524,9 +1516,8 @@ body.rest-on #nums{opacity:.55}
   function lastEx() { let b = null; for (const s of data.sets) if (!s.sample && (!b || s.ts > b.ts)) b = s; return b ? b.ex : null; }
   const WR = 24, WMAX = 20;
   function wheelHtml(c) { c = c === undefined ? data.idx : c; recentEx = lastEx(); let h = ''; for (let k = -WR; k <= WR; k++) { const i = cyc(c + k); h += rowHtml(ORDER[i], i, true, k); } return h; }
-  /* 13줄이 렌즈 높이에 딱 맞게: 줄 높이 = 목록 높이 ÷ 13 (34~48px)
-     세로로 긴 큰 화면: 원통 가장자리 줄은 눕고 흐려져서 실제로 읽히는 건 약 8줄 높이 → ÷ 8 (최대 100px), 글씨·아이콘도 줄 높이 따라 커짐 */
-  function fitWheel() { const L = $('exList'), h = L.clientHeight; if (!h) return; const big = wide() && window.innerHeight >= 860; L.style.setProperty('--rh', Math.max(34, Math.min(big ? 100 : 48, Math.floor(h / (big ? 8 : 13)))) + 'px'); }
+  /* 13줄이 렌즈 높이에 딱 맞게: 줄 높이 = 목록 높이 ÷ 13 (34~48px) */
+  function fitWheel() { const L = $('exList'), h = L.clientHeight; if (h) L.style.setProperty('--rh', Math.max(34, Math.min(48, Math.floor(h / 13))) + 'px'); }
   window.addEventListener('resize', fitWheel); requestAnimationFrame(fitWheel);
 
   /* ---------- 바퀴 물리 (iOS 피커·Designing Fluid Interfaces 원칙) ----------
@@ -1681,7 +1672,6 @@ body.rest-on #nums{opacity:.55}
   function fitNums() {
     const el = $('nums'), h = window.innerHeight;
     let fs = h < 620 ? 68 : h < 700 ? 84 : 104;
-    if (wide() && h >= 860) fs = Math.max(104, Math.min(168, Math.round(h * 0.15), Math.floor(el.clientWidth / 4.3)));   /* 큰 화면: 멀리서도 읽히게 화면 높이 따라 키움 (넘치면 아래에서 줄임) */
     el.style.fontSize = fs + 'px';
     while (el.scrollWidth > el.clientWidth + 1 && fs > 40) { fs -= 4; el.style.fontSize = fs + 'px'; }
     /* 세로 공간이 모자라면: 숫자 크기 먼저 줄이고(최소 60), 그래도 넘치면 덜 중요한 줄부터 숨김 */
