@@ -1378,7 +1378,6 @@ body.rest-on #nums{opacity:.55}
     if (n < N && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 훨씬 잘 나왔어요 · 자세가 바뀐 것 같아요', '', 1];
     /* 휴식 중: 휴식이 실제 문제일 때만(직전 세트 힘듦) '더 쉬세요', 아니면 아래 일반 조언 / 끝나면 '시작하세요' */
     const rTot = (() => { try { return rest ? rest.total / 1000 : 0; } catch (e) { return 0; } })();
-    if (n < N && resting && n && ld < -3) return ['neg', '직전 세트 예상 대비 ' + pctI(ld) + ' · 휴식 30초 늘렸어요', lst.w + '×' + lst.r + ' · 늘어난 휴식까지 채우고 시작', '', 1];
     if (n < N && n && el < plan * 0.8 && !resting && rTot === 0 && ld < -1) return ['neg', '직전 세트 예상 대비 ' + pctI(ld) + ' · 휴식 끝까지 채우기', secTxt(el) + ' 쉼 / 계획 ' + secTxt(plan), '', 1];
     if (n < N && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트가 예상보다 너무 잘 나왔어요', '', 1];
     let justDone = false; try { justDone = !!rest && rest.end <= Date.now() && Date.now() - rest.end < 60000; } catch (e) {}
