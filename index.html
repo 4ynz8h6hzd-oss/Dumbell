@@ -53,6 +53,7 @@ button{cursor:pointer}
 .tick{animation:tick .18s ease-out}
 @keyframes tick{from{transform:translateY(-5px);opacity:.6}to{transform:none;opacity:1}}
 .delta{margin:0;display:flex;align-items:center;gap:6px;font-size:16px;font-weight:700}
+.delta.bo{color:#0A4FA3}
 .delta.up,.delta.same{color:var(--greenTxt)}.delta.hold{color:var(--ink)}.delta.down{color:#9A3D00}.delta.retry,.delta.first,.delta.bw{color:#0A4FA3}
 .why{margin:0;font-size:13px;line-height:1.55;color:var(--sub)}
 .delta .pct{font-style:normal;margin-left:4px;padding:1px 8px;border-radius:999px;box-shadow:inset 0 0 0 1.5px currentColor;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -238,7 +239,7 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .c-pos{color:#1E6E31}.c-neu{color:#0A4FA3}.c-neg{color:#9A3D00}.c-warn{color:#B0241A}
 .bump-up{animation:bumpUp .75s cubic-bezier(.2,.9,.3,1.2)}.bump-dn{animation:bumpDn .75s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes bumpUp{0%{transform:translateY(.25em) scale(.85);opacity:.3;color:#248A3D}45%{transform:translateY(-.06em) scale(1.08);opacity:1;color:#248A3D}100%{transform:none}}
-@keyframes bumpDn{0%{transform:translateY(-.25em) scale(.85);opacity:.3;color:#C26A00}45%{transform:translateY(.06em) scale(1.08);opacity:1;color:#C26A00}100%{transform:none}}
+@keyframes bumpDn{0%{transform:translateY(-.25em) scale(.85);opacity:.3;color:#0A66D1}45%{transform:translateY(.06em) scale(1.08);opacity:1;color:#0A66D1}100%{transform:none}}
 .mood.pop{animation:moodin .55s cubic-bezier(.2,.9,.3,1.2)}
 @keyframes moodin{0%{transform:translateY(10px);opacity:0}60%{transform:translateY(-2px);opacity:1}100%{transform:none}}
 @media (max-height:620px){.today{padding:7px 12px;margin-bottom:4px}.today span{display:none}}
@@ -829,8 +830,8 @@ body.rest-on #nums{opacity:.55}
       return { w: W, r: Math.max(1, Math.min(BO_RMAX, repsAt(C, W))) };
     };
     const p = pick(capAt(tUse)), early = el < rst ? pick(capAt(el)) : null;
-    const kind = p.w < last.w || p.r < last.r ? 'down' : p.r > last.r ? 'up' : 'hold';
-    const delta = (p.w < last.w ? (last.w - p.w) + 'kg 내리고 ' + p.r + '회' : '같은 무게로 ' + p.r + '회') + (type === 'i' ? ' · 천천히, 수축에 집중' : '');
+    const kind = 'bo';   /* 백오프는 계획된 감소: 부정 색/화살표 쓰지 않음 (진짜 부진은 상단 멘트가 알림) */
+    const delta = p.w < last.w ? (last.w - p.w) + 'kg 내리고 ' + p.r + '회' : '같은 무게로 ' + p.r + '회';   /* 템포·수축 안내는 행동 줄에서 */
     const le = e10(last.w, last.r), vs = typeof last.P === 'number' && last.P > 0 ? pct(le, last.P) : null;
     const rec = 100 * (1 - lossAt(L, tUse));
     const expl = [
@@ -1119,7 +1120,7 @@ body.rest-on #nums{opacity:.55}
     dl.className = 'delta ' + sg.kind;
     const ap = sg.kind === 'up' || sg.kind === 'same' ? SVG_ARROW.up : sg.kind === 'down' ? SVG_ARROW.down : sg.kind === 'bw' ? SVG_ARROW.check : SVG_ARROW.side;
     dl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + ap + '"/></svg>' + esc(sg.delta) +
-      (bw ? '' : '<em class="pct">' + (Math.abs(sg.step) < 0.05 ? '유지' : sgn(sg.step) + '%') + '</em>');
+      (bw ? '' : '<em class="pct">' + (sg.bo ? '백오프' : Math.abs(sg.step) < 0.05 ? '유지' : sgn(sg.step) + '%') + '</em>');
   }
   function bumpNums(pw, pr) {
     if (!wIn) return;
