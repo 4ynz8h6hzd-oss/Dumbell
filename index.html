@@ -784,7 +784,8 @@ body.rest-on #nums{opacity:.55}
     const gap = hist.some((h, i) => hist[i + 1] && h.start > now - 28 * 864e5 && h.start - hist[i + 1].end > 7 * 864e5);
     const loadX = now - oldest >= 21 * 864e5 && vPrev > 0 && !gap ? v7 / vPrev : 0, fLoad = loadX > 1.5;
 
-    let mode = 'normal', P = last.e, g = RATE * Math.min(lvlDays, 14) / 7;
+    const RT = exRate(ex).r;
+    let mode = 'normal', P = last.e, g = RT * Math.min(lvlDays, 14) / 7;
     if (hrs > BREAK_D * 24) { mode = 'break'; P = last.e * DELOAD; g = 0; }
     else if (miss(0) && miss(1)) { mode = 'deload'; P = last.e * DELOAD; g = 0; }
     else if (fDrop || fLoad) { mode = 'fatigue'; g = 0; }
@@ -818,7 +819,7 @@ body.rest-on #nums{opacity:.55}
       : !up && adjAct && pen > 0.004 ? '회복 ' + REC_H + '시간 중 ' + Math.max(0, Math.round(hrs)) + '시간 · 무리하지 않게 잡았어요'
       : !up ? '아직 이 무게에 익숙해지는 중 · 며칠 더 하면 올려요' : '';
     const why = '지난 세션(' + md(last.date) + ') 첫 세트 ' + last.w + '×' + last.r + ' = 추정 10RM ' + f1(last.e) + 'kg' +
-      (mode === 'break' || mode === 'deload' ? ' → 3% 낮춤' : ' → 이 레벨 ' + lvlDays.toFixed(1) + '일째, 주 ' + RATE * 100 + '% 속도' + (mode === 'easy' ? '의 절반' : '') + ' ' + sgn(g * 100) + '%') +
+      (mode === 'break' || mode === 'deload' ? ' → 3% 낮춤' : ' → 이 레벨 ' + lvlDays.toFixed(1) + '일째, 주 ' + rp(RT) + ' 속도' + (mode === 'easy' ? '의 절반' : '') + ' ' + sgn(g * 100) + '%') +
       (mode === 'fatigue' ? ' → 피로 신호로 0%' : '') +
       (pen > 0 ? ' → 회복 ' + Math.round(hrs) + '/' + REC_H + '시간 −' + (pen * 100).toFixed(1) + '%' : '') +
       (day.f < 1 ? ' → 오늘 피로 ' + sgn(100 * (day.f - 1)) + '%' : '') +
@@ -831,7 +832,7 @@ body.rest-on #nums{opacity:.55}
         (last.capped ? ' → 목표보다 ' + sgn(pct(last.raw, last.T)) + '%라 +5%까지만 인정, ' + f1(last.e) + 'kg (다음에도 비슷하면 그대로 인정)' : '')],
       ['진도', mode === 'break' ? Math.round(hrs / 24) + '일 만이라 3% 낮춰서 다시 시작' : mode === 'deload' ? '2번 연속 목표 미달 → 3% 낮춰서 다시'
         : mode === 'fatigue' ? (fDrop ? (boDev !== null ? '지난번 2·3세트가 휴식 반영 예상보다 평균 ' + sgn(100 * boDev) + '%' : '지난번 세트 간 횟수 감소가 평소보다 큼') : '최근 7일 운동량이 평소의 ' + loadX.toFixed(1) + '배') + ' → 이번엔 0%'
-        : '이 레벨 ' + lvlDays.toFixed(1) + '일째 × 주 ' + RATE * 100 + '% 속도' + (mode === 'easy' ? '의 절반(지난번 목표 미달)' : '') + ' → ' + sgn(g * 100) + '%'],
+        : '이 레벨 ' + lvlDays.toFixed(1) + '일째 × 주 ' + rp(RT) + ' 속도' + (mode === 'easy' ? '의 절반(지난번 목표 미달)' : '') + ' → ' + sgn(g * 100) + '%'],
       ['회복', mode === 'break' ? '—' : hrs >= REC_H ? '마지막 세트 후 ' + Math.round(hrs) + '시간 · ' + REC_H + '시간 회복 완료' : '마지막 세트 후 ' + Math.round(hrs) + '/' + REC_H + '시간 · 덜 회복된 만큼 −' + (pen * 100).toFixed(1) + '%'],
       ['오늘 피로', day.txt],
       ['결정', '목표 추정 10RM ' + f1(goal) + 'kg → ' + (up ? '가장 가까운 진도 ' + pick.w + 'kg × ' + pick.r + '회 (' + sgn(step) + '%)' : '다음 진도의 75%에 못 미쳐서 ' + pick.w + 'kg × ' + pick.r + '회 유지') +
@@ -922,6 +923,43 @@ body.rest-on #nums{opacity:.55}
   const numBox = (inner, lab) => '<details class="nmore"><summary>' + (lab || '계산 숫자 보기') + '</summary><div>' + inner + '</div></details>';
   const explHtml = (sg) => '<ol class="steps">' + sg.expl.map((x) => '<li><b>' + esc(x[0]) + '</b><span>' + esc(x[1]) + '</span></li>').join('') + '</ol>';
 
+  /* ---------- 목표 속도: 운동별로 기록 보고 0.1%p씩 조정 ---------- */
+  /* 최근 GOAL_DAYS일 첫 세트 추정10RM 직선 평활(최소제곱, 기준 재설정 이후만). upto 날짜(dayNum) 전날까지 기록만. 4세션·14일 미만이면 null */
+  function goalFit(ex, upto) {
+    const ss = sessions(ex, false).filter((s) => dayNum(s.date) < upto), i = ss.findIndex((x) => x.sets[0] && x.sets[0].R);
+    const gp = (i >= 0 ? ss.slice(0, i + 1) : ss).filter((s) => upto - 1 - dayNum(s.date) < GOAL_DAYS)
+      .map((s) => { const f = s.sets[0]; return { x: dayNum(s.date), y: e10(f.w, f.r) }; }).reverse();
+    if (gp.length < 4) return null;
+    const fit = (a) => { let mx = 0, my = 0, nu = 0, de = 0;
+      a.forEach((p) => { mx += p.x; my += p.y; }); mx /= a.length; my /= a.length;
+      a.forEach((p) => { nu += (p.x - mx) * (p.y - my); de += (p.x - mx) ** 2; }); return { b: de ? nu / de : 0, mx, my }; };
+    const L = fit(gp), x0 = gp[0].x, x1 = gp[gp.length - 1].x, d = x1 - x0, s0 = L.my + L.b * (x0 - L.mx), s1 = L.my + L.b * (x1 - L.mx);
+    if (d < 14 || s0 <= 0) return null;
+    /* 최근 EVAL_N세션 기울기가 주 FAST% 이상이면 '너무 빠름'(반동·기록 실수 의심) → 목표 올리지 않음 */
+    const E = fit(gp.slice(-EVAL_N));
+    return { n: gp.length, days: d, s0, now: s1, wk: L.b * 7 / s0, fast: E.b * 7 / E.my * 100 >= FAST };
+  }
+  /* 첫 기록 1주 뒤부터 7일마다 점검: 평활 속도가 지금 목표보다 RATE_BAND 넘게 빠르면 +RATE_STEP, 느리면 −RATE_STEP (RATE_MIN~RATE_MAX).
+     기록에서 매번 다시 계산 → 저장 상태 없음. 그날 기록은 다음 점검부터 반영 */
+  const RATE_MIN = 0.01, RATE_MAX = 0.03, RATE_STEP = 0.001, RATE_BAND = 0.003;
+  function exRate(ex) {
+    let r = RATE; const log = [];
+    if (isBw(ex)) return { r, log };
+    const ss = sessions(ex, false), tn = dayNum(today());
+    if (!ss.length) return { r, log };
+    for (let c = dayNum(ss[ss.length - 1].date) + 7; c <= tn; c += 7) {
+      const f = goalFit(ex, c); if (!f) continue;
+      const o = r;
+      if (f.wk > r + RATE_BAND && !f.fast) r = Math.min(RATE_MAX, r + RATE_STEP);
+      else if (f.wk < r - RATE_BAND) r = Math.max(RATE_MIN, r - RATE_STEP);
+      r = Math.round(r * 1000) / 1000;
+      if (r !== o) log.push({ x: c, from: o, to: r, wk: f.wk });
+    }
+    return { r, log };
+  }
+  const rp = (r) => +(r * 100).toFixed(1) + '%';
+  const xmd = (x) => { const d = new Date(x * 864e5); return (d.getUTCMonth() + 1) + '/' + d.getUTCDate(); };
+
   /* ---------- trend (estimated 10RM) ---------- */
   function trend(ex) {
     const tn = dayNum(today()), recent = sessions(ex, false).filter((s) => tn - dayNum(s.date) < WINDOW_DAYS);
@@ -963,20 +1001,11 @@ body.rest-on #nums{opacity:.55}
         msg: '가장 무거운 덤벨(' + MAX_W + 'kg)에서 ' + lz.r + '회예요. 무게를 더 못 올려서 횟수만 늘고 있어요. 3초에 걸쳐 내리기나 바닥 1초 정지로 바꾸고 판단 근거에서 \'기준 재설정\'을 누르면 다시 ' + RMIN + '~' + RMAX + '회 구간에서 진도를 잴 수 있어요.' });
       ev.sum = ev.label + ' · ' + ev.msg;
     }
-    /* 목표 점검: 최근 GOAL_DAYS일 첫 세트 추정10RM을 직선으로 평활(최소제곱) → 평활 시작값에서 주 RATE 경로와 평활 현재값 비교.
-       첫 기록 한 점이나 마지막 한 점의 컨디션에 휘둘리지 않게. 4세션·14일 이상일 때만 */
-    const gs = sessions(ex, false), gr = gs.findIndex((x) => x.sets[0] && x.sets[0].R);   /* 기준 재설정 이후만 */
-    const gp = (gr >= 0 ? gs.slice(0, gr + 1) : gs).filter((s) => tn - dayNum(s.date) < GOAL_DAYS)
-      .map((s) => { const f = s.sets[0]; return { x: dayNum(s.date), y: e10(f.w, f.r) }; });
-    if (gp.length >= 4) {
-      let gx = 0, gy = 0, gn = 0, gd = 0, x0 = Infinity, x1 = -Infinity;
-      gp.forEach((p) => { gx += p.x; gy += p.y; x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); }); gx /= gp.length; gy /= gp.length;
-      gp.forEach((p) => { gn += (p.x - gx) * (p.y - gy); gd += (p.x - gx) ** 2; });
-      const b = gd ? gn / gd : 0, d = x1 - x0, s0 = gy + b * (x0 - gx), s1 = gy + b * (x1 - gx);
-      if (d >= 14 && s0 > 0) {
-        const exp = s0 * (1 + RATE * d / 7);
-        ev.cal = { n: gp.length, days: d, s0, now: s1, exp, over: (s1 / exp - 1) * 100, wk: b * 7 / s0 * 100 };
-      }
+    /* 목표 점검: 최근 GOAL_DAYS일 평활 시작값에서 이 운동 목표 속도(exRate) 경로와 평활 현재값 비교 (오늘 기록 포함) */
+    const gf = goalFit(ex, tn + 1);
+    if (gf) {
+      const rt = exRate(ex), exp = gf.s0 * (1 + rt.r * gf.days / 7);
+      ev.cal = { n: gf.n, days: gf.days, s0: gf.s0, now: gf.now, exp, over: (gf.now / exp - 1) * 100, wk: gf.wk * 100, rate: rt.r, log: rt.log };
     }
     return { pts, ev, bw: false };
   }
@@ -984,7 +1013,9 @@ body.rest-on #nums{opacity:.55}
   function calLine(ev) {
     const c = ev.cal; if (!c) return '';
     const o = c.over, ff = ev.kind === 'fast', tag = o >= 3 && ff ? '⚠ 목표 경로보다 ' + sgn(o) + '% 앞섬 · 반동·자세 변화나 기록 확인 필요' : o >= 3 ? '목표 경로보다 ' + sgn(o) + '% 앞섬 · 건강한 속도라 괜찮아요' : o <= -3 ? '목표 경로보다 ' + sgn(o) + '% 뒤처짐' : '목표 경로대로 가는 중';
-    return '<span class="cal"><span>최근 ' + Math.round(c.days) + '일 ' + c.n + '세션 평활: ' + f1(c.s0) + ' → <b>' + f1(c.now) + '</b>kg (주 ' + sgn(c.wk) + '%) · 목표 경로(주 ' + RATE * 100 + '%) ' + f1(c.exp) + '</span><em class="' + (o >= 3 && ff ? 'tk-fast' : o >= 3 ? 'tk-up' : o <= -3 ? 'tk-down' : 'tk-up') + '">' + tag + '</em></span>';
+    return '<span class="cal"><span>최근 ' + Math.round(c.days) + '일 ' + c.n + '세션 평활: ' + f1(c.s0) + ' → <b>' + f1(c.now) + '</b>kg (주 ' + sgn(c.wk) + '%) · 목표 경로(주 ' + rp(c.rate) + ') ' + f1(c.exp) + '</span>' +
+      '<span>목표 속도 주 ' + rp(c.rate) + (c.log.length ? ' · 조정 ' + c.log.slice(-3).map((l) => xmd(l.x) + ' ' + rp(l.from) + '→' + rp(l.to)).join(', ') : ' · 기본값(아직 조정 없음)') +
+      ' · 매주 90일 추세가 목표보다 ' + RATE_BAND * 100 + '%p 넘게 빠르면 +0.1, 느리면 −0.1 (' + rp(RATE_MIN) + '~' + rp(RATE_MAX) + ')</span><em class="' + (o >= 3 && ff ? 'tk-fast' : o >= 3 ? 'tk-up' : o <= -3 ? 'tk-down' : 'tk-up') + '">' + tag + '</em></span>';
   }
   const TI = { up: 'M7 17L17 7M9 7h8v8', fast: 'M12 4L2.5 20h19zM12 10v4M12 17h.01', flat: 'M5 12h14M13 6l6 6-6 6', down: 'M7 7l10 10M17 9v8H9', hold: 'M7 12h.01M12 12h.01M17 12h.01', cap: 'M5 5h14M12 19V9M8 13l4-4 4 4' };
   const tIcon = (k) => '<span class="ti ti-' + k + '"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + TI[k] + '"/></svg></span>';
@@ -996,7 +1027,7 @@ body.rest-on #nums{opacity:.55}
     const mk = wkKind(ev.mo * 7 / 30), c = ev.cal, o = c ? c.over : 0, ff = ev.kind === 'fast', ck = o >= 3 && ff ? 'fast' : o <= -3 ? 'down' : 'up';
     return '<div><small>이번 주</small>' + tIcon(wkKind(ev.wk)) + WK_TXT[wkKind(ev.wk)] + '</div>' +
       '<div><small>이번 달</small>' + (ev.moOk ? tIcon(mk) + MO_TXT[mk] : tIcon('hold') + '2주 더 쌓이면 판단') + '</div>' +
-      (c ? '<div><small>목표</small>' + tIcon(ck) + (o >= 3 && ff ? '주 ' + RATE * 100 + '% 목표보다 너무 앞서요 · 기록 확인' : o >= 3 ? '주 ' + RATE * 100 + '% 목표보다 빨리 늘고 있어요' : o <= -3 ? '주 ' + RATE * 100 + '% 목표보다 조금 느려요' : '주 ' + RATE * 100 + '% 목표 순항 중이에요') + '</div>' : '');
+      (c ? '<div><small>목표</small>' + tIcon(ck) + (o >= 3 && ff ? '주 ' + rp(c.rate) + '보다 너무 앞서요 · 기록 확인' : o >= 3 ? '주 ' + rp(c.rate) + '보다 빨리 늘고 있어요' : o <= -3 ? '주 ' + rp(c.rate) + '보다 조금 느려요' : '주 ' + rp(c.rate) + ' 순항 중이에요') + '</div>' : '');
   }
   const COL = { cap: '#6E56CF', fast: '#C4281C', up: '#248A3D', flat: '#B07A00', down: '#C26A00', hold: '#8E8E93' };
   /* status block: verdict sentence + 3 numbers + speed scale */
@@ -1362,7 +1393,7 @@ body.rest-on #nums{opacity:.55}
     const sg = suggest(ex);
     if (sg.expl) return '<div class="sgx"><b>오늘 1세트 추천 ' + sg.w + 'kg × ' + sg.r + '회는 이렇게 나왔어요</b>' + plainHtml(sg) + numBox(explHtml(sg), '추천 계산 숫자 보기') + '</div>';
     return '<div class="sgx"><b>오늘 추천 ' + sg.w + 'kg × ' + sg.r + '회는 이렇게 나왔어요</b><p>' + esc(sg.why) + '</p>' + (sg.last ? '<p>' + esc(sg.last) + '</p>' : '') +
-      numBox('<p>주 ' + RATE * 100 + '% 속도 기준 · 지난 운동 후 ' + REC_H + '시간 안 됐으면 덜 회복된 만큼 목표를 살짝 낮추고, 세트마다 횟수가 평소보다 많이 줄었거나 최근 7일 운동량이 평소의 1.5배를 넘으면 이번엔 유지해요.</p>', '추천 계산 숫자 보기') + '</div>';
+      numBox('<p>주 ' + rp(exRate(ex).r) + ' 속도 기준 · 지난 운동 후 ' + REC_H + '시간 안 됐으면 덜 회복된 만큼 목표를 살짝 낮추고, 세트마다 횟수가 평소보다 많이 줄었거나 최근 7일 운동량이 평소의 1.5배를 넘으면 이번엔 유지해요.</p>', '추천 계산 숫자 보기') + '</div>';
   }
 
   /* left page: exercise map + big trend */
