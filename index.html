@@ -281,11 +281,9 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .today.pos{color:#1E6E31;background:#EEF7F0}.today.neu{color:#0A4FA3;background:#EEF4FC}.today.neg{color:#9A3D00;background:#FDF2EA}.today.warn{color:#B0241A;background:#FCEDEC}
 .today.pop{animation:moodpop .5s ease-out}
 .today.fin b{font-size:17px}
-.fb{flex:none;position:relative;overflow:hidden;margin:10px 14px 0 24px;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-radius:14px;background:var(--plate)}
+.fb{flex:none;margin:10px 14px 0 24px;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px;border-radius:14px;background:var(--plate)}
 .fb[hidden]{display:none}
-.fb>i{position:absolute;left:0;bottom:0;width:100%;height:3px;background:var(--blue);opacity:.45;transform-origin:left;transition:transform 1s linear}
-.fb>span{flex:1;min-width:0;font-size:12px;font-weight:600;color:var(--sub);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fb>span b{display:block;font-size:13px;color:var(--ink)}
+.fb>span{flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--ink);line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fb button{flex:none;min-width:52px;height:36px;padding:0 10px;border:0;border-radius:10px;background:#fff;color:var(--ink);font:inherit;font-size:13px;font-weight:700;box-shadow:0 0 0 1px var(--line) inset}
 .fb button[aria-pressed="true"]{background:var(--blue);color:#fff;box-shadow:none}
 .addset{margin:4px 0 0;display:flex;flex-direction:column;gap:2px;background:#E6F4EA;color:#1E6E31;font-weight:800}.addset small{font-size:12px;font-weight:600;opacity:.8}
@@ -1424,20 +1422,11 @@ body.rest-on #nums{opacity:.55}
     const s = fbSet(), el = $('fb');
     if (!s) { if (!el.hidden) { el.hidden = true; fbKey = ''; requestAnimationFrame(fitNums); } return; }
     const k = s.id + ':' + s.q + ':' + s.w + 'x' + s.r + ':' + curEx();
-    if (k === fbKey && !el.hidden) return fbTick(s, el);
+    if (k === fbKey && !el.hidden) return;
     fbKey = k;
-    const xs = data.sets.filter((x) => x.ex === s.ex && skey(x) === skey(s)).sort((a, b) => a.ts - b.ts), i = xs.indexOf(s) + 1;
-    el.innerHTML = '<span><b>방금 ' + (s.ex !== curEx() ? esc(EX[s.ex].short) + ' ' : '') + i + '세트 ' + s.w + '×' + s.r + '</b>여유는?</span>' +
+    el.innerHTML = '<span>' + (s.q !== undefined ? '기록했어요' : '이전 세트 여유는?') + '</span>' +
       [[1, '여유'], [0, '딱 맞음'], [-1, '한계']].map((x) => '<button type="button" data-q="' + x[0] + '" aria-pressed="' + ((s.q === undefined ? 0 : s.q) === x[0]) + '">' + x[1] + '</button>').join('');
-    el.insertAdjacentHTML('beforeend', '<i></i>');
-    fbTick(s, el);
     if (el.hidden) { el.hidden = false; requestAnimationFrame(fitNums); }
-  }
-  /* 남은 시간: 아래 막대가 줄어듦 — 다음 세트를 기록해도 바뀜 */
-  function fbTick(s, el) {
-    const left = Math.max(0, FB_MS - (Date.now() - s.ts)), t = el.querySelector('span'), bar = el.querySelector('i');
-    if (bar) bar.style.transform = 'scaleX(' + (s.q !== undefined ? 0 : left / FB_MS) + ')';
-    if (t && t.lastChild) t.lastChild.textContent = s.q !== undefined ? '기록했어요' : '여유는?';
   }
   $('fb').addEventListener('click', (e) => {
     const b = e.target.closest('[data-q]'), s = fbSet(); if (!b || !s) return;
