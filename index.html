@@ -184,6 +184,7 @@ button{cursor:pointer}
 .xrow .nm{display:flex;flex-direction:column;gap:1px;min-width:0}
 .xrow .meta{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:500}
 .xrow .meta em{font-size:12px}
+.xrow .meta .rc{font-size:10.5px;font-weight:700;color:var(--blue);background:#EAF2FD;padding:0 6px;border-radius:6px;line-height:16px}
 .xrow b.pc{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;flex:none}
 .xrow b.pc svg{display:block}
 .ti{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;flex:none}
@@ -1498,9 +1499,11 @@ body.rest-on #nums{opacity:.55}
   }
   /* 사이클: 운동이 바뀌면 목록이 그만큼 굴러서 지금 운동이 가운데로 */
   /* 바퀴 위치는 렌즈(가운데)에 고정. 바뀐 만큼 떨어진 곳에서 트랙이 미끄러져 들어옴. 도중에 또 바뀌면 지금 보이는 위치에서 이어서 */
-  let listIdx = -1;
+  let listIdx = -1, recentEx = null;
+  /* 가장 최근에 세트를 기록한 운동 (목록에 '최근' 표시) */
+  function lastEx() { let b = null; for (const s of data.sets) if (!s.sample && (!b || s.ts > b.ts)) b = s; return b ? b.ex : null; }
   const WR = 24, WMAX = 20;
-  function wheelHtml(c) { c = c === undefined ? data.idx : c; let h = ''; for (let k = -WR; k <= WR; k++) { const i = cyc(c + k); h += rowHtml(ORDER[i], i, true, k); } return h; }
+  function wheelHtml(c) { c = c === undefined ? data.idx : c; recentEx = lastEx(); let h = ''; for (let k = -WR; k <= WR; k++) { const i = cyc(c + k); h += rowHtml(ORDER[i], i, true, k); } return h; }
   /* 13줄이 렌즈 높이에 딱 맞게: 줄 높이 = 목록 높이 ÷ 13 (34~48px) */
   function fitWheel() { const L = $('exList'), h = L.clientHeight; if (h) L.style.setProperty('--rh', Math.max(34, Math.min(48, Math.floor(h / 13))) + 'px'); }
   window.addEventListener('resize', fitWheel); requestAnimationFrame(fitWheel);
@@ -1521,7 +1524,22 @@ body.rest-on #nums{opacity:.55}
     sfx('tick');
   }
   function mkWheel(o) {
-    const w = { off: 0, vel: 0, tgt: 0, raf: 0, h: 48, row: 0, drag: null, busy: false, moved: false };
+    const w = { off: 0, vel: 0, tgt: 0, raf: 0, h: 48, row: 0, drag: null, busy: false, moved: false, bend: o.flat ? 0 : 1, bTgt: o.flat ? 0 : 1, braf: 0, flatT: 0 };
+    /* o.flat: 가만히 있으면 평평한 목록, 굴리기 시작하면(끌기·휠·조그) 원통으로 휘었다가 멈추면 다시 펴짐 */
+    w.bendTo = (b) => {
+      if (REDUCED()) b = 0;
+      w.bTgt = b; if (w.braf) return;
+      let last = performance.now();
+      const step = (now) => {
+        const dt = Math.min(0.05, (now - last) / 1000); last = now;
+        w.bend += (w.bTgt - w.bend) * Math.min(1, dt / 0.12);
+        if (Math.abs(w.bTgt - w.bend) < 0.004) w.bend = w.bTgt;
+        if (!w.raf) w.paint();
+        w.braf = w.bend === w.bTgt ? 0 : requestAnimationFrame(step);
+      };
+      w.braf = requestAnimationFrame(step);
+    };
+    w.curve = () => { if (!o.flat) return; clearTimeout(w.flatT); w.bendTo(1); };
     const mag = (x) => x - Math.sin(2 * Math.PI * x / w.h) * w.h * 0.02;
     w.band = (x) => { const L = WMAX * w.h, a = Math.abs(x); if (a <= L) return x; const H = 2.5 * w.h; return Math.sign(x) * (L + (1 - 1 / ((a - L) * 0.55 / H + 1)) * H); };
     w.paint = () => {
@@ -1530,19 +1548,21 @@ body.rest-on #nums{opacity:.55}
         const m = mag(w.off); el.style.transform = 'translateY(' + m.toFixed(2) + 'px)';
         /* 3D 원통: 줄마다 렌즈에서 떨어진 만큼 기울고(rotateX) 안쪽으로 들어가며(translateZ) 원통 둘레 위치로 모임 */
         const R = Math.max(3 * w.h, o.R ? o.R() : w.h / (9 * Math.PI / 180)), rad = w.h / R, rows = el.children, c = (rows.length - 1) / 2;
+        const b = w.bend;
         for (let j = 0; j < rows.length; j++) {
           const st = rows[j].style, p = j - c + m / w.h, th = p * rad;
-          if (Math.abs(th) > 1.52) { st.visibility = 'hidden'; continue; }
+          if (Math.abs(th) > 1.52 && b > 0.5) { st.visibility = 'hidden'; continue; }
           st.visibility = '';
-          st.transform = 'translateY(' + (R * Math.sin(th) - p * w.h).toFixed(2) + 'px) translateZ(' + (R * (Math.cos(th) - 1)).toFixed(2) + 'px) rotateX(' + (-th * 180 / Math.PI).toFixed(2) + 'deg)';
-          st.opacity = (0.2 + 0.8 * Math.cos(th)).toFixed(3);
+          if (!b) { st.transform = ''; st.opacity = ''; continue; }
+          st.transform = 'translateY(' + (b * (R * Math.sin(th) - p * w.h)).toFixed(2) + 'px) translateZ(' + (b * R * (Math.cos(th) - 1)).toFixed(2) + 'px) rotateX(' + (-b * th * 180 / Math.PI).toFixed(2) + 'deg)';
+          st.opacity = (1 - b * 0.8 * (1 - Math.max(0, Math.cos(th)))).toFixed(3);
         }
       }
       const r = Math.round(-w.off / w.h); if (r !== w.row) { w.row = r; if (!w.snap) wTick(); }
     };
     w.shift = (d) => { w.off += d; w.tgt += d; w.row = Math.round(-w.off / w.h); if (w.drag) w.drag.base += d; };
     w.stop = () => { cancelAnimationFrame(w.raf); w.raf = 0; };
-    w.grab = (y, t) => { w.snap = false; w.stop(); w.vel = 0; w.busy = true; w.drag = { y0: y, base: w.off, s: [[t, y]] }; };
+    w.grab = (y, t) => { w.curve(); w.snap = false; w.stop(); w.vel = 0; w.busy = true; w.drag = { y0: y, base: w.off, s: [[t, y]] }; };
     w.move = (y, t) => {
       const d = w.drag; if (!d) return;
       d.s.push([t, y]); while (d.s.length > 2 && t - d.s[0][0] > 100) d.s.shift();
@@ -1558,7 +1578,7 @@ body.rest-on #nums{opacity:.55}
     };
     /* st = 트랙 가운데 기준 몇 줄째로 갈지. commit이 돌려준 만큼 좌표를 옮김(가운데 다시 잡기) */
     w.go = (st, vel) => {
-      w.busy = true; w.tgt = -st * w.h; w.vel = vel || 0;
+      w.busy = true; w.curve(); w.tgt = -st * w.h; w.vel = vel || 0;
       if (st && o.commit) { const sh = o.commit(st); if (sh) w.shift(sh); }
       w.run();
     };
@@ -1583,13 +1603,13 @@ body.rest-on #nums{opacity:.55}
       };
       w.raf = requestAnimationFrame(step);
     };
-    w.done = () => { w.busy = false; w.snap = false; if (w.moved) { w.moved = false; sfx('nav'); buzz(10); } if (o.settle) o.settle(); };
+    w.done = () => { w.busy = false; w.snap = false; if (w.moved) { w.moved = false; buzz(10); } if (o.settle) o.settle(); if (o.flat) { clearTimeout(w.flatT); w.flatT = setTimeout(() => { if (!w.busy) w.bendTo(0); }, 350); } };
     return w;
   }
   const rowH = (tr) => (tr && tr.firstElementChild ? tr.firstElementChild.offsetHeight : 0);
   let lwCommit = false, padRoll = false;
   const lw = mkWheel({
-    el: () => $('exTrack'), R: () => { const hf = $('exList').clientHeight / 2 - 2; return hf * 1000 / (1000 - hf); },   /* 원근(1000px)으로 줄어드는 만큼 키워서 원통이 목록 높이를 꽉 채우게 */
+    flat: true, el: () => $('exTrack'), R: () => { const hf = $('exList').clientHeight / 2 - 2; return hf * 1000 / (1000 - hf); },   /* 원근(1000px)으로 줄어드는 만큼 키워서 원통이 목록 높이를 꽉 채우게 */
     commit: (st) => { lwCommit = true; const i0 = data.idx; goIdx(data.idx + st, st < 0 ? 'prev' : 'next', 0, true); lwCommit = false; if (data.idx !== i0) lw.moved = true; return st * lw.h; },
   });
   /* 운동이 바뀌면(패드·스와이프·목록) 바퀴도 같은 물리로 굴러서 지금 운동이 렌즈로 */
@@ -1615,7 +1635,7 @@ body.rest-on #nums{opacity:.55}
     else if (c > 0) tail = c + '/' + Ne;
     else if (isBw(e)) tail = '맨몸';
     else { const s = suggest(e); tail = s.w + '×' + s.r + (s.kind === 'up' ? ' ↑' : ''); }
-    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= Ne ? ' ok' : '') + '" data-i="' + i + '"' + (Math.abs(k || 0) > 6 ? ' tabindex="-1" aria-hidden="true"' : '') + '>' + icon(e, 28, c >= Ne ? 'done' : '') + (left ? '<span class="nm"><span>' + esc(EX[e].name) + '</span><span class="meta"><em>' + tail + '</em></span></span>' + pc : '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em>') + '</button>';
+    return '<button type="button" class="xrow' + (here ? ' cur' : '') + (c >= Ne ? ' ok' : '') + '" data-i="' + i + '"' + (Math.abs(k || 0) > 6 ? ' tabindex="-1" aria-hidden="true"' : '') + '>' + icon(e, 28, c >= Ne ? 'done' : '') + (left ? '<span class="nm"><span>' + esc(EX[e].name) + '</span><span class="meta"><em>' + tail + '</em>' + (e === recentEx ? '<b class="rc">최근</b>' : '') + '</span></span>' + pc : '<span>' + esc(EX[e].name) + '</span><em>' + tail + '</em>') + '</button>';
   }
   function rowsHtml(left) { return rotOrder().map(([i, k]) => rowHtml(ORDER[i], i, left, k)).join(''); }
 
@@ -2078,7 +2098,7 @@ body.rest-on #nums{opacity:.55}
     const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
     /* 마우스 휠 한 칸 = 한 줄(스프링), 트랙패드 = 손가락처럼 따라오다 멈추면 가장 가까운 줄로 */
     if (e.deltaMode === 1 || (Math.abs(dy) >= 50 && Number.isInteger(dy))) { lw.nudge(dy > 0 ? 1 : -1); return; }
-    lw.stop(); lw.busy = true; lw.vel = 0;
+    lw.stop(); lw.busy = true; lw.vel = 0; lw.curve();
     lw.off = lw.band(lw.off - dy); lw.paint();
     clearTimeout(wWheelT); wWheelT = setTimeout(() => { lw.go(Math.max(-WMAX, Math.min(WMAX, Math.round(-lw.off / lw.h))), 0); }, 90);
   }, { passive: false });
