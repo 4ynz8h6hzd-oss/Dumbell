@@ -160,12 +160,27 @@ button{cursor:pointer}
 /* 사이클 휠: 가운데 렌즈는 제자리, 운동 목록만 미끄러짐 (스크롤 없음) */
 #exList{--rh:48px;position:relative;display:block;flex:1 1 0;max-height:624px;min-height:200px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.3),#000 15%,#000 85%,rgba(0,0,0,.3));mask-image:linear-gradient(to bottom,rgba(0,0,0,.3),#000 15%,#000 85%,rgba(0,0,0,.3))}
 #exList{touch-action:none;-webkit-user-select:none;user-select:none;cursor:grab}#exList.drag{cursor:grabbing}
-#exList .track{position:absolute;left:0;right:0;top:calc(50% - var(--rh) / 2 - 12 * var(--rh));will-change:transform}
+#exList{perspective:1000px}
+#exList .track,.pwheel .track{transform-style:preserve-3d}
+#exList .xrow,.pwheel .xrow{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+#exList .track{position:absolute;left:0;right:0;top:calc(50% - var(--rh) / 2 - 24 * var(--rh));will-change:transform}
 #exList .xrow,#exList .xrow:last-of-type{height:var(--rh);min-height:0;padding:0 8px 0 12px;border:0;border-radius:0;background:transparent;box-shadow:none}
 #exList .xrow .nm>span:first-child{font-weight:500}#exList .xrow.cur .nm>span:first-child{font-weight:600}
 #exList .xrow span,#exList .xrow em{transition:color .35s ease}
 #exList .lens{position:absolute;left:0;right:0;top:calc(50% - var(--rh) / 2);height:var(--rh);border-radius:14px;pointer-events:none;background:rgba(10,102,209,.06);box-shadow:inset 0 0 0 1px rgba(10,102,209,.16),0 2px 12px rgba(10,102,209,.08)}
 #exList .lens::before{content:'';position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 2px 2px 0;background:var(--blue)}
+/* 폰 세로: 운동 이름을 위아래로 끌면 펼쳐지는 바퀴 (렌즈 = 이름 자리) */
+.ctx{touch-action:none}
+.pwheel{position:absolute;inset:0;z-index:6;--rh:54px;--ly:80px;overflow:hidden;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:opacity .16s ease-out;pointer-events:none}
+.pwheel[hidden]{display:none}.pwheel.out{opacity:0}
+.pwheel{perspective:2400px;perspective-origin:50% calc(var(--ly) + var(--rh) / 2)}
+.pwheel .track{position:absolute;left:14px;right:14px;top:calc(var(--ly) - 24 * var(--rh));will-change:transform}
+.pwheel .xrow,.pwheel .xrow:last-of-type{grid-template-columns:28px minmax(0,1fr) 24px;height:var(--rh);min-height:0;padding:0 8px 0 12px;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:16px}
+.pwheel .xrow.cur .nm>span:first-child{font-weight:700}
+.pwheel .lens{position:absolute;left:10px;right:10px;top:var(--ly);height:var(--rh);border-radius:16px;background:rgba(10,102,209,.07);box-shadow:inset 0 0 0 1.5px rgba(10,102,209,.22),0 2px 14px rgba(10,102,209,.1)}
+.pwheel .lens::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:3px;border-radius:0 2px 2px 0;background:var(--blue)}
+.exhead .grip{flex:none;margin-left:auto;color:var(--faint)}
+@media (min-width:560px) and (min-height:480px){.exhead .grip{display:none}}
 .xrow .nm{display:flex;flex-direction:column;gap:1px;min-width:0}
 .xrow .meta{display:flex;align-items:baseline;gap:8px;font-size:12px;font-weight:500}
 .xrow .meta em{font-size:12px}
@@ -479,7 +494,7 @@ body.rest-on #nums{opacity:.55}
       <div class="ctx-top">
         <button type="button" class="daypos" id="dayPos" aria-label="오늘 운동 목록 열기"></button>
       </div>
-      <div class="exhead"><div class="extile" id="exTile"></div><h1 id="exName"></h1></div>
+      <div class="exhead"><div class="extile" id="exTile"></div><h1 id="exName"></h1><svg class="grip" width="16" height="22" viewBox="0 0 16 22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l4-4 4 4M4 15l4 4 4-4"/></svg></div>
       <div class="setrow"><div class="bars setbars" id="setBars" aria-hidden="true"></div><span id="setTxt"></span><span class="eta" id="eta"></span></div>
     </header>
 
@@ -515,6 +530,7 @@ body.rest-on #nums{opacity:.55}
     </section>
 
     <div class="done" id="done" hidden></div>
+    <div class="pwheel" id="pWheel" hidden aria-hidden="true"><div class="track" id="pTrack"></div><div class="lens"></div></div>
   </div>
 </div>
 
@@ -1166,7 +1182,7 @@ body.rest-on #nums{opacity:.55}
       els.forEach((el) => { el.getAnimations().forEach((a) => a.cancel()); el.animate([{ transform: tfx(inX), opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' }); });
     }, () => {});
   }
-  function goIdx(i, dir, dx) {
+  function goIdx(i, dir, dx, quiet) {
     flushSwap();
     i = cyc(i);
     if (i === data.idx) return;
@@ -1175,7 +1191,7 @@ body.rest-on #nums{opacity:.55}
     /* 스와이프만 화면이 밀려남. 패드·자동 넘김은 제자리에서 내용만 살짝 바뀜 (움직이는 건 목록) */
     if (dx) slideSwap(dir === 'prev' ? 1 : -1, apply, dx);
     else { apply(); if (!REDUCED()) ['ctx', 'hero'].forEach((id) => { const el = $(id); if (el.animate) el.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' }); }); }
-    buzz(12); sfx('nav');
+    if (!quiet) { buzz(12); sfx('nav'); }
   }
   function goStep(d, dx) { flushSwap(); goIdx(data.idx + d, d < 0 ? 'prev' : 'next', dx); }
 
@@ -1482,21 +1498,110 @@ body.rest-on #nums{opacity:.55}
   }
   /* 사이클: 운동이 바뀌면 목록이 그만큼 굴러서 지금 운동이 가운데로 */
   /* 바퀴 위치는 렌즈(가운데)에 고정. 바뀐 만큼 떨어진 곳에서 트랙이 미끄러져 들어옴. 도중에 또 바뀌면 지금 보이는 위치에서 이어서 */
-  let listIdx = -1, listAnim = null, wHold = null;
-  function wheelHtml() { let h = ''; for (let k = -12; k <= 12; k++) { const i = cyc(data.idx + k); h += rowHtml(ORDER[i], i, true, k); } return h; }
+  let listIdx = -1;
+  const WR = 24, WMAX = 20;
+  function wheelHtml(c) { c = c === undefined ? data.idx : c; let h = ''; for (let k = -WR; k <= WR; k++) { const i = cyc(c + k); h += rowHtml(ORDER[i], i, true, k); } return h; }
   /* 13줄이 렌즈 높이에 딱 맞게: 줄 높이 = 목록 높이 ÷ 13 (34~48px) */
   function fitWheel() { const L = $('exList'), h = L.clientHeight; if (h) L.style.setProperty('--rh', Math.max(34, Math.min(48, Math.floor(h / 13))) + 'px'); }
   window.addEventListener('resize', fitWheel); requestAnimationFrame(fitWheel);
+
+  /* ---------- 바퀴 물리 (iOS 피커·Designing Fluid Interfaces 원칙) ----------
+     잡는 순간 멈춤(돌던 것도 손가락에 붙음) · 손가락과 1:1 · 줄 자리마다 아주 살짝 붙는 자석 · 끝은 고무줄
+     놓으면 손 속도로 도착점을 투영(iOS 감속률) → 가장 가까운 줄을 도착점으로 → 손 속도를 그대로 이어받아
+     감속하다가 마지막은 스프링으로 딱 안착. 줄이 렌즈를 지날 때마다 틱(진동·소리). 운동은 놓는 순간 바로 바뀜 */
+  const WDEC = 0.997;
+  let hapEl = null, tickAt = 0;
+  function wTick() {
+    const t = performance.now(); if (t - tickAt < 28) return; tickAt = t;
+    if (navigator.vibrate) { try { navigator.vibrate(4); } catch (e) {} }
+    else {   /* iOS 18+: 스위치 체크박스를 누르면 기기 햅틱이 울림 */
+      if (!hapEl) { hapEl = document.createElement('label'); hapEl.setAttribute('aria-hidden', 'true'); hapEl.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none'; hapEl.innerHTML = '<input type="checkbox" switch tabindex="-1">'; document.body.appendChild(hapEl); }
+      try { hapEl.click(); } catch (e) {}
+    }
+    sfx('tick');
+  }
+  function mkWheel(o) {
+    const w = { off: 0, vel: 0, tgt: 0, raf: 0, h: 48, row: 0, drag: null, busy: false, moved: false };
+    const mag = (x) => x - Math.sin(2 * Math.PI * x / w.h) * w.h * 0.02;
+    w.band = (x) => { const L = WMAX * w.h, a = Math.abs(x); if (a <= L) return x; const H = 2.5 * w.h; return Math.sign(x) * (L + (1 - 1 / ((a - L) * 0.55 / H + 1)) * H); };
+    w.paint = () => {
+      const el = o.el();
+      if (el) {
+        const m = mag(w.off); el.style.transform = 'translateY(' + m.toFixed(2) + 'px)';
+        /* 3D 원통: 줄마다 렌즈에서 떨어진 만큼 기울고(rotateX) 안쪽으로 들어가며(translateZ) 원통 둘레 위치로 모임 */
+        const R = Math.max(3 * w.h, o.R ? o.R() : w.h / (9 * Math.PI / 180)), rad = w.h / R, rows = el.children, c = (rows.length - 1) / 2;
+        for (let j = 0; j < rows.length; j++) {
+          const st = rows[j].style, p = j - c + m / w.h, th = p * rad;
+          if (Math.abs(th) > 1.52) { st.visibility = 'hidden'; continue; }
+          st.visibility = '';
+          st.transform = 'translateY(' + (R * Math.sin(th) - p * w.h).toFixed(2) + 'px) translateZ(' + (R * (Math.cos(th) - 1)).toFixed(2) + 'px) rotateX(' + (-th * 180 / Math.PI).toFixed(2) + 'deg)';
+          st.opacity = (0.2 + 0.8 * Math.cos(th)).toFixed(3);
+        }
+      }
+      const r = Math.round(-w.off / w.h); if (r !== w.row) { w.row = r; wTick(); }
+    };
+    w.shift = (d) => { w.off += d; w.tgt += d; w.row = Math.round(-w.off / w.h); if (w.drag) w.drag.base += d; };
+    w.stop = () => { cancelAnimationFrame(w.raf); w.raf = 0; };
+    w.grab = (y, t) => { w.stop(); w.vel = 0; w.busy = true; w.drag = { y0: y, base: w.off, s: [[t, y]] }; };
+    w.move = (y, t) => {
+      const d = w.drag; if (!d) return;
+      d.s.push([t, y]); while (d.s.length > 2 && t - d.s[0][0] > 100) d.s.shift();
+      w.off = w.band(d.base + y - d.y0); w.paint();
+    };
+    w.release = (t, cancel) => {
+      const d = w.drag; w.drag = null; if (!d) return;
+      let v = 0; const a = d.s[0], b = d.s[d.s.length - 1];
+      if (!cancel && b[0] > a[0] && t - b[0] < 60) v = (b[1] - a[1]) / (b[0] - a[0]);
+      v = Math.max(-6, Math.min(6, v));
+      const proj = w.off + v * WDEC / (1 - WDEC);
+      w.go(cancel ? 0 : Math.max(-WMAX, Math.min(WMAX, Math.round(-proj / w.h))), v * 1000);
+    };
+    /* st = 트랙 가운데 기준 몇 줄째로 갈지. commit이 돌려준 만큼 좌표를 옮김(가운데 다시 잡기) */
+    w.go = (st, vel) => {
+      w.busy = true; w.tgt = -st * w.h; w.vel = vel || 0;
+      if (st && o.commit) { const sh = o.commit(st); if (sh) w.shift(sh); }
+      w.run();
+    };
+    w.nudge = (dir) => { w.go(Math.round(-(w.raf ? w.tgt : w.off) / w.h) + dir, w.raf ? w.vel : 0); };
+    w.run = () => {
+      w.stop();
+      if (REDUCED()) { w.off = w.tgt; w.vel = 0; w.paint(); w.done(); return; }
+      let last = performance.now();
+      const step = (now) => {
+        let dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+        const n = Math.max(1, Math.ceil(dt / 0.004)); dt /= n;
+        for (let i = 0; i < n; i++) {
+          const rem = w.tgt - w.off;
+          /* 멀리 남았고 손 방향 그대로면: 마찰 감속(남은 거리에 비례하는 속도로 매끈하게). 가까워지면 스프링 */
+          if (Math.abs(rem) > 0.5 * w.h && rem * w.vel > 0) { const want = rem / 0.3; w.vel += (want - w.vel) * Math.min(1, dt * 9); }
+          else { const T = 0.34, z = 0.78, k = (2 * Math.PI / T) ** 2, c = 4 * Math.PI * z / T; w.vel += (-k * -rem - c * w.vel) * dt; }
+          w.off += w.vel * dt;
+        }
+        w.paint();
+        if (Math.abs(w.tgt - w.off) < 0.3 && Math.abs(w.vel) < 6) { w.off = w.tgt; w.vel = 0; w.paint(); w.raf = 0; w.done(); return; }
+        w.raf = requestAnimationFrame(step);
+      };
+      w.raf = requestAnimationFrame(step);
+    };
+    w.done = () => { w.busy = false; if (w.moved) { w.moved = false; sfx('nav'); buzz(10); } if (o.settle) o.settle(); };
+    return w;
+  }
+  const rowH = (tr) => (tr && tr.firstElementChild ? tr.firstElementChild.offsetHeight : 0);
+  let lwCommit = false;
+  const lw = mkWheel({
+    el: () => $('exTrack'), R: () => { const hf = $('exList').clientHeight / 2 - 2; return hf * 1000 / (1000 - hf); },   /* 원근(1000px)으로 줄어드는 만큼 키워서 원통이 목록 높이를 꽉 채우게 */
+    commit: (st) => { lwCommit = true; const i0 = data.idx; goIdx(data.idx + st, st < 0 ? 'prev' : 'next', 0, true); lwCommit = false; if (data.idx !== i0) lw.moved = true; return st * lw.h; },
+  });
+  /* 운동이 바뀌면(패드·스와이프·목록) 바퀴도 같은 물리로 굴러서 지금 운동이 렌즈로 */
   function rollList() {
     fitWheel();
-    const tr = $('exTrack'), st = listIdx < 0 ? 0 : cdiff(listIdx, data.idx); listIdx = data.idx;
-    if (!st || REDUCED() || !tr.animate || !tr.firstElementChild) return;
-    const h = tr.firstElementChild.offsetHeight;
-    let now = 0;
-    if (wHold !== null) { now = wHold; wHold = null; }
-    else if (listAnim && listAnim.playState === 'running') { now = new DOMMatrixReadOnly(getComputedStyle(tr).transform).m42; listAnim.cancel(); }
-    const from = Math.max(-5 * h, Math.min(5 * h, now + st * h));
-    listAnim = tr.animate([{ transform: 'translateY(' + from.toFixed(1) + 'px)' }, { transform: 'translateY(0)' }], { duration: Math.round(Math.min(680, 420 + 45 * Math.abs(from / h))), easing: 'cubic-bezier(.22,.8,.24,1)' });
+    const st = listIdx < 0 ? 0 : cdiff(listIdx, data.idx); listIdx = data.idx;
+    const h = rowH($('exTrack')); if (h) lw.h = h;
+    if (!st || lwCommit || !h) { lw.paint(); return; }
+    lw.shift(st * h);
+    if (lw.drag) { lw.paint(); return; }
+    lw.off = Math.max(-6 * h, Math.min(6 * h, lw.off)); lw.tgt = 0; lw.row = Math.round(-lw.off / h);
+    lw.go(0, lw.raf ? lw.vel : 0);
   }
   function rowHtml(e, i, left, k) {
     const c = doneCount(e), here = i === data.idx;
@@ -1795,6 +1900,53 @@ body.rest-on #nums{opacity:.55}
       if (el.animate && !REDUCED()) el.animate(from, { duration: 220, easing: 'cubic-bezier(.2,.8,.2,1)' });
     });
   };
+  /* 폰 세로: 위쪽(운동 이름)을 위아래로 끌면 바퀴가 펼쳐지고, 놓으면 렌즈에 온 운동으로 바뀜 (왼쪽 바퀴와 같은 물리) */
+  let pw = null, pCenter = 0, pHide = 0;
+  const ctxEl = $('ctx'), pWheel = $('pWheel'), pTrack = $('pTrack');
+  const pwl = mkWheel({
+    el: () => pTrack, R: () => { const hf = Math.max(200, pWheel.clientHeight - parseFloat(pWheel.style.getPropertyValue('--ly') || 80) - pwl.h / 2 - 16); return hf * 2400 / (2400 - hf); },   /* 이름 자리에서 화면 아래까지 원통이 닿게 */
+    commit: (st) => {
+      const i0 = data.idx; goIdx(pCenter + st, st < 0 ? 'prev' : 'next', 0, true); if (data.idx !== i0) pwl.moved = true;
+      pTrack.querySelectorAll('.xrow').forEach((r) => r.classList.toggle('cur', Number(r.dataset.i) === data.idx));
+      return 0;
+    },
+    settle: () => { if (pw && pw.on) return; pWheel.classList.add('out'); clearTimeout(pHide); pHide = setTimeout(() => { if (!pwl.busy) pWheel.hidden = true; }, 180); },
+  });
+  function pOpen() {
+    clearTimeout(pHide);
+    if (pWheel.hidden || pWheel.classList.contains('out') && !pwl.raf) {
+      pCenter = data.idx; pTrack.innerHTML = wheelHtml(pCenter);
+      pwl.h = 54; pwl.off = 0; pwl.tgt = 0; pwl.row = 0; pwl.paint();
+      const pr0 = pr.getBoundingClientRect(), nm = $('exName').getBoundingClientRect();
+      pWheel.style.setProperty('--ly', Math.round(nm.top + nm.height / 2 - pr0.top - pwl.h / 2) + 'px');
+    }
+    pWheel.hidden = false; pWheel.classList.remove('out');
+  }
+  ctxEl.addEventListener('pointerdown', (e) => {
+    if (wide() || swapPend || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    pw = { x: e.clientX, y: e.clientY, t: e.timeStamp, id: e.pointerId, on: false };
+    if (pwl.raf) { pw.on = true; sw = null; pOpen(); pwl.grab(e.clientY, e.timeStamp); try { ctxEl.setPointerCapture(e.pointerId); } catch (er) {} }
+  });
+  ctxEl.addEventListener('pointermove', (e) => {
+    const d = pw; if (!d || e.pointerId !== d.id) return;
+    if (!d.on) {
+      const dy = e.clientY - d.y, dx = e.clientX - d.x;
+      if (sw && sw.on) { pw = null; return; }
+      if (Math.abs(dy) < 8 || Math.abs(dy) < Math.abs(dx) * 1.5) return;
+      d.on = true; sw = null;
+      try { ctxEl.setPointerCapture(e.pointerId); } catch (er) {}
+      pOpen(); pwl.grab(d.y, d.t); buzz(6);
+    }
+    pwl.move(e.clientY, e.timeStamp);
+  });
+  const pwEnd = (e) => {
+    const d = pw; if (!d || e.pointerId !== d.id) return;
+    pw = null; if (!d.on) return;
+    swallow = true; setTimeout(() => { swallow = false; }, 60);
+    pwl.release(e.timeStamp, e.type === 'pointercancel');
+  };
+  ctxEl.addEventListener('pointerup', pwEnd);
+  ctxEl.addEventListener('pointercancel', pwEnd);
   pr.addEventListener('pointerup', swEnd);
   pr.addEventListener('pointercancel', swEnd);
   pr.addEventListener('click', (e) => { if (swallow) { e.stopPropagation(); e.preventDefault(); } }, true);
@@ -1865,51 +2017,44 @@ body.rest-on #nums{opacity:.55}
     if (e.target.id === 'seedBtn') { seed(); $('list').close(); }
     if (e.target.id === 'unseedBtn') { data.sets = data.sets.filter((s) => !s.sample); persist(); prefill(); render(); $('list').close(); }
   });
-  /* 왼쪽 바퀴: 위아래로 끌면 굴러가고, 놓으면 가운데(렌즈)에 온 운동으로 바뀜. 휠·트랙패드도 한 칸씩 */
-  let wDrag = null, wNoClick = false, wAcc = 0, wLast = 0;
+  /* 왼쪽 바퀴: 위아래로 끌면 굴러가고, 놓으면 렌즈에 온 운동으로 바뀜. 돌고 있을 때 누르면 그 자리에서 멈춤. 휠·트랙패드도 */
+  let wd = null, wNoClick = false, wWheelT = 0;
   const wList = $('exList');
-  const trOff = () => new DOMMatrixReadOnly(getComputedStyle($('exTrack')).transform).m42 || 0;
   wList.addEventListener('pointerdown', (e) => {
     wNoClick = false;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    const tr = $('exTrack'), h = tr.firstElementChild ? tr.firstElementChild.offsetHeight : 0; if (!h) return;
-    let now = 0;
-    if (listAnim && listAnim.playState === 'running') { now = trOff(); listAnim.cancel(); tr.style.transform = 'translateY(' + now.toFixed(1) + 'px)'; }
-    wDrag = { y: e.clientY, base: now, off: now, h, id: e.pointerId, on: !!now, st: Math.round(-now / h), ly: e.clientY, lt: e.timeStamp, v: 0 };
+    const h = rowH($('exTrack')); if (!h) return; lw.h = h;
+    wd = { y: e.clientY, t: e.timeStamp, id: e.pointerId, on: false };
+    if (lw.raf) { wd.on = true; wNoClick = true; lw.grab(e.clientY, e.timeStamp); try { wList.setPointerCapture(e.pointerId); } catch (er) {} wList.classList.add('drag'); }
   });
   wList.addEventListener('pointermove', (e) => {
-    const d = wDrag; if (!d || e.pointerId !== d.id) return;
-    const dy = e.clientY - d.y;
-    if (!d.on) { if (Math.abs(dy) < 6) return; d.on = true; }
-    if (!wList.hasPointerCapture(e.pointerId)) { try { wList.setPointerCapture(e.pointerId); } catch (er) {} wList.classList.add('drag'); }
-    const lim = 6 * d.h;
-    d.off = Math.max(-lim, Math.min(lim, d.base + dy));
-    const dt = e.timeStamp - d.lt; if (dt > 0) { d.v = 0.6 * d.v + 0.4 * ((e.clientY - d.ly) / dt); d.ly = e.clientY; d.lt = e.timeStamp; }
-    $('exTrack').style.transform = 'translateY(' + d.off.toFixed(1) + 'px)';
-    const st = Math.round(-d.off / d.h); if (st !== d.st) { d.st = st; buzz(4); }
+    const d = wd; if (!d || e.pointerId !== d.id) return;
+    if (!d.on) {
+      if (Math.abs(e.clientY - d.y) < 6) return;
+      d.on = true; lw.grab(d.y, d.t);
+      try { wList.setPointerCapture(e.pointerId); } catch (er) {} wList.classList.add('drag');
+    }
+    lw.move(e.clientY, e.timeStamp);
   });
   const wEnd = (e) => {
-    const d = wDrag; if (!d || e.pointerId !== d.id) return;
-    wDrag = null; wList.classList.remove('drag');
+    const d = wd; if (!d || e.pointerId !== d.id) return;
+    wd = null; wList.classList.remove('drag');
     if (!d.on) return;
     wNoClick = true;
-    const tr = $('exTrack'), lim = 6 * d.h;
-    const fling = e.type !== 'pointercancel' && e.timeStamp - d.lt < 80 ? d.v * 140 : 0;
-    const st = Math.max(-6, Math.min(6, Math.round(-Math.max(-lim, Math.min(lim, d.off + fling)) / d.h)));
-    tr.style.transform = '';
-    if (st) { wHold = d.off; goIdx(data.idx + st, st < 0 ? 'prev' : 'next'); if (wHold !== null) { wHold = null; } return; }
-    if (!REDUCED() && tr.animate && d.off) listAnim = tr.animate([{ transform: 'translateY(' + d.off.toFixed(1) + 'px)' }, { transform: 'translateY(0)' }], { duration: 260, easing: 'cubic-bezier(.22,.8,.24,1)' });
+    lw.release(e.timeStamp, e.type === 'pointercancel');
   };
   wList.addEventListener('pointerup', wEnd);
   wList.addEventListener('pointercancel', wEnd);
   wList.addEventListener('wheel', (e) => {
     e.preventDefault();
-    if (wDrag) return;
-    wAcc += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-    const t = e.timeStamp;
-    if (Math.abs(wAcc) < 40 || t - wLast < 110) return;
-    const d = wAcc > 0 ? 1 : -1; wAcc = 0; wLast = t;
-    goIdx(data.idx + d, d < 0 ? 'prev' : 'next');
+    if (wd && wd.on) return;
+    const h = rowH($('exTrack')); if (!h) return; lw.h = h;
+    const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    /* 마우스 휠 한 칸 = 한 줄(스프링), 트랙패드 = 손가락처럼 따라오다 멈추면 가장 가까운 줄로 */
+    if (e.deltaMode === 1 || (Math.abs(dy) >= 50 && Number.isInteger(dy))) { lw.nudge(dy > 0 ? 1 : -1); return; }
+    lw.stop(); lw.busy = true; lw.vel = 0;
+    lw.off = lw.band(lw.off - dy); lw.paint();
+    clearTimeout(wWheelT); wWheelT = setTimeout(() => { lw.go(Math.max(-WMAX, Math.min(WMAX, Math.round(-lw.off / lw.h))), 0); }, 90);
   }, { passive: false });
   $('exList').addEventListener('click', (e) => { if (wNoClick) { wNoClick = false; return; } jump(e, false); });
 
@@ -2529,6 +2674,7 @@ body.rest-on #nums{opacity:.55}
     wup: (t) => { const o = sfxBus(0.3); sub(t, 62, 50, 0.3 * fg(), 0.35, o); metal(t, 330, 0.035 * fg(), 0.5, o); stone(t, 90, 0.14 * og(), 0.1, o); },   /* 무거워질수록 낮게 */
     wdn: (t) => { const o = sfxBus(0.3); sub(t, 82, 92, 0.26 * fg(), 0.3, o); metal(t, 440, 0.035 * fg(), 0.45, o); stone(t, 120, 0.12 * og(), 0.1, o); },
     edge: (t) => { const o = sfxBus(0.2); cavity(t, 46, 0.5 * fg(), 0.5, o); stone(t, 60, 0.25 * og(), 0.14, o); },
+    tick: (t) => { const o = sfxBus(0); sOsc(t, 2100, 1500, 0.02, 0.002, 0.028, o, 0.02); stone(t, 420, 0.03 * og(), 0.02, o); },
     nav: (t) => { const o = sfxBus(0.4); hum(t, 73, 0.1 * fg(), 0.5, o, 0.03); breath(t, 0.07 * og(), 0.35, o, 380, 900, 0.06); metal(t, 587, 0.02 * fg(), 0.6, o, 0.02); },
     set1: (t) => { const o = sfxBus(0.5, 0.18); sub(t, 55, 46, 0.42 * fg(), 0.7, o); cavity(t, 110, 0.35 * fg(), 1.2, o); metal(t, 220, 0.05 * fg(), 1.6, o); stone(t, 70, 0.3 * og(), 0.18, o); breath(t, 0.05 * og(), 0.5, o, 500, 1200, 0.01); },
     set2: (t) => { const o = sfxBus(0.5, 0.18); sub(t, 62, 52, 0.42 * fg(), 0.7, o); cavity(t, 123, 0.35 * fg(), 1.2, o); metal(t, 247, 0.05 * fg(), 1.6, o); stone(t, 78, 0.3 * og(), 0.18, o); breath(t, 0.05 * og(), 0.5, o, 520, 1250, 0.01); },
