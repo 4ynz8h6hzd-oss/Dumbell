@@ -69,7 +69,7 @@ button{cursor:pointer}
 /* trend row (single column only) */
 .trend{flex:none;margin:0 24px;display:flex;align-items:center;gap:12px;padding:11px 0;border:0;border-top:.5px solid var(--line);border-bottom:.5px solid var(--line);background:transparent;text-align:left}
 .trend b{font-size:12px;font-weight:700;white-space:nowrap}
-.tk-cap{color:#5E4AB0}.tk-up{color:var(--greenTxt)}.tk-fast{color:#8A5A00}.tk-flat{color:#7A5600}.tk-down{color:#9A4A00}.tk-hold{color:var(--sub)}
+.tk-cap{color:#0A4FA3}.tk-up{color:var(--greenTxt)}.tk-fast{color:#8A5A00}.tk-flat{color:#7A5600}.tk-down{color:#9A4A00}.tk-hold{color:var(--sub)}
 .vstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .vstats.two{grid-template-columns:repeat(2,minmax(0,1fr))}
 .vstats div{background:var(--plate);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;container-type:inline-size}
@@ -199,7 +199,7 @@ button{cursor:pointer}
 .xrow b.pc{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;flex:none}
 .xrow b.pc svg{display:block}
 .ti{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:6px;flex:none}
-.ti-up{background:#E3F3E7;color:#248A3D}.ti-fast{background:#FDE7E5;color:#C4281C}.ti-flat{background:#FBF0D9;color:#9A6B00}.ti-down{background:#FCEBDD;color:#B05A00}.ti-hold{background:#F2F2F7;color:#8E8E93}.ti-cap{background:#ECE8FA;color:#6E56CF}
+.ti-up{background:#E3F3E7;color:#248A3D}.ti-fast{background:#FDE7E5;color:#C4281C}.ti-flat{background:#FBF0D9;color:#9A6B00}.ti-down{background:#FCEBDD;color:#B05A00}.ti-hold{background:#F2F2F7;color:#8E8E93}.ti-cap{background:#EAF2FD;color:#0A66D1}
 .wd{display:flex;flex-direction:column;gap:6px}.rtrend .wd{flex:none}
 .wd div{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;white-space:nowrap}
 .wd small{width:44px;flex:none;font-size:12px;font-weight:500;color:var(--sub)}
@@ -1086,7 +1086,7 @@ body.rest-on #nums{opacity:.55}
       '<div><small>이번 달</small>' + (ev.moOk ? tIcon(mk) + MO_TXT[mk] : tIcon('hold') + '2주 더 쌓이면 판단') + '</div>' +
       (v ? '<div><small>내 속도</small><b class="spn">주 ' + rp(ev.spd.r) + '</b><span class="sc sc-' + v[0] + '">' + v[1] + '</span></div>' : '');
   }
-  const COL = { cap: '#6E56CF', fast: '#C4281C', up: '#248A3D', flat: '#B07A00', down: '#C26A00', hold: '#8E8E93' };
+  const COL = { cap: '#0A66D1', fast: '#C4281C', up: '#248A3D', flat: '#B07A00', down: '#C26A00', hold: '#8E8E93' };
   /* status block: verdict sentence + 3 numbers + speed scale */
   function verdictHtml(t) {
     const ev = t.ev;
