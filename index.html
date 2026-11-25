@@ -210,6 +210,18 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .btn{min-height:48px;border-radius:14px;border:0;font-size:16px;font-weight:600;background:var(--plate)}
 .btn.pri{background:var(--blue);color:#fff}.btn.del{grid-column:1/-1;background:#FDECEA;color:#B0241A}.btn.wide{grid-column:1/-1}
+.mood{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:18px;background:var(--plate);color:var(--ink);transition:background-color .5s,color .5s}
+.mood>i{flex:none;width:12px;height:12px;border-radius:50%;background:currentColor;animation:breathe 2.8s ease-in-out infinite}
+.mood b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.mood span{display:block;font-size:14px;font-weight:600;line-height:1.35;opacity:.85;font-variant-numeric:tabular-nums}.mood span:empty{display:none}
+.mood.pos{background:#E6F4EA;color:#1E6E31}.mood.neu{background:#EAF2FC;color:#0A4FA3}.mood.neg{background:#FDEEE3;color:#9A3D00}
+.mood.pop{animation:moodpop .45s ease-out}
+@keyframes breathe{0%,100%{transform:scale(.7);opacity:.55}50%{transform:scale(1.15);opacity:1}}
+@keyframes moodpop{0%{transform:scale(.97);opacity:.6}100%{transform:none;opacity:1}}
+.why{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}.why .ago{color:var(--sub)}
+.rule{font-size:13px;font-variant-numeric:tabular-nums}
+@media (max-height:700px){.mood{padding:9px 14px}.mood b{font-size:20px}.mood span{font-size:13px}}
+@media (max-height:620px){.mood b{font-size:18px}.mood span{display:none}}
 .why[role=button]{cursor:pointer}.why .more{color:var(--blue);white-space:nowrap}
 .steps{margin:6px 0 12px;padding:0;list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:10px}
 .steps li{counter-increment:st;display:grid;grid-template-columns:22px 1fr;column-gap:8px;font-size:13px;line-height:1.5;color:var(--sub)}
@@ -415,6 +427,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     </header>
 
     <section class="hero" id="hero" aria-label="이번 세트">
+      <div class="mood" id="mood" aria-live="polite"><i aria-hidden="true"></i><div><b id="moodT"></b><span id="moodS"></span></div></div>
       <div class="nums" id="nums"></div>
       <p class="delta" id="delta"></p>
       <p class="why" id="why" role="button" tabindex="0" aria-label="판단 근거 보기"></p>
@@ -718,7 +731,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
       ['결정', '목표 추정 10RM ' + f1(goal) + 'kg → ' + (up ? '가장 가까운 진도 ' + pick.w + 'kg × ' + pick.r + '회 (' + sgn(step) + '%)' : '다음 진도의 75%에 못 미쳐서 ' + pick.w + 'kg × ' + pick.r + '회 유지') +
         (others.length ? ' · 다른 후보 ' + others.join(', ') : '')]
     ];
-    return { kind, w: pick.w, r: pick.r, T: pick.e, goal, step, mode, delta, why, note, prev: last, ago: agoTxt(hrs), expl, title: '1세트 (탑세트)',
+    return { kind, w: pick.w, r: pick.r, T: pick.e, goal, step, mode, delta, why, note, prev: last, ago: agoTxt(hrs), expl, title: '1세트 (탑세트)', up, pen, hrs, dayF: day.f, fDrop, loadX,
       last: [lastLine, others.length ? '다른 후보: ' + others.join(', ') : ''].filter(Boolean).join('  ·  ') };
   }
 
@@ -767,7 +780,8 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     ];
     const why = '직전 ' + last.w + '×' + last.r + (vs !== null && Math.abs(vs) > 1 ? ' (예상 ' + sgn(vs) + '%)' : '') + ' → 휴식 ' + secTxt(tUse) + ' 뒤 ' + f1(rec) + '% → ' + p.w + '×' + p.r;
     const note = early && (early.w !== p.w || early.r !== p.r) ? '지금 시작하면 ' + early.w + '×' + early.r + ' · 휴식을 채우면 ' + p.w + '×' + p.r : '';
-    return { kind, w: p.w, r: p.r, step: pct(e10(p.w, p.r), le), delta, why, note, expl, title: k + '세트 (백오프)', bo: true, cap: capAt(el), last: '' };
+    return { kind, w: p.w, r: p.r, step: pct(e10(p.w, p.r), le), delta, why, note, expl, title: k + '세트 (백오프)', bo: true, cap: capAt(el), last: '',
+      vs, el, rst, early, rec, k, prevSet: last };
   }
   function suggestNow(ex) {
     const ts = todaySets(ex);
@@ -947,7 +961,7 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
     const ap = sg.kind === 'up' || sg.kind === 'same' ? SVG_ARROW.up : sg.kind === 'down' ? SVG_ARROW.down : sg.kind === 'bw' ? SVG_ARROW.check : SVG_ARROW.side;
     dl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + ap + '"/></svg>' + esc(sg.delta);
     const ts = todaySets(ex);
-    if (bw) { $('why').textContent = sg.why; $('rule').textContent = sg.last; }
+    if (bw) { renderWhy(sg); $('why').textContent = sg.why; $('rule').textContent = sg.last; }
     else {
       dl.innerHTML += '<em class="pct">' + (Math.abs(sg.step) < 0.05 ? '유지' : sgn(sg.step) + '%') + '</em>';
       renderWhy(sg);
@@ -986,13 +1000,53 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
 
   /* why today's suggestion: full reasoning, kept off the main screen */
   /* main-screen reason line (tap → numbered steps); also refreshed every second while resting */
-  let whySg = null;
+  /* live text: "몇 시간 몇 분 전"까지, 매초 갱신 */
+  const agoLive = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)), d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60), sec = t % 60;
+    return (d ? d + '일 ' + h + '시간 ' + m + '분' : h ? h + '시간 ' + m + '분' : m ? m + '분 ' + sec + '초' : sec + '초') + ' 전'; };
+  const setsTxt = (xs) => xs[0].w + '×' + xs.map((x, i) => (i && x.w !== xs[0].w ? x.w + '×' : '') + x.r).join('·');
+  /* 긍정 · 중립 · 부정 한 줄 */
+  function moodOf(ex, sg, n) {
+    if (isBw(ex)) return n >= SETS ? ['pos', '3세트 끝', '수고했어요'] : ['neu', '맨몸 · 완료만 체크', ''];
+    if (n >= SETS) return ['pos', '3세트 끝 · 수고했어요', '다음 세션 1세트: ' + sg.w + '×' + sg.r];
+    if (sg.bo) {
+      const rs = sg.el < sg.rst ? (sg.early && (sg.early.w !== sg.w || sg.early.r !== sg.r) ? '지금 하면 ' + sg.early.w + '×' + sg.early.r + ' · ' : '') + secTxt(sg.rst - sg.el) + ' 더 쉬면 ' + sg.w + '×' + sg.r : '회복 ' + f1(sg.rec) + '% · ' + sg.w + '×' + sg.r + ' 가세요';
+      if (sg.vs === null || Math.abs(sg.vs) <= 1) return ['neu', '예상대로예요 · 페이스 유지', rs];
+      return sg.vs > 0 ? ['pos', '예상보다 좋아요 ' + sgn(sg.vs) + '%', rs] : ['neg', '피로가 예상보다 커요 ' + sgn(sg.vs) + '%', '그만큼 낮췄어요 · ' + rs];
+    }
+    if (!sg.prev) return ['neu', '첫 기록이에요', '입력한 10RM으로 시작'];
+    if (sg.mode === 'break') return ['neg', '오랜만이에요 · 가볍게', Math.round(sg.hrs / 24) + '일 만이라 3% 낮춤'];
+    if (sg.mode === 'deload') return ['neg', '쉬어가는 날 · 3% 낮춤', '2번 연속 목표 미달'];
+    if (sg.mode === 'fatigue') return ['neg', '피로 신호 · 이번엔 유지', sg.fDrop ? '지난번 세트 간 감소가 평소보다 큼' : '최근 7일 운동량 ' + sg.loadX.toFixed(1) + '배'];
+    if (sg.dayF < 1) return ['neg', '오늘 피로 반영 ' + sgn(100 * (sg.dayF - 1)) + '%', '앞선 운동이 예상보다 덜 나왔어요'];
+    if (sg.pen > 0.004) return ['neg', '아직 회복 중', Math.round(sg.hrs) + ' / ' + REC_H + '시간 · 목표 −' + (sg.pen * 100).toFixed(1) + '%'];
+    if (sg.up) return ['pos', '올릴 차례예요 ' + sgn(sg.step) + '%', '회복 완료 · 주 ' + RATE * 100 + '% 속도'];
+    if (sg.mode === 'easy') return ['neu', '천천히 올려요', '지난번 목표에 조금 못 미쳤어요'];
+    return ['neu', '이 무게 다지기', sg.note || ''];
+  }
+  let whySg = null, moodKey = '';
   function renderWhy(sg) {
     whySg = sg;
-    const pv = sg.prev;
-    $('why').innerHTML = (sg.bo ? esc(sg.why) : pv ? '지난번 ' + md(pv.date) + ' <span class="ago">' + sg.ago + '</span> · ' + pv.w + 'kg × ' + pv.r + '회' : esc(sg.why)) +
-      (sg.expl ? ' <span class="more">판단 근거 ›</span>' : '');
-    $('rule').textContent = sg.note || '';
+    const ex = curEx(), n = doneCount(ex), now = Date.now(), m = moodOf(ex, sg, n), mo = $('mood');
+    const key = m[0] + m[1].replace(/[−+]?[\d.]+%/, '');
+    if (mo.className.indexOf(m[0]) < 0 || key !== moodKey) { mo.className = 'mood ' + m[0]; if (moodKey) restart(mo, 'pop'); }
+    moodKey = key; $('moodT').textContent = m[1]; $('moodS').textContent = m[2];
+    if (isBw(ex)) return;
+    const more = sg.expl ? ' <span class="more">판단 근거 ›</span>' : '';
+    let l1 = '', l2 = '';
+    if (sg.bo) {
+      l1 = sg.k - 1 + '세트 ' + sg.prevSet.w + '×' + sg.prevSet.r + ' 완료 <span class="ago">' + agoLive(now - sg.prevSet.ts) + '</span>';
+    } else {
+      if (sg.prev) l1 = '이 운동 지난번 ' + setsTxt(sg.prev.all) + ' <span class="ago">' + agoLive(now - sg.prev.end) + '</span>';
+      else l1 = esc(sg.why);
+      /* 직전에 끝낸 다른 운동 */
+      const t = todaySets().filter((x) => x.ex !== ex && !isBw(x.ex)), lx = t.length ? t[t.length - 1] : null;
+      if (lx && n === 0) {
+        const xs = todaySets(lx.ex), dv = xs.filter((x) => x.P > 0), dev = dv.length ? dv.reduce((a, x) => a + Math.min(0, e10(x.w, x.r) / x.P - 1), 0) / dv.length : 0;
+        l2 = '직전 운동 ' + EX[lx.ex].short + ' ' + setsTxt(xs) + ' · ' + agoLive(now - xs[xs.length - 1].ts) + (dev < -0.01 ? ' · 예상보다 ' + sgn(100 * dev) + '%' : ' · 예상대로');
+      }
+    }
+    $('why').innerHTML = l1 + more;
+    $('rule').textContent = l2;
   }
   function openWhy() {
     const sg = whySg; if (!sg || !sg.expl) return;
@@ -1003,10 +1057,10 @@ body.rest-on #nums{opacity:.28;filter:saturate(.4)}
   }
   setInterval(() => {
     const ex = curEx(), n = doneCount(ex);
-    if (showingDone || isBw(ex) || !n || n >= SETS || document.hidden) return;
+    if (showingDone || isBw(ex) || n >= SETS || document.hidden) return;
     const sg = suggestNow(ex);
     renderWhy(sg);
-    if (cur.auto && (cur.w !== sg.w || cur.r !== sg.r)) { const a = cur.w !== sg.w ? 'w' : 'r'; cur.w = sg.w; cur.r = sg.r; syncInputs(a); fitNums(); }
+    if (cur.auto && (cur.w !== sg.w || cur.r !== sg.r)) { const a = cur.w !== sg.w ? 'w' : 'r'; cur.w = sg.w; cur.r = sg.r; syncInputs(a); fitNums(); buzz(8); }
   }, 1000);
   function sgDetail(ex) {
     if (isBw(ex)) return '';
