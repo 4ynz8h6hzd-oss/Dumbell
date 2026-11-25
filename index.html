@@ -647,7 +647,9 @@ body.rest-on #nums{opacity:.55}
   /* ---------- progression: time-based (RATE per week), recovery & fatigue aware, nearest step ---------- */
   /* candidate steps nearest to target; when holding is allowed (r0), a change must be worth ≥ MIN_STEP */
   const MIN_STEP = 1.5;
-  function steps(w0, r0, target) {
+  /* 한 단계 무거운 덤벨은 이 횟수 이상 나올 때만 (1kg이 큰 비중인 가벼운 덤벨에서 무게 출렁임 방지) */
+  const UP_MIN = { c: 6, i: 8, f: 8 };
+  function steps(w0, r0, target, upMin) {
     const rmax = w0 <= 10 ? RMAX_LIGHT : RMAX, seen = {}, out = [], e0 = r0 ? e10(w0, r0) : 0;
     const add = (W, R) => { const k = W + 'x' + R, e = e10(W, R);
       if (seen[k]) return; seen[k] = 1;
@@ -656,8 +658,10 @@ body.rest-on #nums{opacity:.55}
     if (r0) add(w0, r0);
     for (const W of r0 ? [w0 - 1, w0, w0 + 1] : [w0 - 1, w0]) {   /* lightening: never pick a heavier dumbbell */
       if (W < MIN_W || W > MAX_W) continue;
-      const x = 40 * target / W - 30, top = W === MAX_W ? 30 : rmax;   /* heaviest dumbbell: reps keep climbing */
-      [Math.floor(x + 1e-9), Math.ceil(x - 1e-9)].forEach((R) => { if (R >= RMIN && R <= top) add(W, R); });
+      if (r0 && W < w0 && target >= e0) continue;   /* 올리는 중엔 가벼운 덤벨로 내려가지 않음 (출렁임 방지) */
+      const upOk = !upMin || w0 + 1 > MAX_W || 40 * target / (w0 + 1) - 30 >= upMin - 1e-9;   /* 한 단계 무거운 덤벨로 최소 횟수 가능? */
+      const x = 40 * target / W - 30, top = W === MAX_W ? 30 : W === w0 && !upOk ? 25 : rmax;   /* heaviest dumbbell / 아직 못 올리면: reps keep climbing */
+      [Math.floor(x + 1e-9), Math.ceil(x - 1e-9)].forEach((R) => { if (R >= RMIN && R <= top && !(upMin && W > w0 && R < upMin)) add(W, R); });
     }
     if (!out.length) add(w0, Math.max(RMIN, Math.round(40 * target / w0 - 30)));
     out.sort((p, q) => Math.abs(p.e - target) - Math.abs(q.e - target) || p.e - q.e);
@@ -751,7 +755,7 @@ body.rest-on #nums{opacity:.55}
     const day = dayFatigue(ex);
     const goal = P * (1 + g - pen) * day.f;
     /* 튄 기록(capped)은 그 자리에 묶지 않고 인정한 기준에서 가장 가까운 무게×횟수로 */
-    const cands = steps(last.w, mode === 'deload' || mode === 'break' || last.capped ? 0 : last.r, goal), pick = cands[0];
+    const cands = steps(last.w, mode === 'deload' || mode === 'break' || last.capped ? 0 : last.r, goal, UP_MIN[EX[ex].type || 'f']), pick = cands[0];
     const step = pct(pick.e, last.e);
     let kind, delta;
     if (pick.w > last.w) { kind = 'up'; delta = '1kg 올리고 ' + pick.r + '회'; }
@@ -820,7 +824,8 @@ body.rest-on #nums{opacity:.55}
     const need = type === 'i' ? top.r : RMIN;
     const pick = (C) => {
       let W = type === 'i' ? Math.min(top.w, last.w) : last.w;
-      while (W > MIN_W && repsAt(C, W) < need) W--;
+      /* 고립 운동: 1kg 내렸을 때 1세트보다 6회 넘게 늘면(아주 가벼운 덤벨) 내리지 않고 횟수만 줄임 */
+      while (W > MIN_W && repsAt(C, W) < need && !(type === 'i' && repsAt(C, W - 1) > need + 6)) W--;
       return { w: W, r: Math.max(1, Math.min(BO_RMAX, repsAt(C, W))) };
     };
     const p = pick(capAt(tUse)), early = el < rst ? pick(capAt(el)) : null;
