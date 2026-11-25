@@ -926,7 +926,8 @@ body.rest-on #nums{opacity:.55}
   }
   function backoff(ex, ts, now) {
     const top = ts[0], last = ts[ts.length - 1], k = ts.length + 1, type = EX[ex].type || 'f', rst = planRest();
-    const el = (now - last.ts) / 1000, tUse = Math.max(el, rst);
+    /* 휴식 끝난 뒤에도 계획 휴식 기준 횟수로 고정 (세트 도중 +1 방지). 계획의 2배 넘게 쉰 긴 휴식만 회복 더 반영 */
+    const el = (now - last.ts) / 1000, tUse = el > 2 * rst ? el : rst;
     const { L, n } = fatigue(ex);
     const base = typeof last.P === 'number' && last.P > 0 ? Math.min(eff(last), last.P * (1 + JUMP)) : eff(last);
     /* 직전 휴식이 계획보다 짧았으면 덜 회복된 피로의 절반이 다음 세트까지 이어짐 */
