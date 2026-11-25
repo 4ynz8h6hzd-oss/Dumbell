@@ -750,8 +750,14 @@ body.rest-on #nums{opacity:.55}
     const fDrop = boDev !== null ? boDev < -0.04 : !last.capped && typ !== null && last.drop !== null && last.drop > typ + 0.04;
     const mine = data.sets.filter((s) => s.ex === ex && s.ts <= now && s.date !== today());
     const oldest = mine.reduce((m, s) => Math.min(m, s.ts), now);
-    const v7 = vol(mine.filter((s) => s.ts > now - 7 * 864e5)), vPrev = vol(mine.filter((s) => s.ts <= now - 7 * 864e5 && s.ts > now - 28 * 864e5)) / 3;
-    const loadX = now - oldest >= 21 * 864e5 && vPrev > 0 ? v7 / vPrev : 0, fLoad = loadX > 1.5;
+    /* 운동량 비교: 예상보다 +JUMP 넘게 튄 세트(오타 가능)는 빼고, 이전 3주는 기록 있는 주만 평균 (쉰 주가 섞이면 복귀 직후가 '평소의 몇 배'로 잘못 잡힘) */
+    const volOk = mine.filter((s) => !(s.P > 0 && e10(s.w, s.r) / s.P - 1 > JUMP));
+    const v7 = vol(volOk.filter((s) => s.ts > now - 7 * 864e5));
+    const wks = [1, 2, 3].map((k) => vol(volOk.filter((s) => s.ts <= now - k * 7 * 864e5 && s.ts > now - (k + 1) * 7 * 864e5))).filter((v) => v > 0);
+    const vPrev = wks.length ? wks.reduce((a, v) => a + v, 0) / wks.length : 0;
+    /* 최근 4주 안에 7일 넘게 쉰 적이 있으면 비교 기준 주가 덜 찬 주라서 '평소의 몇 배'가 부풀려짐 → 운동량 신호 끔 (복귀는 break 모드가 따로 낮춤) */
+    const gap = hist.some((h, i) => hist[i + 1] && h.start > now - 28 * 864e5 && h.start - hist[i + 1].end > 7 * 864e5);
+    const loadX = now - oldest >= 21 * 864e5 && vPrev > 0 && !gap ? v7 / vPrev : 0, fLoad = loadX > 1.5;
 
     let mode = 'normal', P = last.e, g = RATE * Math.min(lvlDays, 14) / 7;
     if (hrs > BREAK_D * 24) { mode = 'break'; P = last.e * DELOAD; g = 0; }
