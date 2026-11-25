@@ -814,7 +814,7 @@ body.rest-on #nums{opacity:.55}
         expl: [['기준 재설정', '기술·자세를 바꿔서 이전 기록은 진도 계산에서 빼요'], ['오늘 1세트', '마지막 기록(' + f.w + '×' + f.r + ')의 92%로 편하게 시작 → 오늘 1세트 결과가 새 기준이 돼요']], title: '1세트 (기준 재설정)', last: '' };
     }
     if (isBw(ex)) {
-      return { kind: 'bw', w: 0, r: 0, delta: '맨몸 · 완료만 체크', why: '무게와 횟수 없이 세트를 마칠 때마다 가운데 버튼만 누르면 돼요.', last: ss.length ? '지난번 ' + md(ss[0].date) + ' · ' + ss[0].sets.length + '세트 완료' : '' };
+      return { kind: 'bw', w: 0, r: 0, delta: '맨몸 · 완료만 체크', why: '무게와 횟수 없이 세트를 마칠 때마다 가운데 버튼만 누르면 돼요.', last: ss.length ? '지난번 ' + (() => { const t = ss[0].sets[ss[0].sets.length - 1].ts; return t ? agoTxt((now - t) / 3600000) : md(ss[0].date); })() + ' · ' + ss[0].sets.length + '세트 완료' : '' };
     }
     const hist = ss.map((s) => { const f = s.sets[0], l = s.sets[s.sets.length - 1];
       return { date: s.date, w: f.w, r: f.r, q: f.q, T: f.T, all: s.sets, e: eff(f), start: f.ts, end: l.ts, drop: s.sets.length > 1 ? 1 - eff(l) / eff(f) : null }; });
