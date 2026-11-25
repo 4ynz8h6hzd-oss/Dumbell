@@ -821,7 +821,10 @@ body.rest-on #nums{opacity:.55}
     const el = (now - last.ts) / 1000, tUse = Math.max(el, rst);
     const { L, n } = fatigue(ex);
     const base = typeof last.P === 'number' && last.P > 0 ? Math.min(e10(last.w, last.r), last.P * (1 + JUMP)) : e10(last.w, last.r);
-    const capAt = (t) => base * (1 - lossAt(L, t));
+    /* 직전 휴식이 계획보다 짧았으면 덜 회복된 피로의 절반이 다음 세트까지 이어짐 */
+    const prevRest = ts.length >= 2 ? (last.ts - ts[ts.length - 2].ts) / 1000 : rst;
+    const carry = Math.max(0, lossAt(L, prevRest) - lossAt(L, rst)) * 0.5;
+    const capAt = (t) => base * (1 - lossAt(L, t)) * (1 - carry);
     const need = type === 'i' ? top.r : RMIN;
     const pick = (C) => {
       let W = type === 'i' ? Math.min(top.w, last.w) : last.w;
@@ -843,7 +846,7 @@ body.rest-on #nums{opacity:.55}
     ];
     const why = '직전 ' + last.w + '×' + last.r + (vs !== null && Math.abs(vs) > 1 ? ' (예상 ' + sgn(vs) + '%)' : '') + ' → 휴식 ' + secTxt(tUse) + ' 뒤 ' + f1(rec) + '% → ' + p.w + '×' + p.r;
     const note = early && (early.w !== p.w || early.r !== p.r) ? '지금 시작하면 ' + early.w + '×' + early.r + ' · 휴식을 채우면 ' + p.w + '×' + p.r : '';
-    return { kind, w: p.w, r: p.r, step: pct(e10(p.w, p.r), le), delta, why, note, expl, title: k + '세트 (백오프)', bo: true, cap: capAt(tUse), last: '',
+    return { kind, w: p.w, r: p.r, step: pct(e10(p.w, p.r), le), delta, why, note, expl, title: k + '세트 (백오프)', bo: true, cap: capAt(tUse), capEl: capAt(el), carry, last: '',
       vs, el, rst, early, rec, k, prevSet: last };
   }
   function suggestNow(ex) {
@@ -1071,7 +1074,7 @@ body.rest-on #nums{opacity:.55}
   function moodOf(ex, sg, n) {
     const N = nSets(ex);
     if (isBw(ex)) return n >= N ? ['pos', N + '세트 끝', '수고했어요'] : ['neu', '맨몸 · 완료만 체크', ''];
-    const jump = todaySets(ex).map((x) => (x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0)).reduce((a, v) => Math.max(a, v), 0);
+    const jump = todaySets(ex).map((x) => (x.P > 0 ? pct(e10(x.w, x.r), Math.max(x.P, x.Pr || 0)) : 0)).reduce((a, v) => Math.max(a, v), 0);
     if (jump > JUMP * 100) return ['warn', '기록 확인 · 예상보다 ' + sgn(jump) + '%', '실수라면 오늘 세트를 눌러 고쳐 주세요'];
     if (n >= N) return ['pos', N + '세트 끝 · 수고했어요', '다음 세션 1세트 ' + sg.w + '×' + sg.r];
     if (sg.bo) {
@@ -1154,8 +1157,13 @@ body.rest-on #nums{opacity:.55}
     if (lst) el = (Date.now() - lst.ts) / 1000;
     const iso = (EX[ex] && EX[ex].type) === 'i', curMax = xs.reduce((a, x) => Math.max(a, dv(x)), 0);
     if (n < N && n && curMax > JUMP * 100) return ['warn', tag + '반동 잡으세요 · 멈췄다 올리기', '예상보다 ' + sgn(curMax) + '% · 자세가 바뀐 것 같아요'];
-    if (n < N && n && ld < -1 && el < plan) return ['neg', tag + '휴식 끝까지 채우세요', '직전 세트 예상보다 ' + sgn(ld) + '%'];
+    /* 휴식 중: 숫자 없이 '더 쉬세요' / 끝나면 '시작하세요' (운동 사이 휴식도 같음) */
+    const rTot = (() => { try { return rest ? rest.total / 1000 : 0; } catch (e) { return 0; } })();
+    if (n < N && resting) return n && ld < -3 ? ['neg', tag + '조금 더 쉬는 게 좋아요', '직전 세트가 힘들었어요 · 휴식 30초 늘렸어요'] : ['neu', (n ? tag : '1세트 전 · ') + '조금 더 쉬세요', ''];
+    if (n < N && n && el < plan * 0.8 && !resting && rTot === 0 && ld < -1) return ['neg', tag + '휴식 끝까지 채우세요', '직전 세트 예상보다 ' + sgn(ld) + '%'];
     if (n < N && n && ld > 5) return ['warn', tag + '반동·속도 체크 · 같은 자세로', '직전 세트 예상보다 ' + sgn(ld) + '%'];
+    let justDone = false; try { justDone = !!rest && rest.end <= Date.now() && Date.now() - rest.end < 60000; } catch (e) {}
+    if (n < N && justDone) return ['pos', (n ? tag : '1세트 · ') + '지금 시작하세요', fin ? '1회 남을 때까지 · 자세 유지' : ''];
     if (rAvg !== null && rAvg < plan * 0.8) return ['neg', tag + '휴식 확실히 가져가세요', '오늘 평균 휴식 ' + secTxt(rAvg) + ' (계획 ' + secTxt(plan) + ')'];
     if (mx > JUMP * 100) return ['warn', tag + '오늘 기록 하나가 너무 높아요 · 반동 확인', '최대 ' + sgn(mx) + '%'];
     if (avg < -4) return ['neg', tag + '오늘 컨디션 저하 · 무리하지 말고 목표대로', '오늘 예상 대비 ' + sgn(avg) + '%'];
@@ -1346,13 +1354,17 @@ body.rest-on #nums{opacity:.55}
     if (!bw && n === 0 && resetPending(ex)) { s.R = 1; delete data.rp[ex]; }
     /* 예상치 = 화면에 보여준 추천과 같은 기준(계획 휴식을 채운다는 가정). 추천대로 하면 '예상대로' */
     if (!bw && n > 0 && sg.cap) s.P = Math.round(e10(s.w, s.w === sg.w ? sg.r : Math.max(1, repsAt(sg.cap, s.w))) * 1000) / 1000;
+    /* Pr = 실제로 쉰 시간까지 반영한 예상 (세트 추가·생략 같은 종합 판단용) */
+    if (!bw && n > 0 && sg.capEl) s.Pr = Math.round(e10(s.w, Math.max(1, repsAt(sg.capEl, s.w))) * 1000) / 1000;
+    const restShort = !bw && n > 0 && sg.el !== undefined && sg.el < sg.rst * 0.8;
     data.sets.push(s); persist();
     restart($('kGo'), 'pop'); buzz(30);
-    if (n + 1 < N) startRest(restCfg.set); else if (nextIncomplete(data.idx) >= 0) startRest(restCfg.ex); else stopRest();
+    const hard = !bw && s.P > 0 && pct(e10(s.w, s.r), s.P) < -3;   /* 힘들었던 세트 뒤엔 휴식 +30초 */
+    if (n + 1 < N) startRest(restCfg.set + (hard ? 30 : 0)); else if (nextIncomplete(data.idx) >= 0) startRest(restCfg.ex); else stopRest();
     if (n + 1 === N) { render(); showDone(ex, sg); return; }
     { const pw = cur.w, pr = cur.r; sfx(n === 0 ? 'set1' : 'set2'); prefill(); render(); bumpNums(pw, pr); }
     const jp = !bw && s.P > 0 ? pct(e10(s.w, s.r), s.P) : 0;
-    toast(jp > JUMP * 100 ? '⚠ 예상보다 ' + sgn(jp) + '% · 기록을 확인해 주세요' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
+    toast(jp > JUMP * 100 ? '⚠ 예상보다 ' + sgn(jp) + '% · 기록을 확인해 주세요' : restShort ? '휴식이 짧았어요 · 다음 세트는 끝까지 쉬세요' : (n + 1) + '세트 ' + (bw ? '완료' : '저장 · ' + s.w + 'kg × ' + s.r + '회'));
   });
   $('kPrev').addEventListener('click', () => goIdx(data.idx - 1, 'prev'));
   $('kNext').addEventListener('click', () => goIdx(data.idx + 1, 'next'));
@@ -1424,12 +1436,14 @@ body.rest-on #nums{opacity:.55}
     if (isBw(ex)) return null;
     const xs = todaySets(ex), n = xs.length, N = nSets(ex);
     if (!n) return null;
-    const dv = (x) => (x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0), worst = Math.min(...xs.map(dv)), best = Math.max(...xs.map(dv));
+    /* 종합 판단: 실제 휴식까지 반영한 예상(Pr) 대비. 짧게 쉬고도 해냈으면 그만큼 컨디션이 좋은 것 */
+    const dv = (x) => (x.Pr > 0 ? pct(e10(x.w, x.r), x.Pr) : x.P > 0 ? pct(e10(x.w, x.r), x.P) : 0), worst = Math.min(...xs.map(dv)), best = Math.max(...xs.map(dv));
+    const shortOk = xs.some((x) => x.Pr > 0 && x.P > 0 && x.Pr < x.P - 1e-6);
     if (n >= N && N === SETS) {
       const s1 = suggest(ex), day = dayFatigue(ex);
       const avg = xs.reduce((a, x) => a + dv(x), 0) / n;
       if (worst >= 0 && avg >= 1 && best <= JUMP * 100 && s1.mode !== 'fatigue' && s1.mode !== 'deload' && !(s1.pen > 0.004) && day.f === 1 && xs[n - 1].r >= RMIN + 1)
-        return { kind: 'add', why: '3세트 모두 예상보다 좋음(평균 ' + sgn(avg) + '%) · 회복 충분' };
+        return { kind: 'add', why: (shortOk ? '휴식이 짧았는데도 ' : '') + '3세트 모두 예상보다 좋음(평균 ' + sgn(avg) + '%) · 회복 충분' };
     }
     if (n === N - 1 && n >= 2) {
       const l = dv(xs[n - 1]), b = backoff(ex, xs, Date.now() + 1e9);
@@ -1601,7 +1615,7 @@ body.rest-on #nums{opacity:.55}
     const head = {
       app: 'dumbbell-set-log', updated: new Date().toISOString(),
       timeZone: (Intl.DateTimeFormat().resolvedOptions().timeZone || ''),
-      note: '세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, P=그 세트의 예상 추정10RM(오늘 피로 판단용), R=1이면 그 세트부터 기준 재설정(기술·자세 변경), u=수정 시각. 추정10RM = w×(30+r)÷40',
+      note: '세트 1개 = 1줄. ex=운동 키, date=날짜, ts=세트 완료 시각(epoch ms), w=무게 kg, r=횟수(맨몸은 0), T=그날 첫 세트의 목표 추정10RM, P=그 세트의 예상 추정10RM(화면 추천 기준), Pr=실제 휴식까지 반영한 예상(세트 추가·생략 판단용), R=1이면 그 세트부터 기준 재설정(기술·자세 변경), u=수정 시각. 추정10RM = w×(30+r)÷40',
       exercises: Object.fromEntries(ORDER.map((e) => [e, EX[e].name + (isBw(e) ? ' (맨몸)' : ' (시작 10RM ' + EX[e].start + 'kg)')])),
       order: ORDER
     };
