@@ -507,7 +507,7 @@ body.rest-on #nums{opacity:.55}
         <button type="button" class="daypos" id="dayPos" aria-label="오늘 운동 목록 열기"></button>
       </div>
       <div class="exhead"><div class="extile" id="exTile"></div><h1 id="exName"></h1><svg class="grip" width="16" height="22" viewBox="0 0 16 22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l4-4 4 4M4 15l4 4 4-4"/></svg></div>
-      <div class="setrow"><div class="bars setbars" id="setBars" aria-hidden="true"></div><span id="setTxt"></span><span class="eta" id="eta"></span></div>
+      <div class="setrow"><div class="bars setbars" id="setBars" aria-hidden="true"></div><span class="eta" id="eta"></span></div>
     </header>
 
     <section class="hero" id="hero" aria-label="이번 세트">
@@ -1238,7 +1238,6 @@ body.rest-on #nums{opacity:.55}
     $('exTile').innerHTML = icon(ex, 40, '');
     let sb = ''; for (let k = 0; k < N; k++) sb += '<i class="' + (k < n ? 'd' : k === n ? 'c' : '') + '"></i>';
     $('setBars').innerHTML = sb;
-    $('setTxt').textContent = n >= N ? N + '세트 끝' : '세트 ' + (n + 1) + ' / ' + N;
 
     const sg = suggestNow(ex);
     renderNums(ex, bw, sg, n);
