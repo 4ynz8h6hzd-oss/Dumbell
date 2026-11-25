@@ -874,7 +874,8 @@ body.rest-on #nums{opacity:.55}
     else if (pick.w < last.w) { kind = 'down'; delta = '1kg 내리고 ' + pick.r + '회'; }
     else if (pick.r > last.r) { kind = 'up'; delta = '지난번보다 ' + (pick.r - last.r) + '회 더'; }
     else if (pick.r < last.r) { kind = 'down'; delta = '지난번보다 ' + (last.r - pick.r) + '회 덜'; }
-    else { kind = 'hold'; delta = '지난번과 같게'; }
+    /* 위 줄(moodOf)은 상황, 이 줄은 할 일 하나 — 같은 무게·횟수일 때도 할 일을 분명히 */
+    else { kind = 'hold'; delta = maxed ? '같은 무게 · 3초 내리기' : mode === 'normal' || mode === 'easy' ? '지난번과 같게 · 되면 1회 더' : '지난번과 같게'; }
     const up = pick.e > last.e + 1e-9;
     const note = mode === 'break' ? Math.round(hrs / 24) + '일 만이라 조금 가볍게 다시 시작해요'
       : mode === 'deload' ? '2번 연속 목표를 못 채워서 한 번 쉬어가요'
@@ -1324,11 +1325,12 @@ body.rest-on #nums{opacity:.55}
     if (sg.mode === 'break') return ['neu', '오랜만이에요 · 가볍게', Math.round(sg.hrs / 24) + '일 만이라 조금 가볍게 시작해요'];
     if (sg.mode === 'deload') return ['neu', '한 번 쉬어가요 · 조금 가볍게', '2번 연속 목표를 못 채웠어요'];
     if (sg.mode === 'fatigue') return ['neu', '이번엔 유지해요', (sg.fDrop ? '지난번 2·3세트가 예상보다 덜 나왔어요' : '최근 일주일 운동량이 평소보다 많아요')];
-    if (sg.maxed) return ['neu', '장비 한계 · 템포로 진도', MAX_W + 'kg ' + sg.prev.r + '회 · 3초 내리기로 바꾸고 판단 근거에서 기준 재설정'];
+    if (sg.maxed) return ['neu', '장비 한계 · ' + MAX_W + 'kg', sg.prev.r + '회 달성 · 3초 내리기로 바꾸고 판단 근거에서 기준 재설정'];
     if (sg.adjAct && sg.dayF < 1) return ['neu', '앞선 운동 피로 반영 · ' + chgTxt(sg.pick0, sg), '같은 근육을 앞에서 써서 조금 낮췄어요'];
     if (sg.adjAct && sg.pen > 0.004) return ['neu', '회복 중 · ' + chgTxt(sg.pick0, sg), '지난 운동 ' + Math.round(sg.hrs) + '시간 전 · ' + REC_H + '시간 전엔 살짝 낮춰요'];
     if (sg.up) return ['pos', '올릴 차례예요', sg.atMax ? '최대 덤벨이라 횟수로 진도' : '충분히 쉬었어요 · 이번에 한 단계 올려요'];
-    if (sg.mode === 'easy') return ['neu', sg.w === sg.prev.w && sg.r === sg.prev.r ? '지난번 횟수 넘기기' : '조금만 올려요 · ' + chgTxt(sg.prev, sg), '지난번 목표에 조금 못 미쳤어요'];
+    if (sg.mode === 'easy') return sg.kind === 'hold' ? ['neu', '지난번 목표에 조금 못 미침', '지난번 ' + sg.prev.w + '×' + sg.prev.r] : ['neu', '조금만 올려요 · ' + chgTxt(sg.prev, sg), '지난번 목표에 조금 못 미쳤어요'];
+    if (sg.kind === 'hold') return ['neu', '이 무게 적응 중', '며칠 더 하면 올려요'];
     return ['neu', '지난번 횟수 넘기기', sg.note || '지난번 ' + sg.prev.w + '×' + sg.prev.r];
   }
   let whySg = null, moodKey = '';
