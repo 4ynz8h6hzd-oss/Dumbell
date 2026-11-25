@@ -1190,7 +1190,7 @@ body.rest-on #nums{opacity:.55}
     const apply = () => { data.idx = i; persist(); prefill(); render(); };
     /* 스와이프만 화면이 밀려남. 패드·자동 넘김은 제자리에서 내용만 살짝 바뀜 (움직이는 건 목록) */
     if (dx) slideSwap(dir === 'prev' ? 1 : -1, apply, dx);
-    else { apply(); if (!REDUCED()) ['ctx', 'hero'].forEach((id) => { const el = $(id); if (el.animate) el.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' }); }); }
+    else { apply(); if (!REDUCED()) ['ctx', 'hero'].forEach((id) => { const el = $(id); if (el.animate) el.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: padRoll ? 90 : 220, easing: 'ease-out' }); }); }
     if (!quiet) { buzz(12); sfx('nav'); }
   }
   function goStep(d, dx) { flushSwap(); goIdx(data.idx + d, d < 0 ? 'prev' : 'next', dx); }
@@ -1512,7 +1512,7 @@ body.rest-on #nums{opacity:.55}
   const WDEC = 0.997;
   let hapEl = null, tickAt = 0;
   function wTick() {
-    const t = performance.now(); if (t - tickAt < 28) return; tickAt = t;
+    const t = performance.now(); if (t - tickAt < 14) return; tickAt = t;
     if (navigator.vibrate) { try { navigator.vibrate(4); } catch (e) {} }
     else {   /* iOS 18+: 스위치 체크박스를 누르면 기기 햅틱이 울림 */
       if (!hapEl) { hapEl = document.createElement('label'); hapEl.setAttribute('aria-hidden', 'true'); hapEl.style.cssText = 'position:fixed;left:-99px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none'; hapEl.innerHTML = '<input type="checkbox" switch tabindex="-1">'; document.body.appendChild(hapEl); }
@@ -1538,11 +1538,11 @@ body.rest-on #nums{opacity:.55}
           st.opacity = (0.2 + 0.8 * Math.cos(th)).toFixed(3);
         }
       }
-      const r = Math.round(-w.off / w.h); if (r !== w.row) { w.row = r; wTick(); }
+      const r = Math.round(-w.off / w.h); if (r !== w.row) { w.row = r; if (!w.snap) wTick(); }
     };
     w.shift = (d) => { w.off += d; w.tgt += d; w.row = Math.round(-w.off / w.h); if (w.drag) w.drag.base += d; };
     w.stop = () => { cancelAnimationFrame(w.raf); w.raf = 0; };
-    w.grab = (y, t) => { w.stop(); w.vel = 0; w.busy = true; w.drag = { y0: y, base: w.off, s: [[t, y]] }; };
+    w.grab = (y, t) => { w.snap = false; w.stop(); w.vel = 0; w.busy = true; w.drag = { y0: y, base: w.off, s: [[t, y]] }; };
     w.move = (y, t) => {
       const d = w.drag; if (!d) return;
       d.s.push([t, y]); while (d.s.length > 2 && t - d.s[0][0] > 100) d.s.shift();
@@ -1573,8 +1573,8 @@ body.rest-on #nums{opacity:.55}
         for (let i = 0; i < n; i++) {
           const rem = w.tgt - w.off;
           /* 멀리 남았고 손 방향 그대로면: 마찰 감속(남은 거리에 비례하는 속도로 매끈하게). 가까워지면 스프링 */
-          if (Math.abs(rem) > 0.5 * w.h && rem * w.vel > 0) { const want = rem / 0.3; w.vel += (want - w.vel) * Math.min(1, dt * 9); }
-          else { const T = 0.34, z = 0.78, k = (2 * Math.PI / T) ** 2, c = 4 * Math.PI * z / T; w.vel += (-k * -rem - c * w.vel) * dt; }
+          if (Math.abs(rem) > 0.5 * w.h && rem * w.vel > 0) { const want = rem / (w.snap ? 0.1 : 0.3); w.vel += (want - w.vel) * Math.min(1, dt * (w.snap ? 30 : 9)); }
+          else { const T = w.snap ? 0.15 : 0.34, z = w.snap ? 0.86 : 0.78, k = (2 * Math.PI / T) ** 2, c = 4 * Math.PI * z / T; w.vel += (-k * -rem - c * w.vel) * dt; }
           w.off += w.vel * dt;
         }
         w.paint();
@@ -1583,11 +1583,11 @@ body.rest-on #nums{opacity:.55}
       };
       w.raf = requestAnimationFrame(step);
     };
-    w.done = () => { w.busy = false; if (w.moved) { w.moved = false; sfx('nav'); buzz(10); } if (o.settle) o.settle(); };
+    w.done = () => { w.busy = false; w.snap = false; if (w.moved) { w.moved = false; sfx('nav'); buzz(10); } if (o.settle) o.settle(); };
     return w;
   }
   const rowH = (tr) => (tr && tr.firstElementChild ? tr.firstElementChild.offsetHeight : 0);
-  let lwCommit = false;
+  let lwCommit = false, padRoll = false;
   const lw = mkWheel({
     el: () => $('exTrack'), R: () => { const hf = $('exList').clientHeight / 2 - 2; return hf * 1000 / (1000 - hf); },   /* 원근(1000px)으로 줄어드는 만큼 키워서 원통이 목록 높이를 꽉 채우게 */
     commit: (st) => { lwCommit = true; const i0 = data.idx; goIdx(data.idx + st, st < 0 ? 'prev' : 'next', 0, true); lwCommit = false; if (data.idx !== i0) lw.moved = true; return st * lw.h; },
@@ -1601,6 +1601,7 @@ body.rest-on #nums{opacity:.55}
     lw.shift(st * h);
     if (lw.drag) { lw.paint(); return; }
     lw.off = Math.max(-6 * h, Math.min(6 * h, lw.off)); lw.tgt = 0; lw.row = Math.round(-lw.off / h);
+    lw.snap = padRoll;   /* 패드 «·»: 틱은 누른 순간 이미 울림 → 더 단단한 스프링으로 빠르게 달라붙음 */
     lw.go(0, lw.raf ? lw.vel : 0);
   }
   function rowHtml(e, i, left, k) {
@@ -1743,7 +1744,7 @@ body.rest-on #nums{opacity:.55}
       navArm = k; setTimeout(() => { if (navArm === k) navArm = ''; }, 2000);
       buzz(8); toast('세트 진행 중 · 한 번 더 누르면 ' + (d < 0 ? '이전' : '다음') + ' 운동으로'); return;
     }
-    navArm = ''; flushSwap(); const i0 = data.idx; goIdx(data.idx + d, d < 0 ? 'prev' : 'next', 0, true); if (data.idx !== i0) wTick();
+    navArm = ''; flushSwap(); const i0 = data.idx; padRoll = true; goIdx(data.idx + d, d < 0 ? 'prev' : 'next', 0, true); padRoll = false; if (data.idx !== i0) wTick();
   };
   /* 누르고 있으면 연속 이동: 베지어 곡선으로 점점 빨라짐(피젯 스피너처럼) — 세트 진행 중 확인도 길게 누르면 통과 */
   const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x → y (이분법) */
@@ -1751,7 +1752,7 @@ body.rest-on #nums{opacity:.55}
     let lo = 0, hi = 1, t = x; for (let k = 0; k < 20; k++) { t = (lo + hi) / 2; if (f(t, x1, x2) < x) lo = t; else hi = t; }
     return f(t, y1, y2);
   };
-  const NAV_EASE = bez(0.6, 0, 0.3, 1), NAV_SLOW = 300, NAV_FAST = 55, NAV_RAMP = 1800;
+  const NAV_EASE = bez(0.6, 0, 0.3, 1), NAV_SLOW = 260, NAV_FAST = 18, NAV_RAMP = 1400;
   [['kPrev', -1], ['kNext', 1]].forEach(([id, d]) => {
     const b = $(id); let t = null, t0 = 0;
     const stop = () => { clearTimeout(t); t = null; b.classList.remove('pressed'); };
@@ -1765,7 +1766,7 @@ body.rest-on #nums{opacity:.55}
       e.preventDefault(); stop();
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
       b.classList.add('pressed'); padNav(d);
-      t = setTimeout(() => { t0 = performance.now(); loop(); }, 400);
+      t = setTimeout(() => { t0 = performance.now(); loop(); }, 320);
     });
     ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, stop));
     b.addEventListener('click', (e) => { if (e.detail === 0) padNav(d); });
