@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/.claude/skills/i-have-adhd/SKILL.md\"; [ -f \"$f\" ] && { echo 'ADHD MODE ACTIVE (always-on, project). Rules below apply to every response. \"stop adhd mode\" turns it off for this session.'; echo; sed '1,/^---$/d' \"$f\"; }; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}
