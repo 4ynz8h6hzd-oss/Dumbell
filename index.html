@@ -687,7 +687,7 @@ body.rest-on #nums{opacity:.55}
   /* ---------- storage ---------- */
   let mem = null;
   const load = () => { try { const s = localStorage.getItem(KEY); if (s) return JSON.parse(s); } catch (e) {} return mem; };
-  const saveLocal = () => { mem = data; try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} };
+  const saveLocal = () => { mem = data; ver++; try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} };
   const persist = () => { saveLocal(); queueSync(); };
   let data = load();
   if (!data || !Array.isArray(data.sets)) data = { sets: [], dayDate: '', idx: 0 };
@@ -699,7 +699,8 @@ body.rest-on #nums{opacity:.55}
   const dstr = (d) => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
   const today = () => dstr(new Date());
   const md = (s) => { const p = s.split('-'); return (+p[1]) + '/' + (+p[2]); };
-  const dayNum = (s) => { const p = s.split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]) / 864e5; };
+  const dnC = new Map();   /* 날짜 문자열 → 일 번호 (같은 날짜를 수천 번 다시 파싱하지 않게) */
+  const dayNum = (s) => { let v = dnC.get(s); if (v === undefined) { const p = s.split('-').map(Number); v = Date.UTC(p[0], p[1] - 1, p[2]) / 864e5; dnC.set(s, v); } return v; };
   const clampW = (v) => { v = Math.round(Number(v)); if (!isFinite(v)) v = MIN_W; return Math.min(MAX_W, Math.max(MIN_W, v)); };
   const clampR = (v) => { v = Math.round(Number(v)); if (!isFinite(v)) v = 1; return Math.min(100, Math.max(1, v)); };
   const e10 = (w, r) => w * (30 + r) / 40;            /* Epley 공식을 10회 기준으로 맞춘 추정 10RM */
@@ -723,20 +724,31 @@ body.rest-on #nums{opacity:.55}
   /* 무한 사이클: 13개 운동을 한 바퀴씩 돌고 다시 처음으로. 날짜가 바뀌어도 이어서 진행 (data.cyc = 이번 바퀴 상태)
      세션 키(sk) = 그 운동 세션의 1세트 날짜. 다음 날 이어서 한 세트(2세트부터)는 sk로 원래 세션에 묶임, 같은 날 두 번째 바퀴는 'YYYY-MM-DD.2' */
   const skey = (s) => s.sk || s.date;
-  const todaySets = (ex) => { const t = today(); return data.sets.filter((s) => s.date === t && (!ex || s.ex === ex)).sort((a, b) => a.ts - b.ts); };
+  /* 계산 캐시: 기록(data.sets)·날짜가 바뀌면 자동으로 비움. 저장(saveLocal)마다 ver++, 배열 교체·세트 추가는 참조·길이로도 감지
+     (기록이 쌓일수록 화면 한 번 그릴 때 같은 전체 기록 훑기를 수백 번 하던 것 → 바뀔 때 한 번) */
+  let ver = 0, cacheK = '', cacheRef = null;
+  const caches = [];
+  function chk() { const k = ver + '|' + data.sets.length + '|' + today(); if (k !== cacheK || cacheRef !== data.sets) { cacheK = k; cacheRef = data.sets; caches.forEach((m) => m.clear()); } }
+  const memo = (fn, kf) => { const m = new Map(); caches.push(m); return (...a) => { chk(); const k = kf(...a); let v = m.get(k); if (v === undefined) { v = fn(...a); m.set(k, v); } return v; }; };
+  const todayM = memo((ex) => { const t = today(); return data.sets.filter((s) => s.date === t && (!ex || s.ex === ex)).sort((a, b) => a.ts - b.ts); }, (ex) => ex || '');
+  const todaySets = (ex) => todayM(ex).slice();
   const newCyc = () => ({ id: uid(), s: {}, n: {} });
   if (!data.cyc || !data.cyc.s) {
     data.cyc = newCyc();
     ORDER.forEach((e) => { if (todaySets(e).length) data.cyc.s[e] = today(); if (data.plan && data.plan.date === today() && data.plan[e]) data.cyc.n[e] = data.plan[e]; });
   }
   /* 이번 바퀴에서 이 운동 세션의 세트 */
-  const lapSets = (ex) => { const k = data.cyc.s[ex]; return k ? data.sets.filter((s) => s.ex === ex && skey(s) === k).sort((a, b) => a.ts - b.ts) : []; };
-  const doneCount = (ex) => lapSets(ex).length;
-  function sessions(ex, excludeCur) {
-    const cur = excludeCur ? data.cyc.s[ex] : null, by = {};
-    data.sets.forEach((s) => { const k = skey(s); if (s.ex !== ex || (cur && k === cur)) return; (by[k] = by[k] || []).push(s); });
+  const lapM = memo((ex, k) => (k ? data.sets.filter((s) => s.ex === ex && skey(s) === k).sort((a, b) => a.ts - b.ts) : []), (ex, k) => ex + '|' + (k || ''));
+  const lapSets = (ex) => lapM(ex, data.cyc.s[ex]).slice();
+  const doneCount = (ex) => lapM(ex, data.cyc.s[ex]).length;
+  /* 운동별 세션(최신순). 전체 기록을 한 번만 운동별로 나눠 둠 */
+  const byExM = memo(() => { const o = {}; data.sets.forEach((s) => { (o[s.ex] = o[s.ex] || []).push(s); }); return o; }, () => '');
+  const sessM = memo((ex, cur) => {
+    const by = {};
+    (byExM()[ex] || []).forEach((s) => { const k = skey(s); if (cur && k === cur) return; (by[k] = by[k] || []).push(s); });
     return Object.values(by).map((xs) => xs.sort((a, b) => a.ts - b.ts)).sort((a, b) => b[0].ts - a[0].ts).map((xs) => ({ date: skey(xs[0]).slice(0, 10), sets: xs }));
-  }
+  }, (ex, cur) => ex + '|' + (cur || ''));
+  function sessions(ex, excludeCur) { return sessM(ex, excludeCur ? data.cyc.s[ex] : null).slice(); }
 
   /* ---------- progression: time-based (RATE per week), recovery & fatigue aware, nearest step ---------- */
   /* candidate steps nearest to target; when holding is allowed (r0), a change must be worth ≥ MIN_STEP */
@@ -812,7 +824,17 @@ body.rest-on #nums{opacity:.55}
   /* 시작 기준 맞추기: 운동별 처음 CALIB_N 세션(기준 재설정 후 포함)의 1세트는 여유 있으면 1회 남을 때까지 → 입력한 10RM이 낮아도 빨리 따라잡음 */
   const CALIB_N = 2;
   const calib = (ex) => !isBw(ex) && sessCut(ex, true).length < CALIB_N;
+  /* 지금 시각 추천은 한 번의 처리(이벤트·타이머 한 번) 안에서 한 번만 계산 — 화면 그리기 한 번에 같은 운동을 여러 번 묻던 것 (기록이 바뀌면 키가 바뀜) */
+  let sgF = null;
   function suggest(ex, nowMs) {
+    if (nowMs) return suggestAt(ex, nowMs);
+    chk();
+    if (!sgF) { sgF = new Map(); queueMicrotask(() => { sgF = null; }); }
+    const k = ex + '|' + cacheK + '|' + (data.cyc.s[ex] || '') + '|' + (data.rp && data.rp[ex] || '');
+    let v = sgF.get(k); if (!v) sgF.set(k, v = suggestAt(ex, Date.now()));
+    return v;
+  }
+  function suggestAt(ex, nowMs) {
     const now = nowMs || Date.now(), ssAll = sessions(ex, true), ss = sessCut(ex, true);
     if (!isBw(ex) && resetPending(ex) && ssAll.length) {
       const f = ssAll[0].sets[0], b = e10(f.w, f.r) * 0.92, pk = steps(f.w, 0, b)[0];
@@ -1000,10 +1022,11 @@ body.rest-on #nums{opacity:.55}
 
   /* ---------- 목표 속도: 운동별로 기록 보고 0.1%p씩 조정 ---------- */
   /* 최근 GOAL_DAYS일 첫 세트 추정10RM 직선 평활(최소제곱, 기준 재설정 이후만). upto 날짜(dayNum) 전날까지 기록만. 4세션·14일 미만이면 null */
+  /* 세션별 첫 세트 점(최신순): x = 일 번호, y = 추정10RM, R = 기준 재설정 */
+  const sessPts = memo((ex) => sessions(ex, false).map((s) => { const f = s.sets[0]; return { x: dayNum(s.date), y: e10(f.w, f.r), R: !!f.R }; }), (ex) => ex);
   function goalFit(ex, upto) {
-    const ss = sessions(ex, false).filter((s) => dayNum(s.date) < upto), i = ss.findIndex((x) => x.sets[0] && x.sets[0].R);
-    const gp = (i >= 0 ? ss.slice(0, i + 1) : ss).filter((s) => upto - 1 - dayNum(s.date) < GOAL_DAYS)
-      .map((s) => { const f = s.sets[0]; return { x: dayNum(s.date), y: e10(f.w, f.r) }; }).reverse();
+    const ss = sessPts(ex).filter((p) => p.x < upto), i = ss.findIndex((p) => p.R);
+    const gp = (i >= 0 ? ss.slice(0, i + 1) : ss).filter((p) => upto - 1 - p.x < GOAL_DAYS).reverse();
     if (gp.length < 4) return null;
     const fit = (a) => { let mx = 0, my = 0, nu = 0, de = 0;
       a.forEach((p) => { mx += p.x; my += p.y; }); mx /= a.length; my /= a.length;
@@ -1017,7 +1040,8 @@ body.rest-on #nums{opacity:.55}
   /* 첫 기록 1주 뒤부터 7일마다 점검: 평활 속도가 지금 목표보다 RATE_BAND 넘게 빠르면 +RATE_STEP, 느리면 −RATE_STEP (RATE_MIN~RATE_MAX).
      기록에서 매번 다시 계산 → 저장 상태 없음. 그날 기록은 다음 점검부터 반영 */
   const RATE_MIN = 0.01, RATE_MAX = 0.03, RATE_STEP = 0.001, RATE_BAND = 0.003;
-  function exRate(ex) {
+  const exRate = memo((ex) => exRate0(ex), (ex) => ex);
+  function exRate0(ex) {
     let r = RATE; const log = [];
     if (isBw(ex)) return { r, log };
     const ss = sessions(ex, false), tn = dayNum(today());
@@ -1037,7 +1061,8 @@ body.rest-on #nums{opacity:.55}
   const xmd = (x) => { const d = new Date(x * 864e5); return (d.getUTCMonth() + 1) + '/' + d.getUTCDate(); };
 
   /* ---------- trend (estimated 10RM) ---------- */
-  function trend(ex) {
+  const trend = memo((ex) => trend0(ex), (ex) => ex);
+  function trend0(ex) {
     const tn = dayNum(today()), recent = sessions(ex, false).filter((s) => tn - dayNum(s.date) < WINDOW_DAYS);
     if (isBw(ex)) {
       const n = recent.length;
@@ -1478,7 +1503,8 @@ body.rest-on #nums{opacity:.55}
     render();
   });
   /* 남은 세트 · 예상 종료 시각 */
-  function setPace() {
+  const setPace = memo(() => setPace0(), () => '');
+  function setPace0() {
     const span = (xs) => (xs.length >= 4 ? (xs[xs.length - 1].ts - xs[0].ts) / (xs.length - 1) : 0);
     const t = todaySets();
     if (t.length >= 6) return span(t);
@@ -1487,7 +1513,8 @@ body.rest-on #nums{opacity:.55}
     return ps.length ? median(ps) : 120e3;
   }
   /* 오늘 한 바퀴: 오늘 처음 시작한 운동부터 13개 운동. 한 바퀴를 다 돌면 그 뒤 첫 세트부터 다음 바퀴 */
-  function dayLap() {
+  const dayLap = memo(() => dayLap0(), () => data.idx + '|' + JSON.stringify(data.cyc));
+  function dayLap0() {
     const t = todaySets().filter((s) => !s.sample);
     let i0 = data.idx, t0 = Infinity, endTs = 0, k0 = 0;
     for (;;) {
@@ -1652,8 +1679,10 @@ body.rest-on #nums{opacity:.55}
     $('whyDlg').showModal();
   }
   setInterval(() => {
+    if (document.hidden) return;
+    if (data.dayDate !== today() && !showingDone) { ensureDay(); prefill(); render(); }   /* 화면을 켜 둔 채 자정이 지나도 날짜 넘김 */
     const ex = curEx(), n = doneCount(ex);
-    if (showingDone || document.hidden) return;
+    if (showingDone) return;
     renderToday();
     if (isBw(ex) || n >= nSets(ex)) return;
     const sg = suggestNow(ex);
@@ -2803,9 +2832,8 @@ body.rest-on #nums{opacity:.55}
   const restSec = () => Math.ceil((rest.end - Date.now()) / 1000);
   function restDecor() {             /* render()가 덮어쓴 글자를 휴식 표시로 바꿈 */
     if (!rest) return;
-    const left = restSec(), ended = left <= 0, ex = curEx(), n = doneCount(ex);
+    const left = restSec();
     /* 휴식 표시는 수면 + 버튼의 '휴식 중'만 (남은 시간 숫자 없음) */
-    void ended; void ex; void n;
     $('rArc').setAttribute('stroke-dasharray', Math.max(0, Math.min(100, left * 1000 / rest.total * 100)) + ' 100');
   }
   function drawRest() {
@@ -2814,13 +2842,12 @@ body.rest-on #nums{opacity:.55}
     if (!rest) { w.hidden = true; B.classList.remove('rest-on', 'rest-end'); return; }
     const left = rest.end - Date.now();
     if (left <= -OVER_MAX) { stopRest(); return; }
-    const ended = left <= 0, s = restSec();
+    const ended = left <= 0;
     if (ended && !restRang) { restRang = true; closeRMenu(); if (!document.hidden) { buzz([200, 100, 200]); restart($('kGo'), 'pop'); } }
     B.classList.toggle('rest-on', !ended); B.classList.toggle('rest-end', ended);
     const h = ended ? 100 : Math.min(100, Math.max(0, (1 - left / rest.total) * 100));
     w.hidden = false; w.classList.toggle('end', ended); w.classList.toggle('hi', h > 85);
     w.style.height = h + '%';
-    $('wTag').innerHTML = (s >= 60 ? Math.floor(s / 60) + '분' + (s % 60 ? ' ' + (s % 60) + '초' : '') : s + '초') + '<small>남음</small>';
     restDecor();
     restTick = setTimeout(drawRest, 250);
   }
@@ -2964,7 +2991,8 @@ body.rest-on #nums{opacity:.55}
     if (data.dayDate !== today()) { ensureDay(); hideDone(); prefill(); render(); }
     queueSync(300);
   });
-  window.addEventListener('resize', () => { render(); });
+  let rsRaf = 0;
+  window.addEventListener('resize', () => { if (!rsRaf) rsRaf = requestAnimationFrame(() => { rsRaf = 0; render(); }); });
   ensureDay();
   if (!(data.idx >= 0 && data.idx < ORDER.length)) data.idx = 0;
   prefill();
