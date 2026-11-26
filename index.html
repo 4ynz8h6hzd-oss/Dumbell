@@ -60,10 +60,10 @@ button{cursor:pointer}
 .delta{margin:0;display:flex;align-items:center;gap:6px;font-size:16px;font-weight:700}
 .delta.bo{color:#0A4FA3}
 .delta.up,.delta.same{color:var(--greenTxt)}.delta.hold{color:var(--ink)}.delta.down{color:#9A3D00}.delta.retry,.delta.first,.delta.bw{color:#0A4FA3}
-.why{margin:0;font-size:13px;line-height:1.55;color:var(--sub)}
+.why{margin:0;font-size:14px;line-height:1.55;color:var(--ink);font-variant-numeric:tabular-nums}
 .delta .pct{font-style:normal;margin-left:4px;padding:1px 8px;border-radius:999px;box-shadow:inset 0 0 0 1.5px currentColor;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
-.why .ago{color:var(--mute)}
-.rule{margin:0;font-size:12px;line-height:1.5;color:var(--sub)}.rule:empty{display:none}
+.why .ago{color:var(--sub)}
+.rule{margin:0;font-size:13px;line-height:1.5;color:var(--sub);font-variant-numeric:tabular-nums}.rule:empty{display:none}
 .sgx{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:var(--plate)}.sgx b{font-size:13px}.sgx p{margin:0;font-size:12px;line-height:1.55;color:var(--sub)}
 
 /* trend row (single column only) */
@@ -287,11 +287,8 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .mood span{display:block;font-size:13px;font-weight:600;line-height:1.35;color:var(--sub);font-variant-numeric:tabular-nums}.mood span:empty{display:none}
 .mood.pos{color:#1E6E31}.mood.neu{color:#0A4FA3}.mood.neg{color:#9A3D00}.mood.warn{color:#B0241A}
 .mood.warn>i{animation-duration:1.2s}
-.mood.pop{animation:moodpop .45s ease-out}
 @keyframes breathe{0%,100%{transform:scale(.7);opacity:.55}50%{transform:scale(1.15);opacity:1}}
 @keyframes moodpop{0%{transform:scale(.97);opacity:.6}100%{transform:none;opacity:1}}
-.why{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}.why .ago{color:var(--sub)}
-.rule{font-size:13px;font-variant-numeric:tabular-nums}
 @media (max-height:700px){.mood b{font-size:19px}.mood span{font-size:13px}}
 @media (max-height:620px){.mood b{font-size:18px}.mood span{display:none}}
 .today{flex:none;margin:0 24px 8px;display:flex;align-items:center;gap:10px;padding:10px 14px;border:0;border-radius:14px;background:var(--plate);text-align:left;color:var(--ink);font:inherit;transition:background-color .5s,color .5s}
@@ -851,7 +848,7 @@ body.rest-on #nums{opacity:.55}
     hist.forEach((h, i) => { const o = hist[i + 1], hi = (x) => x && typeof x.T === 'number' && x.raw > x.T * (1 + CAP);
       if (hi(h) && !hi(o)) { h.e = h.T * (1 + CAP); h.capped = true; } });
     if (!hist.length) {
-      const st = EX[ex].start, pick = { w: st, r: 10, e: st };
+      const st = EX[ex].start;
       return { kind: 'same', w: st, r: 10, T: st, step: 0, delta: '입력한 10RM으로 시작', prev: null, note: '첫 기록이에요. 입력한 10RM ' + st + 'kg × 10회로 시작해요.', why: '첫 기록이라 입력한 10RM 그대로 시작해요.', last: '' };
     }
     const last = hist[0], hrs = (now - last.end) / 36e5;
@@ -1296,11 +1293,8 @@ body.rest-on #nums{opacity:.55}
     renderDelta(sg, bw);
     const ts = lapSets(ex);
     renderToday();
-    if (bw) { renderWhy(sg); $('why').textContent = sg.why; $('rule').textContent = sg.last; }
-    else {
-      renderWhy(sg);
-    }
-    void ts;
+    renderWhy(sg);
+    if (bw) { $('why').textContent = sg.why; $('rule').textContent = sg.last; }
 
     const t = trend(ex);
     $('trend').innerHTML = '<b class="tk-' + t.ev.kind + '">' + t.ev.label + '</b>' + (t.bw ? '<svg aria-hidden="true"></svg>' : chart(t, false)) + '<span>' + esc(t.ev.wk !== undefined ? WK_TXT[wkKind(t.ev.wk)] : t.ev.short) + '</span>';
@@ -1335,8 +1329,8 @@ body.rest-on #nums{opacity:.55}
   /* why today's suggestion: full reasoning, kept off the main screen */
   /* main-screen reason line (tap → numbered steps); also refreshed every second while resting */
   /* live text: "몇 시간 몇 분 전"까지, 매초 갱신 */
-  const agoLive = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)), d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60), sec = t % 60;
-    void sec; return t < 60 ? '방금' : (d ? d + '일 ' + h + '시간 ' + m + '분' : h ? h + '시간 ' + m + '분' : m + '분') + ' 전'; };
+  const agoLive = (ms) => { const t = Math.max(0, Math.floor(ms / 1000)), d = Math.floor(t / 86400), h = Math.floor(t % 86400 / 3600), m = Math.floor(t % 3600 / 60);
+    return t < 60 ? '방금' : (d ? d + '일 ' + h + '시간 ' + m + '분' : h ? h + '시간 ' + m + '분' : m + '분') + ' 전'; };
   const setsTxt = (xs) => xs[0].w + '×' + xs.map((x, i) => (i && x.w !== xs[0].w ? x.w + '×' : '') + x.r).join('·');
   /* 긍정 · 중립 · 부정 한 줄. 메인 화면엔 정수 %만, 실제 무게×횟수를 바꾸지 않는 1% 남짓 조정은 말하지 않음 (덤벨 들기 전 괜한 부정 문구 방지) */
   const devTxt = (v) => (v > 1 ? '오늘 예상보다 잘 되고 있어요' : v < -1 ? '오늘 예상보다 조금 힘든 날이에요' : '오늘 예상대로예요');
@@ -2383,6 +2377,9 @@ body.rest-on #nums{opacity:.55}
   const lsGet = (k) => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
   const lsSet = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} };
   let syncTimer = null, syncing = false, syncAgain = false, syncErr = '', syncAt = lsGet(SYNCK);
+  /* 이 기기가 마지막으로 읽거나 쓴 원격 상태(메모리만). 기록 저장 때는 받지 않고 바로 올림 — 다른 기기가 먼저 바꿨으면
+     GitHub가 sha 불일치(409)로 거절 → 그때 받아서 합치고 다시 올림. 앱을 열 때·다시 볼 때·'지금 저장'은 항상 먼저 받음 */
+  let ghSha = null, ghKey = null, syncPull = false;
   const ghApi = (method, body, raw) => fetch('https://api.github.com/repos/' + GH.owner + '/' + GH.repo + '/contents/' + GH.path + (method === 'GET' ? '?ref=' + GH.branch + '&t=' + Date.now() : ''), {
     method, cache: 'no-store',
     headers: Object.assign({ Authorization: 'Bearer ' + lsGet(TOKK), Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }, body ? { 'Content-Type': 'application/json' } : {}),
@@ -2399,15 +2396,20 @@ body.rest-on #nums{opacity:.55}
     if (!txt) { const r2 = await ghApi('GET', null, true); if (!r2.ok) throw r2.status; txt = await r2.text(); }
     return { sha: j.sha, doc: txt.trim() ? JSON.parse(txt) : null };
   }
+  /* 밖에서 들어온 세트(GitHub·백업 파일) 검사: 화면 HTML에 그대로 들어가는 값(id·날짜·숫자)이 형식에 맞을 때만 받음 */
+  const ID_RE = /^[\w.-]{1,64}$/, D_RE = /^\d{4}-\d\d-\d\d$/, SK_RE = /^\d{4}-\d\d-\d\d(\.\d+)?$/;
+  const num = (v) => typeof v === 'number' && isFinite(v);
+  const okSet = (x) => !!x && !!EX[x.ex] && ID_RE.test(String(x.id)) && typeof x.date === 'string' && D_RE.test(x.date) && num(x.ts) && num(x.w) && num(x.r) &&
+    (x.sk === undefined || (typeof x.sk === 'string' && SK_RE.test(x.sk))) && ['T', 'P', 'Pr', 'u', 'q', 'R', 'C'].every((k) => x[k] === undefined || num(x[k]));
   const realSets = () => data.sets.filter((x) => !x.sample).sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1));
   const setsKey = (arr, del) => JSON.stringify([arr, del]);
   function mergeRemote(doc) {
     if (!doc) return false;
-    const del = new Set([].concat(data.deleted || [], doc.deleted || []));
+    const del = new Set([].concat(data.deleted || [], (Array.isArray(doc.deleted) ? doc.deleted : []).filter((id) => typeof id === 'string')));
     const before = setsKey(realSets(), (data.deleted || []).slice().sort());
     const map = new Map();
     const put = (x) => {
-      if (!x || !EX[x.ex] || x.sample || del.has(x.id)) return;
+      if (!okSet(x) || x.sample || del.has(x.id)) return;
       const o = map.get(x.id);
       if (!o || (x.u || x.ts) > (o.u || o.ts)) map.set(x.id, x);
     };
@@ -2433,16 +2435,28 @@ body.rest-on #nums{opacity:.55}
   async function sync(force) {
     if (!lsGet(TOKK)) return;
     if (syncing) { syncAgain = true; return; }
+    const pull = force || syncPull || !ghSha; syncPull = false;
     clearTimeout(syncTimer); syncTimer = null; syncing = true; syncErr = ''; showSync('저장 중…');
     try {
       for (let tries = 0; ; tries++) {
-        const { sha, doc } = await ghPull();
-        if (mergeRemote(doc) && !showingDone) render();
-        const remoteKey = doc ? setsKey((doc.sets || []).slice().sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1)), (doc.deleted || []).slice().sort()) : null;
-        if (!force && remoteKey === setsKey(realSets(), data.deleted || [])) break;
+        let sha = ghSha, remoteKey = ghKey;
+        if (pull || tries) {
+          const p = await ghPull(); sha = p.sha;
+          if (mergeRemote(p.doc) && !showingDone) render();
+          remoteKey = p.doc ? setsKey((p.doc.sets || []).slice().sort((a, b) => a.ts - b.ts || (a.id < b.id ? -1 : 1)), (p.doc.deleted || []).slice().sort()) : null;
+          ghSha = sha; ghKey = remoteKey;
+        }
+        const localKey = setsKey(realSets(), data.deleted || []);
+        if (!force && remoteKey === localKey) break;
         const n = realSets().length;
         const r = await ghApi('PUT', { message: '운동 기록 ' + today() + ' · 총 ' + n + '세트', content: b64e(docText()), branch: GH.branch, ...(sha ? { sha } : {}) });
-        if (r.ok) break;
+        if (r.ok) {
+          ghSha = null;
+          try { const j = await r.json(); ghSha = (j.content && j.content.sha) || null; } catch (e) {}
+          ghKey = ghSha ? localKey : null;
+          break;
+        }
+        ghSha = null; ghKey = null;
         if ((r.status === 409 || r.status === 422) && tries < 2) continue;
         throw r.status;
       }
@@ -2454,7 +2468,7 @@ body.rest-on #nums{opacity:.55}
     syncing = false; showSync();
     if (syncAgain) { syncAgain = false; queueSync(0); }
   }
-  function queueSync(ms) { if (!lsGet(TOKK)) return; clearTimeout(syncTimer); syncTimer = setTimeout(sync, ms == null ? 1500 : ms); }
+  function queueSync(ms, pull) { if (!lsGet(TOKK)) return; if (pull) syncPull = true; clearTimeout(syncTimer); syncTimer = setTimeout(() => sync(false), ms == null ? 1500 : ms); }
   function tomb(id) { data.deleted = data.deleted || []; if (!data.deleted.includes(id)) data.deleted.push(id); }
   function showSync(busy) {
     const on = !!lsGet(TOKK), st = $('syncStat');
@@ -2471,7 +2485,7 @@ body.rest-on #nums{opacity:.55}
     lsSet(TOKK, v); $('tokIn').value = ''; syncErr = ''; showSync(); sync(true);
   });
   $('syncNow').addEventListener('click', async () => { await sync(true); toast(syncErr ? 'GitHub 저장 실패: ' + syncErr : 'GitHub에 저장했어요'); });
-  $('tokOff').addEventListener('click', () => { lsSet(TOKK, ''); lsSet(SYNCK, ''); syncAt = ''; syncErr = ''; showSync(); toast('GitHub 연결을 해제했어요'); });
+  $('tokOff').addEventListener('click', () => { lsSet(TOKK, ''); ghSha = ghKey = null; lsSet(SYNCK, ''); syncAt = ''; syncErr = ''; showSync(); toast('GitHub 연결을 해제했어요'); });
 
   /* ---------- 백업 파일 ---------- */
   $('bkSave').addEventListener('click', () => {
@@ -2487,12 +2501,16 @@ body.rest-on #nums{opacity:.55}
     try {
       const j = JSON.parse(await f.text()), arr = Array.isArray(j) ? j : j.sets;
       if (!Array.isArray(arr)) throw 0;
-      const have = new Set(data.sets.map((s) => s.id));
+      const have = new Set(data.sets.map((s) => s.id).concat(data.deleted || []));   /* 지운 세트는 다시 살리지 않음 */
       let added = 0;
       arr.forEach((s) => {
-        if (!s || !EX[s.ex] || typeof s.date !== 'string' || have.has(s.id)) return;
-        data.sets.push({ id: String(s.id || uid()), ex: s.ex, date: s.date, ts: Number(s.ts) || Date.now(), w: isBw(s.ex) ? 0 : clampW(s.w), r: isBw(s.ex) ? 0 : clampR(s.r), ...(typeof s.T === 'number' ? { T: s.T } : {}), ...(typeof s.sk === 'string' ? { sk: s.sk } : {}), ...(s.sample ? { sample: true } : {}) });
-        have.add(s.id); added++;
+        if (!s || have.has(s.id)) return;
+        const x = { ...s, id: s.id === undefined ? uid() : s.id, ts: num(s.ts) ? s.ts : Date.now(), w: isBw(s.ex) ? 0 : clampW(s.w), r: isBw(s.ex) ? 0 : clampR(s.r) };
+        if (!x.sample) delete x.sample;
+        if (!okSet(x)) return;
+        /* 알려진 필드만 (P·Pr·q·R·C·u 포함 — 예전엔 빠져서 기준 재설정·여유 입력이 사라졌음) */
+        const o = {}; ['id', 'ex', 'date', 'ts', 'w', 'r', 'sk', 'T', 'P', 'C', 'R', 'Pr', 'q', 'u', 'sample'].forEach((k) => { if (x[k] !== undefined) o[k] = x[k]; });
+        data.sets.push(o); have.add(o.id); added++;
       });
       persist(); prefill(); render(); $('list').close();
       toast(added ? added + '세트를 불러왔어요' : '새로 불러올 기록이 없어요');
@@ -2502,7 +2520,7 @@ body.rest-on #nums{opacity:.55}
   /* ---------- sample data (past sessions, follows the algorithm) ---------- */
   function rng(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   function seed() {
-    const rnd = rng(7), now = new Date(), realToday = today, cap = {};
+    const rnd = rng(7), now = new Date(), cap = {};
     ORDER.forEach((ex) => { if (!isBw(ex)) cap[ex] = EX[ex].start * 0.99; });
     for (let back = 24; back >= 1; back--) {
       const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - back * 2, 19, 0, 0), ds = dstr(day);
@@ -2524,7 +2542,6 @@ body.rest-on #nums{opacity:.55}
         }
       });
     }
-    void realToday;
     persist(); prefill(); render(); toast('예시 데이터를 넣었어요');
   }
 
@@ -2989,7 +3006,7 @@ body.rest-on #nums{opacity:.55}
     if (document.hidden) { if (syncTimer) sync(); return; }
     lockWake(); checkUpdate();
     if (data.dayDate !== today()) { ensureDay(); hideDone(); prefill(); render(); }
-    queueSync(300);
+    queueSync(300, true);
   });
   let rsRaf = 0;
   window.addEventListener('resize', () => { if (!rsRaf) rsRaf = requestAnimationFrame(() => { rsRaf = 0; render(); }); });
@@ -3002,7 +3019,7 @@ body.rest-on #nums{opacity:.55}
   window.addEventListener('focus', () => { lockWake(); checkUpdate(); });
   setTimeout(checkUpdate, 1500);
   if (/[?&]v=/.test(location.search)) history.replaceState(null, '', location.pathname);
-  queueSync(500);
+  queueSync(500, true);
 }
 </script>
 </body>
