@@ -275,6 +275,10 @@ dialog::backdrop{background:rgba(0,0,0,.3)}
 .btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .btn{min-height:48px;border-radius:14px;border:0;font-size:16px;font-weight:600;background:var(--plate)}
 .btn:disabled{opacity:.4}
+.evh{margin:2px 0 4px;font-size:22px;font-weight:800;letter-spacing:-.02em}
+.ev{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:14px;background:var(--plate)}
+.ev small{font-size:12px;font-weight:800}.ev b{font-size:16px;font-weight:700;line-height:1.45}
+#evalBtn{margin-left:auto}
 .btn.pri{background:var(--blue);color:#fff}.btn.del{grid-column:1/-1;background:#FDECEA;color:#B0241A}.btn.wide{grid-column:1/-1}
 .mood{display:flex;align-items:center;gap:10px;color:var(--ink);transition:color .5s;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .mood.skip b::after{content:' ›';opacity:.6}
@@ -523,6 +527,7 @@ body.rest-on #nums{opacity:.55}
     <header class="ctx" id="ctx">
       <div class="ctx-top">
         <button type="button" class="daypos" id="dayPos" aria-label="오늘 운동 목록 열기"></button>
+        <button type="button" class="pill" id="evalBtn">지난 운동 평가</button>
       </div>
       <div class="exhead"><div class="extile" id="exTile"></div><h1 id="exName"></h1><svg class="grip" width="16" height="22" viewBox="0 0 16 22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l4-4 4 4M4 15l4 4 4-4"/></svg></div>
       <div class="setrow"><div class="bars setbars" id="setBars" aria-hidden="true"></div><span class="eta" id="eta"></span></div>
@@ -1558,81 +1563,78 @@ body.rest-on #nums{opacity:.55}
     const ch = rows.filter((r) => r.chg !== null), up = ch.filter((r) => r.chg > 0.5), dn = ch.filter((r) => r.chg < -0.5);
     const qs = [].concat(...rows.map((r) => r.xs)), qY = qs.filter((s) => s.q === 1).length, qL = qs.filter((s) => s.q === -1).length;
     const jumps = rows.filter((r) => r.jump), calN = rows.filter((r) => r.top && r.top.C).length;
-    const nm = (r) => EX[r.e].short, S = [];
-    /* 1. 총평 */
+    const nm = (r) => EX[r.e].short, ig = (w) => { const c = w.charCodeAt(w.length - 1) - 0xAC00; return w + (c >= 0 && c < 11172 && c % 28 ? '이' : '가'); };
+    /* 핵심만: 한 줄 판정 + 잘한 점 · 아쉬운 점 · 다음엔 (각 한 문장, 우선순위 첫 항목만) */
     const sc = avgTop !== null ? avgTop : avgBo;
-    let tone = 'neu', head = '기록이 적어 판단하기 어려운 블록이에요';
-    if (sc !== null) {
-      if (sc >= 3) { tone = 'pos'; head = '예상보다 잘 된 블록이에요'; }
-      else if (sc <= -4) { tone = 'neg'; head = '힘든 블록이었어요'; }
-      else if (sc <= -2) { tone = 'neg'; head = '조금 힘든 블록이었어요'; }
-      else head = '예상대로 소화한 블록이에요';
-    } else if (!rows.length && bwN) head = '맨몸 운동만 한 블록이에요';
-    if (jumps.length) { tone = 'warn'; head = '기록 확인이 필요한 블록이에요'; }
-    if (avgTop !== null) S.push('첫 세트는 앱 예상 대비 평균 ' + sgn(avgTop) + '%였어요(' + tops.length + '개 운동).' +
-      (Math.abs(avgTop) < 2 ? ' 진도 계산이 지금 실력과 잘 맞고 있어요.' : avgTop > 0 ? ' 실력이 예상보다 빨리 오르고 있어요.' : ' 컨디션이나 회복이 덜 된 날일 수 있어요.'));
-    /* 2. 지난 세션 대비 진도 */
-    if (ch.length) {
-      const best = ch.reduce((a, r) => (r.chg > a.chg ? r : a)), worst = ch.reduce((a, r) => (r.chg < a.chg ? r : a));
-      S.push('지난 세션과 비교하면 첫 세트 추정 10RM이 오른 운동 ' + up.length + '개, 그대로 ' + (ch.length - up.length - dn.length) + '개, 내려간 운동 ' + dn.length + '개예요.' +
-        (up.length ? ' 가장 많이 오른 건 ' + nm(best) + '(' + sgn(best.chg) + '%)' + (dn.length ? '이고, 가장 떨어진 건 ' + nm(worst) + '(' + sgn(worst.chg) + '%)예요.' : '예요.') : dn.length ? ' 가장 떨어진 건 ' + nm(worst) + '(' + sgn(worst.chg) + '%)예요.' : ''));
-    }
-    /* 3. 백오프 */
-    if (avgBo !== null) S.push('2·3세트는 실제 휴식을 반영한 예상 대비 평균 ' + sgn(avgBo) + '%로, ' +
-      (avgBo <= -3 ? '피로가 예상보다 컸어요. 세트 사이를 조금 더 쉬어 보세요.' : avgBo >= 3 ? '회복이 예상보다 좋았어요.' : '피로가 예상 수준이었어요.'));
-    /* 4. 블록 안 피로 흐름: 앞 절반 vs 뒤 절반 운동 */
-    if (tops.length >= 4) {
-      const h = tops.length >> 1, a = avgOf(tops.slice(0, h).map((r) => r.dvTop)), z = avgOf(tops.slice(h).map((r) => r.dvTop));
-      if (z - a <= -3) S.push('뒤로 갈수록 예상보다 떨어졌어요(앞 ' + sgn(a) + '% → 뒤 ' + sgn(z) + '%). 후반에 누적 피로가 컸어요.');
-      else if (z - a >= 3) S.push('뒤로 갈수록 오히려 더 잘 됐어요(앞 ' + sgn(a) + '% → 뒤 ' + sgn(z) + '%). 초반 몸풀기가 부족했을 수 있어요.');
-      else S.push('처음부터 끝까지 고르게 유지했어요.');
-    }
-    /* 5. 여유 입력 */
-    if (qY || qL) {
-      const n = qs.length;
-      S.push('여유 입력은 여유 ' + qY + ' · 딱 맞음 ' + (n - qY - qL) + ' · 한계 ' + qL + '세트예요. ' +
-        (qL / n >= 0.4 ? '한계까지 간 세트가 많아요. 다음 추천이 그만큼 낮아져요.' : qY / n >= 0.4 ? '여유 있던 세트가 많아요. 추천보다 더 되면 더 해도 돼요.' : '무게 설정이 대체로 맞았어요.'));
-    }
-    /* 6. 휴식 */
-    if (rAvg !== null) S.push('세트 사이 휴식은 평균 ' + secTxt(rAvg) + ', 설정은 ' + secTxt(plan) + '이에요. ' +
-      (rShort ? '설정보다 짧았던 휴식이 ' + rShort + '번 있었어요.' : '휴식은 충분했어요.'));
-    /* 7. 경고·참고 */
-    if (jumps.length) S.push(jumps.map(nm).join(', ') + '에서 예상보다 10% 넘게 높은 세트가 있어요. 반동이나 기록 실수인지 확인하세요.');
-    if (calN) S.push('시작 기준 맞추기 세트 ' + calN + '개는 예상 대비 평가에서 뺐어요.');
-    /* 8. 직전 블록과 간격 */
-    if (i > 0) {
-      const gh = (t0 - bs[i - 1][bs[i - 1].length - 1].ts) / 3600e3;
-      S.push('직전 블록과 ' + (gh >= 48 ? Math.round(gh / 24) + '일' : Math.round(gh) + '시간') + ' 간격이었어요.' +
-        (gh < REC_H && sc !== null && sc <= -2 ? ' 회복 시간이 짧았던 것도 원인일 수 있어요.' : ''));
-    }
+    let fade = false;
+    if (tops.length >= 4) { const h = tops.length >> 1; fade = avgOf(tops.slice(h).map((r) => r.dvTop)) - avgOf(tops.slice(0, h).map((r) => r.dvTop)) <= -3; }
+    const gapH = i > 0 ? (t0 - bs[i - 1][bs[i - 1].length - 1].ts) / 3600e3 : null;
+    const restHurt = rShort >= 3 && avgBo !== null && avgBo <= -3, n = qs.length;
+    const best = up.length ? up.reduce((a, r) => (r.chg > a.chg ? r : a)) : null, worst = dn.length ? dn.reduce((a, r) => (r.chg < a.chg ? r : a)) : null;
+    let tone = 'neu', head = '기록이 적어서 판정은 보류예요';
+    if (jumps.length) { tone = 'warn'; head = '기록 확인이 필요해요'; }
+    else if (sc !== null) {
+      if (sc >= 3) { tone = 'pos'; head = '예상보다 잘했어요'; }
+      else if (sc <= -4) { tone = 'neg'; head = '힘든 날이었어요'; }
+      else if (sc <= -2) { tone = 'neg'; head = '조금 힘든 날이었어요'; }
+      else { tone = 'pos'; head = '계획대로 잘했어요'; }
+    } else if (!rows.length && bwN) { tone = 'pos'; head = '맨몸 운동 완료했어요'; }
+    const good = best ? (up.length > 1 ? nm(best) + ' 포함 ' + up.length + '개 운동이 지난번보다 올랐어요.' : ig(nm(best)) + ' 지난번보다 올랐어요.')
+      : sc !== null && sc >= 3 ? '첫 세트가 예상보다 잘 나왔어요.'
+      : avgBo !== null && avgBo > -1.5 ? '2·3세트까지 예상만큼 버텼어요.'
+      : tops.length >= 4 && !fade ? '끝까지 힘이 고르게 유지됐어요.'
+      : rAvg !== null && !rShort ? '휴식을 잘 지켰어요.'
+      : exs.length + '개 운동, ' + b.length + '세트를 끝냈어요.';
+    const bad = jumps.length ? nm(jumps[0]) + ' 기록이 너무 높아요. 반동이나 입력 실수일 수 있어요.'
+      : restHurt ? '휴식이 짧아서 2·3세트가 떨어졌어요.'
+      : fade ? '뒤쪽 운동에서 힘이 빠졌어요.'
+      : worst ? ig(nm(worst)) + ' 지난번보다 내려갔어요.'
+      : avgBo !== null && avgBo <= -3 ? '2·3세트에서 피로가 컸어요.'
+      : n && qL / n >= 0.4 ? '한계까지 간 세트가 많았어요.'
+      : '없어요.';
+    const next = jumps.length ? '멈췄다 올리기 · 반동 없이.'
+      : restHurt ? '휴식 ' + secTxt(plan) + ' 다 채우기.'
+      : fade ? '뒤쪽 운동 전엔 조금 더 쉬기.'
+      : sc !== null && sc <= -2 && gapH !== null && gapH < REC_H ? '하루 더 쉬고 하기.'
+      : sc !== null && sc <= -2 ? '앱 추천대로만 하기. 무게는 앱이 맞춰요.'
+      : n && qY / n >= 0.4 ? '더 되면 추천보다 더 하기.'
+      : '지금처럼 추천대로 하기.';
     const d0 = new Date(t0), hm = (d) => d.getHours() + ':' + pad2(d.getMinutes()), live = Date.now() - t1 < BLK_GAP;
     const meta = (d0.getMonth() + 1) + '/' + d0.getDate() + ' (' + DOW[d0.getDay()] + ') ' + hm(d0) + '–' + hm(new Date(t1)) + ' · ' + durTxt(t1 - t0) +
-      ' · ' + exs.length + '개 운동 ' + b.length + '세트' + (bwN ? '(맨몸 ' + bwN + '개)' : '') + (live ? ' · 진행 중' : '');
+      ' · ' + exs.length + '개 운동 ' + b.length + '세트' + (live ? ' · 진행 중' : '');
+    const line = (k, c, x) => '<div class="ev"><small class="c-' + c + '">' + k + '</small><b>' + esc(x) + '</b></div>';
     const cls = (r) => (r.jump ? 'warn' : r.chg === null ? 'neu' : r.chg > 0.5 ? 'pos' : r.chg < -0.5 ? 'neg' : 'neu');
     const lab = (r) => (r.jump ? '확인 필요' : r.chg === null ? (r.top && r.top.R ? '기준 재설정' : r.top ? '첫 기록' : '이어서') : r.chg > 0.5 ? sgn(r.chg) + '% 오름' : r.chg < -0.5 ? sgn(r.chg) + '% 내림' : '그대로');
     return '<p class="sub" style="margin:0">' + esc(meta) + '</p>' +
-      '<p class="why c-' + tone + '" style="font-weight:800;font-size:16px">' + esc(head) + '</p>' +
-      S.map((x) => '<p class="why" style="line-height:1.55">' + esc(x) + '</p>').join('') +
+      '<p class="evh c-' + tone + '">' + esc(head) + '</p>' +
+      line('잘한 점', 'pos', good) + line('아쉬운 점', bad === '없어요.' ? 'neu' : 'neg', bad) + line('다음엔', 'neu', next) +
       (rows.length ? numBox('<div class="trows">' + rows.map((r) => '<div class="trow"><b>' + esc(nm(r)) + ' · ' + setsTxt(r.xs) + '</b><em class="c-' + cls(r) + '">' + lab(r) + '</em><small>' +
         (r.dvTop !== null ? '첫 세트 예상 대비 ' + sgn(r.dvTop) + '%' : r.top && r.top.C ? '시작 기준 맞추기' : r.top ? '예상 없음' : '앞 세트는 이전 블록') +
         (r.dvBo.length ? ' · 2·3세트 ' + sgn(avgOf(r.dvBo)) + '%' : '') + (r.rs.length ? ' · 휴식 ' + secTxt(avgOf(r.rs)) : '') + '</small></div>').join('') + '</div>' +
-        '<p class="trend-more">블록 = 세트 간격 6시간 이내로 이어진 한 묶음 · 오름/내림 = 지난 세션 첫 세트 대비 추정 10RM(±0.5% 안은 그대로) · % = 앱 예상(P, 2·3세트는 휴식 반영 Pr) 대비 실제, 여유 입력 반영</p>', '운동별 보기') : '');
+        '<p class="trend-more">' + [avgTop !== null ? '첫 세트 예상 대비 평균 ' + sgn(avgTop) + '%' : '', avgBo !== null ? '2·3세트 ' + sgn(avgBo) + '%' : '', rAvg !== null ? '휴식 평균 ' + secTxt(rAvg) + '(설정 ' + secTxt(plan) + ', 짧음 ' + rShort + '번)' : '',
+          n ? '여유 ' + qY + ' · 한계 ' + qL + ' / ' + n + '세트' : '', gapH !== null ? '직전 블록과 ' + (gapH >= 48 ? Math.round(gapH / 24) + '일' : Math.round(gapH) + '시간') : '', calN ? '시작 기준 맞추기 ' + calN + '개 제외' : ''].filter(Boolean).join(' · ') + '</p>' +
+        '<p class="trend-more">블록 = 세트 간격 6시간 이내로 이어진 한 묶음 · 판정: 첫 세트 예상 대비 +3% 이상 잘함, −2% 이하 조금 힘듦, −4% 이하 힘듦 · 오름/내림 = 지난 세션 첫 세트 대비 추정 10RM</p>', '숫자로 보기') : '');
   }
-  function openBlock(i) {
-    const bs = blocks();
-    $('todayT').textContent = '운동 블록 평가';
-    if (!bs.length) { $('todayBody').innerHTML = '<p class="why">아직 기록이 없어요.</p><button type="button" class="btn wide" data-blk="back">오늘 현황으로</button>'; return; }
-    blkI = Math.max(0, Math.min(bs.length - 1, i < 0 ? bs.length - 1 : i));
-    $('todayBody').innerHTML = blockEval(bs, blkI) +
-      '<div class="btns"><button type="button" class="btn" data-blk="prev"' + (blkI ? '' : ' disabled') + '>‹ 이전 블록</button><button type="button" class="btn" data-blk="next"' + (blkI < bs.length - 1 ? '' : ' disabled') + '>다음 블록 ›</button>' +
-      '<button type="button" class="btn wide" data-blk="back">오늘 현황으로</button></div>';
+  let blkFrom = '';
+  function openBlock(i, from) {
+    if (from !== undefined) blkFrom = from;
+    const bs = blocks(), back = blkFrom === 'today' ? '<button type="button" class="btn wide" data-blk="back">오늘 현황으로</button>' : '<button type="button" class="btn wide" data-blk="close">닫기</button>';
+    $('todayT').textContent = '지난 운동 평가';
+    if (!bs.length) $('todayBody').innerHTML = '<p class="why">아직 기록이 없어요.</p>' + back;
+    else {
+      blkI = Math.max(0, Math.min(bs.length - 1, i < 0 ? bs.length - 1 : i));
+      $('todayBody').innerHTML = blockEval(bs, blkI) +
+        '<div class="btns"><button type="button" class="btn" data-blk="prev"' + (blkI ? '' : ' disabled') + '>‹ 이전</button><button type="button" class="btn" data-blk="next"' + (blkI < bs.length - 1 ? '' : ' disabled') + '>다음 ›</button>' + back + '</div>';
+    }
+    if (!$('todayDlg').open) $('todayDlg').showModal();
     $('todayDlg').scrollTop = 0;
   }
   $('todayBody').addEventListener('click', (e) => {
     const b = e.target.closest('[data-blk]'); if (!b) return;
     const k = b.dataset.blk;
-    if (k === 'open') openBlock(-1); else if (k === 'prev') openBlock(blkI - 1); else if (k === 'next') openBlock(blkI + 1); else openToday();
+    if (k === 'open') openBlock(-1, 'today'); else if (k === 'prev') openBlock(blkI - 1); else if (k === 'next') openBlock(blkI + 1); else if (k === 'close') $('todayDlg').close(); else openToday();
   });
+  $('evalBtn').addEventListener('click', () => openBlock(-1, 'main'));
   function openWhy() {
     const sg = whySg; if (!sg || !sg.expl) return;
     $('whyT').textContent = EX[curEx()].short + ' · ' + sg.title;
