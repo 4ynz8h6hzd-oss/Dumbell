@@ -17,7 +17,7 @@
 - 이름 Fool, 아이콘 주황(#F26B1D) 바탕 흰 그릇+젓가락 (`food/index.html` head의 SVG favicon·180px apple-touch-icon).
 
 - 앱: `food/index.html` 한 파일(빌드 없음) → https://4ynz8h6hzd-oss.github.io/Dumbell/food/ . 같은 출처라 운동 앱의 GitHub 토큰(`dumbbell-gh-token`)을 같이 씀.
-- 입력: 아래 입력바 하나(글 → Claude 추정 카드, 📷 → 사진 추정, 숫자만 → kcal 직접, 빈칸 → 직접 입력), 자주 먹는 음식 칩(탭 = 바로 기록+되돌리기, 길게 = 양 조절). AI는 브라우저에서 Claude API 직접 호출(키는 기기 localStorage `food-claude-key`, 모델 `MODEL` 상수). 사용자가 기록한 음식을 프롬프트에 넣어 같은 음식은 그 값을 우선.
+- 입력: 운동 앱과 같은 오른쪽 아래 3×3 엄지 패드에서 전부. 기본: 전날·사진·다음날 / 몸무게·✎(가운데, 글 → Claude 추정 카드)·★자주 / 되돌리기·＋직접·추세. ★ = 누른 채 위로 밀어 고르고 떼면 기록, 탭하면 목록(최근 60일 빈도 + 지금 시간대 ±2시간 ×2). 몸무게 = 패드 모드 전환(▲▼ ±0.1, ◀▶ ±1, 패드 위아래로 밀면 14px당 0.1 조그, 가운데 ✓ 저장). 숫자만 적으면 kcal 직접. 라이트 테마 고정, 강조색 주황. AI는 브라우저에서 Claude API 직접 호출(키는 기기 localStorage `food-claude-key`, 모델 `MODEL` 상수). 사용자가 기록한 음식을 프롬프트에 넣어 같은 음식은 그 값을 우선.
 - 기록: `data` 브랜치 `food.json`. foods(1개 = 1줄): id, date, ts, name, amt(양), kcal, p, c, f(g), src(ai|photo|manual|chip), u(수정 시각). weights: id, date, kg, u(하루 1개). deleted = 삭제된 id.
   기록 분석 요청 시 `git fetch origin data && git show FETCH_HEAD:food.json`.
 - 계산(기록에서 매번 재계산, `model()`): 몸무게 추세 = 지수이동평균 10%. 소모량 = 어제까지 28일 중 기록한 날 평균 섭취 − 추세 변화×7700÷일수, 7일 이상부터 기록일/21 비율로 시작값(설정 또는 체중×31)에 섞음. 목표 kcal = 소모량 + 목표 속도(감량 −0.5%/주, 유지, 증량 +0.25%/주)×체중×7700÷7. 단백질 = 체중×g/kg(기본 1.8), 지방 = 목표의 25%, 탄수 = 나머지.
