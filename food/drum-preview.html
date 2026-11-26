@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fool 원통 시안</title>
+<style>
+:root{--bg:#F2F2F7;--card:#fff;--ink:#1C1C1E;--sub:#6C6C70;--mute:#8E8E93;--faint:#C7C7CC;--line:#E5E5EA;--acc:#F26B1D;--accTxt:#B3470A}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-tap-highlight-color:transparent}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}
+.lead{color:var(--sub);font-size:14px;margin:0 0 20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.c{background:var(--card);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.c h2{font-size:17px;margin:0}
+.c h2 b{color:var(--acc);margin-right:6px}
+.c p{margin:0;font-size:13px;color:var(--sub);line-height:1.55}
+.out{font-size:14px;font-weight:600;min-height:20px;font-variant-numeric:tabular-nums}
+.out em{font-style:normal;color:var(--accTxt)}
+/* 공통 원통 */
+.drum{position:relative;height:280px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;border-radius:18px;background:#FAFAFC;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(to bottom,transparent,#000 22%,#000 78%,transparent)}
+.drum .wp{position:absolute;inset:0;perspective:900px}
+.drum .tr{position:absolute;left:0;right:0;top:50%;transform-style:preserve-3d}
+.drum .r{position:absolute;left:0;right:0;height:52px;margin-top:-26px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:17px;backface-visibility:hidden;-webkit-backface-visibility:hidden;will-change:transform,opacity}
+.drum .r em{font-style:normal;color:var(--mute);font-size:14px;font-variant-numeric:tabular-nums}
+.drum .r.cur{font-weight:700}.drum .r.cur em{color:var(--accTxt)}
+.lens{position:absolute;left:8px;right:8px;top:50%;height:52px;margin-top:-26px;border-radius:14px;pointer-events:none;background:rgba(242,107,29,.07);box-shadow:inset 0 0 0 1.5px rgba(242,107,29,.28),0 2px 12px rgba(242,107,29,.1)}
+.lens::before{content:'';position:absolute;left:0;top:13px;bottom:13px;width:3px;border-radius:0 2px 2px 0;background:var(--acc)}
+/* B: 몸무게 오도미터 */
+.odo{display:flex;align-items:center;justify-content:center;gap:4px;height:200px;border-radius:18px;background:#FAFAFC;touch-action:none;user-select:none;-webkit-user-select:none;cursor:ns-resize;position:relative}
+.dg{position:relative;width:62px;height:150px;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(to bottom,transparent,#000 30%,#000 70%,transparent)}
+.dg .wp{position:absolute;inset:0;perspective:500px}
+.dg .tr{position:absolute;left:0;right:0;top:50%;transform-style:preserve-3d}
+.dg .r{position:absolute;left:0;right:0;height:70px;margin-top:-35px;display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:700;letter-spacing:-.04em;font-variant-numeric:tabular-nums;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.dg.dec .r{color:var(--acc)}
+.dot{font-size:64px;font-weight:700;margin:0 -2px}
+.kg{font-size:20px;color:var(--mute);font-weight:600;align-self:center;margin-left:6px;padding-top:24px}
+.odo .band{position:absolute;left:16px;right:16px;top:50%;height:70px;margin-top:-35px;border-radius:16px;pointer-events:none;box-shadow:inset 0 0 0 1.5px rgba(242,107,29,.25)}
+/* C: 양 가로 원통 */
+.hdrum{position:relative;height:96px;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;cursor:ew-resize;border-radius:18px;background:#FAFAFC;
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 25%,#000 75%,transparent);mask-image:linear-gradient(to right,transparent,#000 25%,#000 75%,transparent)}
+.hdrum .wp{position:absolute;inset:0;perspective:700px}
+.hdrum .tr{position:absolute;top:0;bottom:0;left:50%;transform-style:preserve-3d}
+.hdrum .r{position:absolute;top:0;bottom:0;width:64px;margin-left:-32px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--faint);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.hdrum .r.cur{color:var(--ink)}
+.hlens{position:absolute;top:14px;bottom:14px;left:50%;width:66px;margin-left:-33px;border-radius:16px;pointer-events:none;background:rgba(242,107,29,.07);box-shadow:inset 0 0 0 1.5px rgba(242,107,29,.28)}
+.food{display:flex;justify-content:space-between;align-items:baseline}
+.food b{font-size:18px}
+.food span{font-size:30px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.food span small{font-size:14px;color:var(--mute);font-weight:600;margin-left:4px}
+.mac{font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:11px;font-weight:700;color:var(--accTxt);background:#FDF0E8;border-radius:999px;padding:3px 9px;align-self:flex-start}
+</style>
+</head>
+<body>
+<main>
+  <h1>Fool 원통 시안 3개</h1>
+  <p class="lead">덤벨 앱 운동 바퀴와 같은 3D 원통(가운데 렌즈는 고정, 줄만 원통 둘레로 굴러감). 각 카드를 위아래·좌우로 끌어 보세요.</p>
+  <div class="grid">
+    <section class="c">
+      <span class="tag">추천 · 패드 ★와 바로 연결</span>
+      <h2><b>A</b>자주 먹는 음식 원통</h2>
+      <p>★를 누른 채 위아래로 밀면 이 원통이 돌고, 렌즈에 온 음식이 손 떼는 순간 기록. 지금 시간대에 자주 먹은 순서.</p>
+      <div class="drum" id="dA"><div class="wp"><div class="tr"></div></div><div class="lens"></div></div>
+      <div class="out" id="oA"></div>
+    </section>
+    <section class="c">
+      <h2><b>B</b>몸무게 오도미터</h2>
+      <p>자릿수마다 작은 원통. 위아래로 밀면 소수점 자리(주황)가 돌고, 9→0 넘어갈 때 앞자리가 따라 굴러감 — 체중계 다이얼 느낌.</p>
+      <div class="odo" id="dB"><div class="band"></div>
+        <div class="dg" id="g1"><div class="wp"><div class="tr"></div></div></div>
+        <div class="dg" id="g2"><div class="wp"><div class="tr"></div></div></div>
+        <span class="dot">.</span>
+        <div class="dg dec" id="g3"><div class="wp"><div class="tr"></div></div></div>
+        <span class="kg">kg</span>
+      </div>
+      <div class="out" id="oB"></div>
+    </section>
+    <section class="c">
+      <h2><b>C</b>양 가로 원통</h2>
+      <p>AI 카드·★ 기록 뒤 양 조절. 좌우로 굴리면 kcal·단탄지가 실시간으로 바뀜. ½·1½ 버튼 대신 엄지 한 번 스와이프.</p>
+      <div class="food"><b>김치찌개</b><span id="kC">320<small>kcal</small></span></div>
+      <div class="mac" id="mC"></div>
+      <div class="hdrum" id="dC"><div class="wp"><div class="tr"></div></div><div class="hlens"></div></div>
+      <div class="out" id="oC"></div>
+    </section>
+  </div>
+</main>
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const vib = () => { try { navigator.vibrate && navigator.vibrate(4); } catch (e) {} };
+/* 원통 하나: items 문자열(html), 칸 크기 h, 한 칸당 각도 step, axis 'x'(가로줄이 위아래로) 또는 'y'(세로줄이 좌우로) */
+function Drum(el, items, o) {
+  const tr = el.querySelector('.tr'), h = o.h, step = o.step || 0.36, R = h / step, horiz = o.axis === 'y';
+  tr.innerHTML = items.map((s) => '<div class="r">' + s + '</div>').join('');
+  const rows = [...tr.children];
+  let pos = o.start || 0, cur = -1;
+  function draw() {
+    rows.forEach((r, i) => {
+      let d = i - pos;
+      if (o.loop) { const n = rows.length; d = ((d % n) + n + n / 2) % n - n / 2; }
+      const th = d * step;
+      if (Math.abs(th) > Math.PI / 2 + 0.2) { r.style.visibility = 'hidden'; return; }
+      r.style.visibility = '';
+      r.style.opacity = (1 - Math.min(1, Math.abs(th) / (Math.PI / 2)) * 0.75).toFixed(3);
+      r.style.transform = horiz
+        ? 'translateX(' + (R * Math.sin(th)).toFixed(2) + 'px) translateZ(' + (R * (Math.cos(th) - 1)).toFixed(2) + 'px) rotateY(' + (th * 180 / Math.PI).toFixed(2) + 'deg)'
+        : 'translateY(' + (R * Math.sin(th)).toFixed(2) + 'px) translateZ(' + (R * (Math.cos(th) - 1)).toFixed(2) + 'px) rotateX(' + (-th * 180 / Math.PI).toFixed(2) + 'deg)';
+    });
+    const n = rows.length, c = o.loop ? ((Math.round(pos) % n) + n) % n : Math.max(0, Math.min(n - 1, Math.round(pos)));
+    if (c !== cur) { if (cur >= 0) rows[cur].classList.remove('cur'); rows[c].classList.add('cur'); if (cur >= 0) vib(); cur = c; o.onPick && o.onPick(c, false); }
+  }
+  const api = { get pos() { return pos; }, set(p) { pos = o.loop ? p : Math.max(-0.4, Math.min(rows.length - 0.6, p)); draw(); } };
+  if (!o.passive) {
+    let start = null, p0 = 0, v = 0, lt = 0, lp = 0, raf = 0;
+    el.addEventListener('pointerdown', (e) => { cancelAnimationFrame(raf); el.setPointerCapture(e.pointerId); start = horiz ? e.clientX : e.clientY; p0 = pos; v = 0; lt = performance.now(); lp = pos; });
+    el.addEventListener('pointermove', (e) => {
+      if (start == null) return;
+      const d = (horiz ? e.clientX : e.clientY) - start;
+      api.set(p0 - d / h * (horiz ? 1 : 1));
+      const t = performance.now(); if (t - lt > 16) { v = (pos - lp) / (t - lt); lt = t; lp = pos; }
+    });
+    const end = () => {
+      if (start == null) return; start = null;
+      /* 관성 후 가장 가까운 칸에 착 붙음 */
+      let target = Math.round(pos + v * 160);
+      if (!o.loop) target = Math.max(0, Math.min(rows.length - 1, target));
+      const from = pos, t0 = performance.now(), dur = 320;
+      const tick = (t) => { const k = Math.min(1, (t - t0) / dur), e2 = 1 - Math.pow(1 - k, 3); api.set(from + (target - from) * e2); if (k < 1) raf = requestAnimationFrame(tick); else o.onPick && o.onPick(cur, true); };
+      raf = requestAnimationFrame(tick);
+    };
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  }
+  draw();
+  return api;
+}
+
+/* A: 자주 먹는 음식 */
+const FOODS = [['아메리카노', 10], ['계란 2개', 150], ['그릭요거트', 130], ['김치찌개', 320], ['공기밥', 300], ['닭가슴살', 165], ['바나나', 105], ['프로틴 쉐이크', 120], ['샐러드', 180], ['라면', 500]];
+Drum($('dA'), FOODS.map(([n, k]) => '<span>' + n + '</span><em>' + k + '</em>'), { h: 52, step: 0.34, start: 3,
+  onPick: (i, done) => { $('oA').innerHTML = done ? '손 뗌 → <em>' + FOODS[i][0] + ' ' + FOODS[i][1] + ' kcal 기록</em> · 되돌리기 토스트' : '렌즈: ' + FOODS[i][0]; } });
+
+/* B: 몸무게 오도미터 — 소수 자리는 연속으로, 앞자리는 9→0 넘어갈 때만 굴러감 */
+const digits = [...'0123456789'];
+const g1 = Drum($('g1'), digits, { h: 70, step: 0.5, loop: true, passive: true });
+const g2 = Drum($('g2'), digits, { h: 70, step: 0.5, loop: true, passive: true });
+const g3 = Drum($('g3'), digits, { h: 70, step: 0.5, loop: true, passive: true });
+let kg = 71.4;
+function odo(v) {
+  const t = v * 10, d = ((t % 10) + 10) % 10, carry = Math.max(0, d - 9);
+  const ones = Math.floor(v) % 10 + carry, tens = Math.floor(v / 10) % 10 + (Math.floor(v) % 10 === 9 ? carry : 0);
+  g3.set(d); g2.set(ones); g1.set(tens);
+  $('oB').innerHTML = '<em>' + (Math.round(v * 10) / 10).toFixed(1) + ' kg</em> · 패드를 14px 밀 때마다 0.1';
+}
+(() => {
+  const el = $('dB'); let s = null, k0 = 0, raf = 0, last = -1;
+  el.addEventListener('pointerdown', (e) => { cancelAnimationFrame(raf); el.setPointerCapture(e.pointerId); s = e.clientY; k0 = kg; });
+  el.addEventListener('pointermove', (e) => { if (s == null) return; kg = Math.max(30, Math.min(150, k0 + (s - e.clientY) / 140)); const q = Math.round(kg * 10); if (q !== last) { last = q; vib(); } odo(kg); });
+  const end = () => { if (s == null) return; s = null; const from = kg, to = Math.round(kg * 10) / 10, t0 = performance.now();
+    const tick = (t) => { const k = Math.min(1, (t - t0) / 220); kg = from + (to - from) * (1 - Math.pow(1 - k, 3)); odo(kg); if (k < 1) raf = requestAnimationFrame(tick); };
+    raf = requestAnimationFrame(tick); };
+  el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  odo(kg);
+})();
+
+/* C: 양 */
+const PORT = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
+const lab = (v) => ({ 0.25: '¼', 0.5: '½', 0.75: '¾', 1: '1', 1.25: '1¼', 1.5: '1½', 2: '2', 2.5: '2½', 3: '3' }[v]);
+const base = { k: 320, p: 18, c: 14, f: 21 };
+Drum($('dC'), PORT.map(lab), { h: 64, step: 0.42, axis: 'y', start: 3,
+  onPick: (i, done) => {
+    const m = PORT[i];
+    $('kC').innerHTML = Math.round(base.k * m) + '<small>kcal</small>';
+    $('mC').textContent = '1그릇 ×' + lab(m) + ' · 단 ' + Math.round(base.p * m) + ' · 탄 ' + Math.round(base.c * m) + ' · 지 ' + Math.round(base.f * m);
+    $('oC').innerHTML = done ? '<em>×' + lab(m) + ' 확정</em> · 가운데 ✓로 기록' : '';
+  } });
+})();
+</script>
+</body>
+</html>
