@@ -143,6 +143,14 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 #fwD .r em{font-style:normal;color:var(--mute);font-size:15px;flex:none}
 #fwD .r.cur{font-weight:700}#fwD .r.cur em{color:var(--accTxt)}
 .fw .lens{position:absolute;left:12px;right:12px;max-width:456px;margin:-29px auto 0;top:var(--ly);height:58px;border-radius:16px;pointer-events:none;background:rgba(242,107,29,.07);box-shadow:inset 0 0 0 1.5px rgba(242,107,29,.26),0 2px 14px rgba(242,107,29,.1)}
+/* 양 눈금자: 렌즈 바로 아래, 옆으로 밀 때만 */
+#fwR{position:absolute;left:0;right:0;top:calc(var(--ly) + 32px);height:40px;padding-top:4px;background:#fff;pointer-events:none;opacity:0;transition:opacity .12s;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.fw.hz #fwR{opacity:1}.fw.hz #fwD .r:not(.cur){opacity:.15!important}
+#fwR .rt{position:absolute;left:0;top:6px;bottom:0}
+#fwR i{position:absolute;top:0;width:1.5px;height:9px;margin-left:-.75px;background:var(--faint)}
+#fwR i.b{height:15px;background:var(--mute)}
+#fwR em{position:absolute;top:18px;left:0;transform:translateX(-50%);font-style:normal;font-size:12px;font-weight:600;color:var(--sub);white-space:nowrap}
+#fwR .nd{position:absolute;left:0;top:2px;width:3px;height:22px;margin-left:-1.5px;border-radius:2px;background:var(--acc)}
 #fwM{position:absolute;right:18px;top:0;bottom:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;line-height:1.15;background:linear-gradient(90deg,transparent,#FEF3EC 18px);padding-left:26px}
 #fwM b{font-size:17px;color:var(--ink)}#fwM span{font-size:12px;color:var(--accTxt);font-weight:600}
 .fw.mx #fwM b{color:var(--accTxt)}
@@ -254,7 +262,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <button id="send" aria-label="기록"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 </form>
 <input type="file" id="file" accept="image/*" hidden>
-<div class="fw" id="fw" hidden><div id="fwD"><div class="wp"><div class="tr"></div></div></div><div class="lens"><div id="fwM"></div></div><p class="fwh" id="fwH"></p><button id="fwX" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+<div class="fw" id="fw" hidden><div id="fwD"><div class="wp"><div class="tr"></div></div></div><div class="lens"><div id="fwM"></div></div><div id="fwR"></div><p class="fwh" id="fwH"></p><button id="fwX" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 
 <dialog class="sheet" id="card"><div class="sh">
   <div class="grab"></div>
@@ -1073,24 +1081,13 @@ pad.addEventListener('pointerdown', (e) => {
     };
     holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, MAG.delay);
   }
-  if (pdn.k === 'fav' && favOpen()) pdn.p0 = fav.api.pos;
+  if (pdn.k === 'fav' && favOpen()) { fav.g.lx = fav.g.x = e.clientX; fav.g.ly = fav.g.ay = e.clientY; }
 });
 pad.addEventListener('pointermove', (e) => {
   if (!pdn) return;
   if (!pdn.moved && (Math.abs(e.clientY - pdn.y) > 10 || (pdn.k === 'fav' && Math.abs(e.clientX - pdn.x) > 10))) { pdn.moved = true; suppress = true; stopHold(); }
   if (!pdn.moved) return;
-  if (pdn.k === 'fav' && fav.open) {   /* 엄지 FAV_PX마다 한 줄 (줄 높이보다 훨씬 적게) · 처음 자리보다 아래로 내리면 '놓으면 취소' */
-    const dy = pdn.y - e.clientY, cx = dy < -FAV_CX;
-    if (cx !== !!pdn.cx) { pdn.cx = cx; $('fw').classList.toggle('cx', cx); $('fwH').textContent = cx ? '놓으면 취소' : '위로 밀어 고르고 · 옆으로 밀어 양 · 떼면 기록'; vib(); }
-    if (!cx) fav.api.set(pdn.p0 + Math.max(0, dy) / FAV_PX);
-    /* 옆으로 밀면 양: FAV_MPX마다 0.1인분 (0.1~3) */
-    /* ★가 화면 오른쪽이라 옆 공간이 좁음 → 화면 끝에 엄지를 대고 있으면 0.1씩 계속 (키 자동 반복처럼) */
-    fav.dx = e.clientX - pdn.x;
-    const ed = e.clientX > innerWidth - FAV_EDGE ? 1 : e.clientX < FAV_EDGE ? -1 : 0;
-    if (ed !== fav.ed) { fav.ed = ed; clearInterval(fav.edI); if (ed) fav.edI = setInterval(() => { fav.mo = r1(fav.mo + ed * 0.1); favSetM(); }, 110); }
-    favSetM();
-    return;
-  }
+  if (pdn.k === 'fav' && fav.open) { favMove(e); return; }
   if (mode === 'weight') {
     /* 조그: 14px = 0.1kg, 숫자 원통은 손가락 따라 연속으로 굴러감 */
     const disp = Math.max(20, Math.min(299.9, pdn.w0 + (pdn.y - e.clientY) / 140)), q = r1(disp);
@@ -1142,17 +1139,57 @@ function chipFoods(limit) {
 /* ★ 자주 먹는 음식 원통: ★를 누른 채 위로 밀면 굴러가고 렌즈에 온 음식이 손 떼면 기록.
    그냥 탭하면 원통이 열린 채로 — 끌어서 굴리고, 줄을 탭하면 기록, 빈 곳·닫기를 누르면 닫힘 */
 const fav = { items: [], api: null, open: false, tap: false, t: 0, m: 1 };
-const FROWH = 58, FAV_PX = 22, FAV_CX = 36, FAV_MPX = 10, FAV_EDGE = 26;   /* 옆으로 10px = 0.1인분 */
+const FROWH = 58, FAV_PX = 22, FAV_CX = 36, FAV_MPX = 16, FAV_EDGE = 26, FAV_LOCK = 14;   /* 옆으로 10px = 0.1인분 */
 /* 양 적기: 앞 숫자에 곱함 (1접시 ×1.3 = 1.3접시), 숫자 없으면 '×1.3', 양이 없으면 '1.3인분' */
 const amtX = (amt, m) => {
   if (m === 1) return amt || '';
   const a = String(amt || '').trim(), t = String(r1(m)), g = a.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
   return !a ? t + '인분' : g ? String(r1(+g[1] * m)) + g[2] : a + ' ×' + t;
 };
+/* 누른 채 밀기 — 방향 잠금: 위아래 = 음식(줄마다 자석), 옆 = 양(렌즈 아래 눈금자가 엄지를 따라감).
+   한 방향으로 FAV_LOCK px 넘게 밀면 그 방향으로 바뀌고, 다른 쪽은 그 자리에 멈춤 */
+const soft = (x) => { const n = Math.round(x), f = x - n; return n + 4 * f * f * f; };   /* 줄 사이 자석: 가운데 가까울수록 붙음 */
+function favMove(e) {
+  const g = fav.g, x = e.clientX, y = e.clientY, cx = pdn.y - y < -FAV_CX;
+  if (cx !== !!pdn.cx) { pdn.cx = cx; $('fw').classList.toggle('cx', cx); favHint(); vib(); }
+  /* 방향 판단은 '최근' 움직임으로: 같은 방향으로 계속 가면 기준점을 따라 옮김 */
+  let ax = x - g.lx, ay = y - g.ly;
+  if ((g.mode === 'v' ? Math.abs(ay) > Math.abs(ax) : Math.abs(ax) > Math.abs(ay)) && Math.hypot(ax, ay) > FAV_LOCK) { g.lx = x; g.ly = y; ax = ay = 0; }
+  if (g.mode === 'v' && Math.abs(ax) > FAV_LOCK && Math.abs(ax) > Math.abs(ay) * 1.2) {   /* → 양 모드 */
+    fav.api.set(Math.round(fav.api.pos)); g.mode = 'h'; g.lx = x; g.ly = y; g.ox = x - (fav.m - 1) * 10 * FAV_MPX; $('fw').classList.add('hz'); favHint(); favRuler(x); return;
+  }
+  if (g.mode === 'h' && Math.abs(ay) > FAV_LOCK * 1.6 && Math.abs(ay) > Math.abs(ax) * 1.2) {   /* → 음식 모드 */
+    g.mode = 'v'; g.lx = x; g.ly = y; g.ay = y; g.p0 = Math.round(fav.api.pos); favEdge(0); $('fw').classList.remove('hz'); favHint(); return;
+  }
+  if (cx) return;
+  if (g.mode === 'v') {
+    const c0 = fav.api.cur; fav.api.set(Math.max(0, soft(g.p0 + (g.ay - y) / FAV_PX)));
+    if (fav.api.cur !== c0 && fav.m !== 1) { fav.m = 1; favShowM(); }   /* 다른 음식으로 가면 양은 1로 */
+    return;
+  }
+  favEdge(x > innerWidth - FAV_EDGE ? 1 : x < FAV_EDGE ? -1 : 0); g.x = x; favSetM();
+}
+/* 화면 끝에 엄지를 대고 있으면 눈금자가 계속 흘러감 (★가 오른쪽이라 옆 공간이 좁음) */
+function favEdge(d) {
+  const g = fav.g; if (d === g.ed) return; g.ed = d; clearInterval(g.edI);
+  if (d) g.edI = setInterval(() => { g.ox -= d * FAV_MPX; favSetM(); }, 110);
+}
 function favSetM() {
-  const raw = r1(1 + Math.round(fav.dx / FAV_MPX) / 10 + fav.mo), m = Math.max(0.1, Math.min(3, raw));
-  if (raw !== m) fav.mo = r1(fav.mo + m - raw);   /* 끝에 닿으면 더 안 쌓임 — 돌아올 때 바로 반응 */
-  if (m !== fav.m) { fav.m = m; vib(); favShowM(); } else if (raw !== m && fav.ed) sfx('edge');
+  const g = fav.g, raw = r1(1 + Math.round((g.x - g.ox) / FAV_MPX) / 10), m = Math.max(0.1, Math.min(3, raw));
+  if (raw !== m) { g.ox += (raw - m) * 10 * FAV_MPX; if (g.ed) sfx('edge'); }   /* 끝에 닿으면 더 안 쌓임 */
+  if (m !== fav.m) { fav.m = m; vib(); favShowM(); }
+  favRuler(g.x);
+}
+/* 눈금자: 0.1마다 눈금, 0.5마다 숫자. 바늘(주황)은 엄지 x에, 눈금은 그 값이 바늘에 오도록 */
+function favRuler(x) {
+  const g = fav.g, R = $('fwR');
+  if (!R.firstChild) { let h = ''; for (let k = 1; k <= 30; k++) { const v = k / 10, big = k % 5 === 0; h += '<i style="left:' + (k - 10) * FAV_MPX + 'px" class="' + (big ? 'b' : '') + '">' + (big ? '<em>' + (v === 1 ? '1인분' : v) + '</em>' : '') + '</i>'; } R.innerHTML = '<div class="rt">' + h + '</div><b class="nd"></b>'; }
+  const nx = g.ox + (fav.m - 1) * 10 * FAV_MPX;
+  R.firstChild.style.transform = 'translateX(' + g.ox.toFixed(1) + 'px)';
+  R.lastChild.style.transform = 'translateX(' + nx.toFixed(1) + 'px)';
+}
+function favHint() {
+  $('fwH').textContent = fav.g && pdn && pdn.cx ? '놓으면 취소' : fav.g && fav.g.mode === 'h' ? '옆으로 밀어 양 · 위아래로 밀면 다시 음식 · 떼면 기록' : '위로 밀어 고르고 · 옆으로 밀어 양 · 떼면 기록';
 }
 /* 렌즈 오른쪽: 양 (굵게) + 그 아래 kcal */
 function favShowM() {
@@ -1165,20 +1202,21 @@ function favOpen() {
   $('toast').classList.remove('on');   /* 직전 기록 알림이 렌즈 위를 덮어 탭을 먹지 않게 */
   fav.items = chipFoods(15); if (!fav.items.length) return false;
   $('fwD').querySelector('.tr').innerHTML = fav.items.map((x) => '<div class="r"><span class="fn">' + esc(x.name) + (x.amt ? '<small>' + esc(x.amt) + '</small>' : '') + '</span><em class="num">' + fmt(x.kcal) + '</em></div>').join('');
-  fav.m = 1; fav.dx = 0; fav.mo = 0; fav.ed = 0; clearInterval(fav.edI);
+  if (fav.g) clearInterval(fav.g.edI);
+  fav.m = 1; fav.g = { mode: 'v', lx: 0, ly: 0, ay: 0, p0: 0, ox: 0, x: 0, ed: 0, edI: 0 }; $('fw').classList.remove('hz');
   fav.api = Drum($('fwD'), { h: FROWH, step: 0.3, onPick: () => favShowM() });
   fav.open = true; fav.tap = false; favShowM();
-  $('fwH').textContent = '위로 밀어 고르고 · 옆으로 밀어 양 · 떼면 기록';
+  favHint();
   const w = $('fw'); w.hidden = false; w.classList.remove('out');
   return true;
 }
 function favClose() {
-  if (!fav.open) return; fav.open = false; fav.tap = false; $('fw').classList.remove('cx'); if (fav.api) fav.api.stop(); clearInterval(fav.edI); fav.ed = 0;
+  if (!fav.open) return; fav.open = false; fav.tap = false; $('fw').classList.remove('cx', 'hz'); if (fav.api) fav.api.stop(); if (fav.g) { clearInterval(fav.g.edI); fav.g.ed = 0; }
   const w = $('fw'); w.classList.add('out'); setTimeout(() => { if (!fav.open) w.hidden = true; }, 160);
 }
 function favAdd(f) { const ids = addFoods([f], 'chip'); toast(f.name + ' · ' + fmt(f.kcal) + ' kcal', () => removeFoods(ids)); }
 function favCommit() {
-  clearInterval(fav.edI); fav.ed = 0;
+  if (fav.g) { clearInterval(fav.g.edI); fav.g.ed = 0; }
   const f = fav.items[fav.api.cur], m = fav.m; favClose(); if (!f) return;
   favAdd(m === 1 ? f : { name: f.name, amt: amtX(f.amt || '1인분', m), kcal: f.kcal * m, p: f.p * m, c: f.c * m, f: f.f * m });
 }
