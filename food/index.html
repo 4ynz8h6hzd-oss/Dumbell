@@ -699,7 +699,21 @@ function drawChart(M) {
 /* 기준값(애플): 한 칸 이동 = SwiftUI 기본 스프링처럼 임계 감쇠(튕김 없음) 스프링, 반응 0.34초(기본 0.55보다 경쾌).
    지수 추적과 달리 0에서 부드럽게 출발 → 갑자기 튀어 나가는 느낌 없음. 길게 누르는 동안은 반응 0.12초로 바짝 따라감.
    손 튕김 = UIScrollView 기본 감속 0.998/ms (τ ≈ 0.5초)로 멈출 곳을 정하고 그 날에 맞춰 감속 */
-const CH_RESP = 0.34, CH_RESP_HOLD = 0.11, CH_DEC = 0.998, CH_FTAU = -0.001 / Math.log(CH_DEC);
+/* ---------- 손맛 조정값 (기기 localStorage `food-mag`, 주소 끝 ?tune → 왼쪽 아래 🧲 패널에서 바꿈) ----------
+   [오늘 자석] 한 번씩 탭은 절대 안 붙음.
+   dragR: 튕겨서 멈출 곳이 오늘에서 이 일수 안이면 오늘로 · dragVmin: 이보다 느리게 놓으면(천천히 맞춘 것) 안 붙음
+   dragVmax: 이보다 세게 튕기면 지나감 (일/초) · pull/pullR: 끄는 중 오늘 근처(pullR일)에서 손가락을 오늘 쪽으로 당기는 세기(0~1)
+   hold: 길게 눌러 지나갈 때 오늘에서 멈추는 시간(ms) · resume: 멈춘 뒤 1 = 원래 속도로, 0 = 처음 속도부터
+   back: 오늘을 지나고 이 시간(ms) 안에 손 떼면 오늘로 되돌아옴
+   [길게 누르기] delay 시작까지(ms) · v0 처음 속도 · vmax 최고 속도(일/초) · ramp 최고 속도까지 걸리는 시간(ms)
+   [움직임] resp 한 칸 이동 스프링 반응(초) · respHold 길게 누르는 동안 반응(초) · blur 최고 모션 블러(px)
+   [튕김] flingTau 미끄러짐 시간상수(ms, 애플 0.998/ms ≈ 500) · flingMax 최고 튕김 속도 · flingDead 이보다 느리면 튕김 없음(일/초) */
+const MAG_DEF = { dragR: 3, dragVmin: 2, dragVmax: 80, pull: 0, pullR: 1, hold: 300, resume: 0, back: 350,
+  delay: 230, v0: 14, vmax: 140, ramp: 900, resp: 0.34, respHold: 0.11, blur: 0.3, flingTau: 500, flingMax: 400, flingDead: 4 };
+const MAG = Object.assign({}, MAG_DEF, (() => { try { return JSON.parse(lsGet('food-mag')) || {}; } catch (e) { return {}; } })());
+let magPass = 0;
+const magLog = (t) => { const e = document.getElementById('magLog'); if (e) e.textContent = t; };
+
 function lineYf(p) { const a = Math.floor(p), f = p - a, y0 = ch.lineY(a), y1 = ch.lineY(a + 1); return y0 == null ? y1 : y1 == null ? y0 : y0 + (y1 - y0) * f; }
 function paintStrip() {
   const g = $('cs'), gw = $('cw'); if (!g || !ch) return;
@@ -716,7 +730,7 @@ function runStrip() {
     if (ch.drag) { ch.pos = ch.tgt; ch.vel = 0; }
     else if (ch.tau) ch.pos += (ch.tgt - ch.pos) * (1 - Math.exp(-dt / ch.tau));   /* 손 튕김: 지수 감속 */
     else {   /* 임계 감쇠 스프링 (4ms 단위로 나눠 적분) */
-      const w = 2 * Math.PI / (navFast ? CH_RESP_HOLD : CH_RESP), n = Math.max(1, Math.ceil(dt / 0.004)), h = dt / n;
+      const w = 2 * Math.PI / (navFast ? MAG.respHold : MAG.resp), n = Math.max(1, Math.ceil(dt / 0.004)), h = dt / n;
       for (let k = 0; k < n; k++) { ch.vel += (-w * w * (ch.pos - ch.tgt) - 2 * w * ch.vel) * h; ch.pos += ch.vel * h; }
     }
     /* 세 벌 중 가운데 쪽으로 몰래 되돌림 (벌마다 똑같이 그려져 있어 보이는 건 그대로) */
@@ -748,27 +762,23 @@ function updChart(M) {
   else el.classList.remove('on');
   clearTimeout(chHideT);
 }
-/* ---------- 오늘 자석: 끌어 튕기거나 길게 눌러 넘기다 오늘 근처면 오늘에 붙음. 한 번씩 탭은 절대 안 붙음 ----------
-   dragR: 튕겨서 멈출 곳이 오늘에서 이 일수 안이면 오늘로 · dragVmin: 이보다 느리게 놓으면(천천히 맞춘 것) 안 붙음
-   dragVmax: 이보다 세게 튕기면 지나감 (일/초) · hold: 길게 눌러 지나갈 때 오늘에서 멈추는 시간(ms)
-   back: 오늘을 지나고 이 시간(ms) 안에 손 떼면 오늘로 되돌아옴. 조정: 주소 끝에 ?tune → 화면 위 🧲 패널 */
-const MAG_DEF = { dragR: 3, dragVmin: 2, dragVmax: 80, hold: 300, back: 350 };
-const MAG = Object.assign({}, MAG_DEF, (() => { try { return JSON.parse(lsGet('food-mag')) || {}; } catch (e) { return {}; } })());
-let magPass = 0;
-const magLog = (t) => { const e = document.getElementById('magLog'); if (e) e.textContent = t; };
 const todayAhead = (d) => ringI((RPAST - (dayDiff(today(), sel) + RPAST)) * d);   /* d 방향으로 오늘까지 남은 날 (0 = 오늘) */
 (() => {
   if (/[?&]tune\b/.test(location.search)) lsSet('food-tune', '1');
   if (!lsGet('food-tune')) return;
-  const SL = [['dragR', '튕김 붙는 반경', 0, 10, 1, '일'], ['dragVmin', '이보다 느리면 안 붙음', 0, 30, 1, '일/초'], ['dragVmax', '이보다 세면 지나감', 10, 400, 5, '일/초'],
-    ['hold', '길게 누름: 오늘에서 멈춤', 0, 1000, 25, 'ms'], ['back', '지나친 뒤 놓으면 되돌아옴', 0, 1000, 25, 'ms']];
+  const SL = [['🧲 오늘 자석 — 끌기'], ['dragR', '튕김 붙는 반경', 0, 10, 1, '일'], ['dragVmin', '이보다 느리면 안 붙음', 0, 30, 1, '일/초'], ['dragVmax', '이보다 세면 지나감', 10, 400, 5, '일/초'],
+    ['pull', '끄는 중 오늘 쪽으로 당김', 0, 1, 0.05, '(0 = 끔)'], ['pullR', '당기는 범위', 0.5, 3, 0.1, '일'],
+    ['🧲 오늘 자석 — 길게 누르기'], ['hold', '오늘에서 멈춤', 0, 1000, 25, 'ms'], ['resume', '멈춘 뒤 원래 속도로 (1) / 처음부터 (0)', 0, 1, 1, ''], ['back', '지나친 뒤 놓으면 되돌아옴', 0, 1000, 25, 'ms'],
+    ['⏩ 길게 누르기 속도'], ['delay', '시작까지', 0, 800, 10, 'ms'], ['v0', '처음 속도', 1, 60, 1, '일/초'], ['vmax', '최고 속도', 10, 400, 5, '일/초'], ['ramp', '최고 속도까지 (가속)', 0, 3000, 50, 'ms'],
+    ['〰️ 움직임'], ['resp', '한 칸 이동 반응 (클수록 느긋)', 0.1, 1, 0.01, '초'], ['respHold', '길게 누르는 동안 반응', 0.03, 0.5, 0.01, '초'], ['blur', '모션 블러 최고', 0, 2, 0.05, 'px'],
+    ['👆 튕김'], ['flingTau', '미끄러짐 (클수록 멀리)', 100, 1500, 25, 'ms'], ['flingMax', '최고 튕김 속도', 50, 800, 10, '일/초'], ['flingDead', '이보다 느리면 튕김 없음', 0, 20, 0.5, '일/초']];
   const w = document.createElement('div');
-  w.style.cssText = 'position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);max-width:calc(100% - var(--pad) - 40px);z-index:999;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12);font-size:13px;padding:8px 12px;touch-action:manipulation';
+  w.style.cssText = 'max-height:75vh;overflow-y:auto;overscroll-behavior:contain;position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);max-width:calc(100% - var(--pad) - 40px);z-index:999;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12);font-size:13px;padding:8px 12px;touch-action:manipulation';
   const save = () => { lsSet('food-mag', JSON.stringify(MAG)); };
   const draw = () => {
     w.innerHTML = '<div style="display:flex;gap:8px;align-items:center"><b id="magT" style="flex:1">🧲 자석 ▾</b>' +
       '</div><div id="magLog" style="color:var(--sub);font-size:12px;margin-top:2px">끌어 튕기거나 전날·다음날을 길게 눌러 보세요</div>' +
-      '<div id="magB" hidden><div style="display:flex;gap:4px;margin-top:6px"><button data-a="def">기본값</button><button data-a="copy">복사</button><button data-a="off">끄기</button></div>' + SL.map(([k, l, a, b, st, u]) => '<label style="display:block;margin-top:6px">' + l + ' <b id="mv_' + k + '">' + MAG[k] + '</b> ' + u +
+      '<div id="magB" hidden><div style="display:flex;gap:4px;margin-top:6px"><button data-a="def">기본값</button><button data-a="copy">복사</button><button data-a="off">끄기</button></div>' + SL.map(([k, l, a, b, st, u]) => !l ? '<div style="margin-top:10px;font-weight:700">' + k + '</div>' : '<label style="display:block;margin-top:6px">' + l + ' <b id="mv_' + k + '">' + MAG[k] + '</b> ' + u +
         '<input type="range" data-k="' + k + '" min="' + a + '" max="' + b + '" step="' + st + '" value="' + MAG[k] + '" style="width:100%"></label>').join('') +
       '</div>';
   };
@@ -804,7 +814,12 @@ function stepDay(d) {
     if (!dn) return; const dx = (e.clientX - dn.x) * unit().k;
     if (Math.abs(dx) > 4) dn.moved = true;
     if (!dn.moved) return;
-    const t = performance.now(); ch.tgt = dn.p0 - dx / CCW;
+    const t = performance.now(); let raw = dn.p0 - dx / CCW;
+    if (MAG.pull > 0) {   /* 오늘 자석: 오늘 근처에선 손가락보다 오늘 쪽으로 당겨짐 (가까울수록 세게) */
+      const tI = dayDiff(ch.start, today()), r = Math.round(raw), tu = r + (ringI(tI - ringI(r) + CN / 2) - CN / 2), g = tu - raw;
+      if (Math.abs(g) < MAG.pullR) raw += g * MAG.pull * (1 - Math.abs(g) / MAG.pullR);
+    }
+    ch.tgt = raw;
     dn.s.push([t, ch.tgt]); while (dn.s.length > 2 && t - dn.s[0][0] > 60) dn.s.shift();
   });
   const end = (e, tap) => {
@@ -819,15 +834,15 @@ function stepDay(d) {
       /* 놓기: 마지막 60ms 속도(일/초)로 미끄러질 곳을 정하고, 그 날에 지수 감속으로 멈춤 */
       const a = dn.s[0], b = dn.s[dn.s.length - 1], t = performance.now();
       let v = b[0] > a[0] && t - b[0] < 80 ? (b[1] - a[1]) / (b[0] - a[0]) * 1000 : 0;
-      v = Math.sign(v) * Math.min(400, Math.max(0, Math.abs(v) - 4));
-      let tg = Math.round(ch.pos + v * CH_FTAU);
+      v = Math.sign(v) * Math.min(MAG.flingMax, Math.max(0, Math.abs(v) - MAG.flingDead));
+      let tg = Math.round(ch.pos + v * MAG.flingTau / 1000);
       /* 오늘 자석: 튕겨 멈출 곳이 오늘 근처 + 속도가 적당하면 오늘로 (천천히 맞춰 놓거나 세게 튕기면 그대로) */
       const tI = dayDiff(ch.start, today()), tu = tg + (ringI(tI - ringI(tg) + CN / 2) - CN / 2), av = Math.abs(v), gap = Math.abs(tu - tg);
       const snap = gap > 0 && gap <= MAG.dragR && av >= MAG.dragVmin && av <= MAG.dragVmax;
       magLog('튕김 ' + av.toFixed(1) + '일/초 · 멈출 곳 오늘에서 ' + gap + '일 → ' + (gap === 0 ? '오늘' : snap ? '붙음 🧲' : gap > MAG.dragR ? '멀어서 안 붙음' : av < MAG.dragVmin ? '느려서 안 붙음' : '세서 지나감'));
       if (snap) tg = tu;
       ch.tgt = tg;
-      const rem = ch.tgt - ch.pos; ch.tau = v && rem * v > 0 ? Math.max(0.1, Math.min(CH_FTAU, rem / v)) : 0;
+      const rem = ch.tgt - ch.pos; ch.tau = v && rem * v > 0 ? Math.max(0.1, Math.min(MAG.flingTau / 1000, rem / v)) : 0;
       runStrip();
     }
     dn = null;
@@ -855,9 +870,9 @@ const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x �
   let lo = 0, hi = 1, t = x; for (let k = 0; k < 20; k++) { t = (lo + hi) / 2; if (f(t, x1, x2) < x) lo = t; else hi = t; }
   return f(t, y1, y2);
 };
-/* 길게 누르기 = 키보드·스테퍼 자동 반복처럼: 잠깐 기다렸다가(NAV_DELAY) 천천히 시작해 누를수록 빨라짐.
+/* 길게 누르기 = 키보드·스테퍼 자동 반복처럼: 잠깐 기다렸다가(MAG.delay) 천천히 시작해 누를수록 빨라짐.
    애플 NSStepper 기준 0.5초 뒤 초당 10번 → 90일을 다니기엔 느려서 0.23초 뒤 초당 14일로 시작, 0.9초 동안 초당 140일(한 바퀴 0.65초)까지 */
-const NAV_EASE = bez(0.4, 0, 0.2, 1), NAV_V0 = 14, NAV_VMAX = 140, NAV_RAMP = 900, NAV_DELAY = 230;   /* 일/초 */
+const NAV_EASE = bez(0.4, 0, 0.2, 1);   /* 속도·가속은 MAG.delay·v0·vmax·ramp (🧲 패널) */
 const WSTEP = { 'w+.1': 0.1, 'w-.1': -0.1, 'w+1': 1, 'w-1': -1 };
 function renderPad() {
   const isToday = sel === today(), fut = sel > today(), planOK = !fut && !dayFoods(sel).length && !!planFor(sel), big = (s) => '<b style="font-size:19px;letter-spacing:-.02em">' + s + '</b>';
@@ -903,7 +918,7 @@ let pdn = null, holdT = null, holdI = null, holdR = 0, suppress = false;
 const stopHold = () => { clearTimeout(holdT); clearInterval(holdI); cancelAnimationFrame(holdR); holdT = holdI = null; holdR = 0; $('ch').classList.remove('fast'); navBlur(0); if (navFast) { navFast = false; if (listDirty) render(); } };
 /* 모션 블러 (덤벨 앱처럼 속도에 비례): 그래프 띠에만 */
 function navBlur(v) {
-  const nb = !REDUCED() && v > 20 ? Math.min(0.3, v / 800) : 0, f = nb ? 'blur(' + nb.toFixed(2) + 'px)' : '';   /* 그래프 띠만, 약하게 (최고 0.3px) */
+  const nb = !REDUCED() && v > 20 ? Math.min(MAG.blur, v / 800) : 0, f = nb ? 'blur(' + nb.toFixed(2) + 'px)' : '';   /* 그래프 띠만, 약하게 (최고 0.3px) */
   ['cs', 'cw'].forEach((id) => { const e = $(id); if (e && e.style.filter !== f) e.style.filter = f; });
 }
 pad.addEventListener('pointerdown', (e) => {
@@ -915,26 +930,26 @@ pad.addEventListener('pointerdown', (e) => {
   try { b.setPointerCapture(e.pointerId); } catch (er) {}   /* ★ 드래그·조그가 패드 밖(목록 위)으로 나가도 계속 받음 */
   if (WSTEP[pdn.k]) { const d = WSTEP[pdn.k]; stepW(d); holdT = setTimeout(() => { holdI = setInterval(() => stepW(d), 90); }, 420); }   /* 덤벨 앱 kg·회 길게 누르기와 같음 */
   /* 전날·다음날: 누르는 즉시, 길게 누르면 하루씩 빠르게 넘어가며 숫자가 계속 굴러감 */
-  /* 150ms 뒤 시작, 속도(일/초)가 NAV_RAMP 동안 베지어로 NAV_V0 → NAV_VMAX까지 오르고 놓을 때까지 그대로.
+  /* 150ms 뒤 시작, 속도(일/초)가 MAG.ramp 동안 베지어로 MAG.v0 → MAG.vmax까지 오르고 놓을 때까지 그대로.
      시간 기준(프레임이 늦어도 속도 유지) — 매 프레임 쌓인 만큼 한 번에 여러 날 넘김 + 속도에 맞춘 모션 블러 */
   if (DSTEP[pdn.k]) {
     const d = DSTEP[pdn.k]; stepDay(d); let t0 = 0, last = 0, acc = 0, pause = 0; magPass = 0;
     const loop = (now) => {
       if (now < pause) { last = now; holdR = requestAnimationFrame(loop); return; }   /* 오늘에서 잠깐 멈춤 */
-      const v = NAV_V0 + (NAV_VMAX - NAV_V0) * NAV_EASE(Math.min(1, Math.max(0, now - t0) / NAV_RAMP));
+      const v = MAG.v0 + (MAG.vmax - MAG.v0) * NAV_EASE(MAG.ramp > 0 ? Math.min(1, Math.max(0, now - t0) / MAG.ramp) : 1);
       acc += v * Math.min(0.1, (now - last) / 1000); last = now;
       const n = Math.floor(acc);
       if (n) {
         acc -= n; const k = MAG.hold > 0 ? todayAhead(d) : 0;
         if (k && k <= n) {   /* 오늘을 지나가려 함 → 오늘에 딱 서고 잠깐 멈췄다가 처음 속도부터 다시 */
-          stepDay(d * k); acc = 0; pause = now + MAG.hold; t0 = magPass = pause; navBlur(0);
+          stepDay(d * k); acc = 0; pause = magPass = now + MAG.hold; t0 = MAG.resume ? t0 + MAG.hold : pause; navBlur(0);
           magLog('길게 누름: 오늘에서 ' + MAG.hold + 'ms 멈춤 🧲'); holdR = requestAnimationFrame(loop); return;
         }
         stepDay(d * n);
       }
       navBlur(v); holdR = requestAnimationFrame(loop);
     };
-    holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, NAV_DELAY);
+    holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, MAG.delay);
   }
   if (pdn.k === 'fav' && favOpen()) pdn.p0 = fav.api.pos;
 });
