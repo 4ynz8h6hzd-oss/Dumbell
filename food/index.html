@@ -510,13 +510,12 @@ const weightOn = (d) => data.weights.find((w) => w.date === d && !w.sample) || d
 const lastWeight = (d) => data.weights.filter((w) => w.date <= d).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
 const sgn = (v, d) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d);
 let mode = 'main', wVal = 70, lastAdd = [];
-/* 한 줄 코칭: 최근 7일 평균 섭취 vs 목표 → 하루 몇 kcal 더/덜 (50 단위, ±100 미만이면 지금처럼) */
+/* 한 줄 코칭(어느 날을 보든 항상): 최근 7일 평균 섭취 vs 목표 → 너무 적게/많이 (50 단위, ±100 미만이면 잘 먹는 중) */
 function coachLine(M) {
-  const g = { cut: '감량', keep: '유지', bulk: '증량' }[cfg.goal] || '유지';
-  if (M.avgK == null) return g + ' · 하루 <b>' + fmt(M.target) + ' kcal</b> 목표로 드세요';
+  if (M.avgK == null) return '하루 <b>' + fmt(M.target) + ' kcal</b> 목표로 드세요';
   const d = Math.round((M.target - M.avgK) / 50) * 50, via = ' · 7일 평균 ' + fmt(M.avgK);
-  if (Math.abs(d) < 100) return g + ' · <b>지금처럼 드세요</b>' + via;
-  return g + ' · 하루 <b>' + fmt(Math.abs(d)) + ' kcal ' + (d > 0 ? '더' : '덜') + '</b> 드세요' + via;
+  if (Math.abs(d) < 100) return '<b>잘 먹고 있어요</b> · 지금처럼' + via;
+  return '<b>너무 ' + (d > 0 ? '적게' : '많이') + ' 먹고 있어요</b> · 하루 ' + fmt(Math.abs(d)) + ' ' + (d > 0 ? '더' : '덜') + via;
 }
 function render() {
   const M = model(), isToday = sel === today(), fut = sel > today(), sm = fut ? M.sim.get(sel) : null, fs = dayFoods(sm ? sm.src : sel), hero = $('hero');
@@ -539,7 +538,7 @@ function render() {
   }
   if (fut) { kRoll.to(sm ? Math.round(sm.k) : null); $('kMeta').innerHTML = '/ ' + fmt(M.target) + ' · 예상'; }
   else { kRoll.to(Math.round(t.k)); $('kMeta').innerHTML = '/ ' + fmt(M.target) + ' · ' + (left >= 0 ? fmt(left) + ' 남음' : '<b>' + fmt(-left) + ' 초과</b>'); }
-  $('coach').innerHTML = isToday && mode !== 'weight' ? coachLine(M) : '';
+  $('coach').innerHTML = coachLine(M);
   [['p', t.p, M.P], ['c', t.c, M.C], ['f', t.f, M.F]].forEach(([k, v, g]) => {
     $(k + 'V').textContent = Math.round(v) + '/' + g + 'g';
     const b = $(k + 'B'); b.style.width = Math.min(100, g ? v / g * 100 : 0) + '%';
