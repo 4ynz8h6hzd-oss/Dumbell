@@ -524,7 +524,7 @@ const wRoll = Roll($('wRoll'), 68), kRoll = Roll($('kRoll'), 34);
 
 /* ---------- 30일 창 그래프: 90일 한 바퀴를 띠로 그리고, 고른 날이 늘 가운데 오도록 띠가 부드럽게 움직임.
    그날 먹은 kcal 막대 + 몸무게 추세선(잰 날은 점). 끌면 띠가 따라오며 날짜가 바뀌고 숫자가 굴러감 ---------- */
-const CW = 360, CH = 118, CN = 90, CVIS = 30, CCW = CW / CVIS, CMID = CW / 2;
+const CW = 360, CH = 118, CY = 31, CN = 90, CVIS = 30, CCW = CW / CVIS, CMID = CW / 2;
 let ch = null, chPin = false, navAt = 0, chHideT = null;
 const chX = (i) => (i + 0.5) * CCW;
 /* 90일이 한 바퀴: 지난 60일(오늘 포함) + 앞으로 30일(추세 예상). 끝과 처음이 이어지도록 띠를 세 벌 그림 */
@@ -559,27 +559,34 @@ function drawChart(M) {
   const ti = RPAST, tx = (chX(ti) + CCW / 2).toFixed(1);
   b += '<line class="td" x1="' + tx + '" x2="' + tx + '" y1="2" y2="' + kB + '"/>';
   b += '<line class="sm" x1="0" x2="0" y1="2" y2="' + kB + '"/>';
+  let w = '';
   const pp = [], pf = []; lv.forEach((v, i) => { if (v == null) return; const q = chX(i).toFixed(1) + ',' + wY(v).toFixed(1); if (i <= ti) pp.push(q); if (i >= ti) pf.push(q); });
-  if (pp.length > 1) b += '<polyline class="wl2" points="' + pp.join(' ') + '"/>';
-  if (pf.length > 1) b += '<polyline class="wl2 fu" points="' + pf.join(' ') + '"/>';
-  days.forEach((d, i) => { if (ws.has(d)) b += '<circle class="wd" cx="' + chX(i).toFixed(1) + '" cy="' + wY(ws.get(d)).toFixed(1) + '" r="2.2"/>'; });
+  if (pp.length > 1) w += '<polyline class="wl2" points="' + pp.join(' ') + '"/>';
+  if (pf.length > 1) w += '<polyline class="wl2 fu" points="' + pf.join(' ') + '"/>';
+  days.forEach((d, i) => { if (ws.has(d)) w += '<circle class="wd" cx="' + chX(i).toFixed(1) + '" cy="' + wY(ws.get(d)).toFixed(1) + '" r="2.2"/>'; });
   days.forEach((d, i) => {
     const dd = +d.slice(8), lab = i === ti ? '오늘' : Math.abs(i - ti) > 2 && (dd === 1 || dd === 10 || dd === 20) ? +d.slice(5, 7) + '.' + dd : '';
     if (lab) b += '<text x="' + chX(i).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle"' + (i === ti ? ' class="tt"' : '') + '>' + lab + '</text>';
   });
   let s = '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="고른 날 앞뒤 30일 섭취 kcal와 몸무게">';
   s += '<line x1="0" x2="' + CW + '" y1="' + kY(M.target).toFixed(1) + '" y2="' + kY(M.target).toFixed(1) + '" class="tg"/>';
-  s += '<g id="cs" class="cs">' + [-1, 0, 1].map((k) => '<g transform="translate(' + (k * CN * CCW).toFixed(1) + ',0)">' + b + '</g>').join('') + '</g>';
-  s += '<line class="cl" x1="' + CMID + '" x2="' + CMID + '" y1="2" y2="' + kB + '"/><circle id="cd" class="cd" r="4.5" cx="' + CMID + '" cy="0"/></svg>';
+  const strip = (id, x) => '<g id="' + id + '" class="cs">' + [-1, 0, 1].map((k) => '<g transform="translate(' + (k * CN * CCW).toFixed(1) + ',0)">' + x + '</g>').join('') + '</g>';
+  /* 막대 띠는 옆으로만, 몸무게 띠는 옆+위아래로 움직여 가운데 고정 점(CMID, CY)을 선이 지나가게 함 */
+  s += strip('cs', b) + '<line class="cl" x1="' + CMID + '" x2="' + CMID + '" y1="2" y2="' + kB + '"/>' + strip('cw', w);
+  s += '<circle id="cd" class="cd" r="4.5" cx="' + CMID + '" cy="' + CY + '"/></svg>';
   $('ch').innerHTML = s;
-  ch = { key, start, wY, lv, ws, p: null, normT: null };
+  ch = { key, start, wY, lv, ws, p: null, ty: 0, normT: null };
 }
 /* 띠 위치 p(풀린 인덱스). 고른 날까지 고리에서 가까운 쪽으로 움직이고, 멈추면 몰래 가운데 벌로 되돌림 */
 function stripTo(p, anim) {
-  const g = $('cs'); if (!g) return;
-  if (!anim) { g.style.transition = 'none'; g.getBoundingClientRect(); }
-  g.style.transform = 'translateX(' + (CMID - chX(p)).toFixed(2) + 'px)';
-  if (!anim) { g.getBoundingClientRect(); g.style.transition = ''; }
+  const g = $('cs'), gw = $('cw'); if (!g || !ch) return;
+  const v = ch.lv[ringI(p)]; if (v != null) ch.ty = CY - ch.wY(v);
+  const x = (CMID - chX(p)).toFixed(2);
+  [[g, 'translate(' + x + 'px,0)'], [gw, 'translate(' + x + 'px,' + ch.ty.toFixed(2) + 'px)']].forEach(([e, t]) => {
+    if (!anim) { e.style.transition = 'none'; e.getBoundingClientRect(); }
+    e.style.transform = t;
+    if (!anim) { e.getBoundingClientRect(); e.style.transition = ''; }
+  });
 }
 function placeCursor() {
   if (!ch) return;
@@ -593,9 +600,7 @@ function placeCursor() {
     if (ch.p < 0 || ch.p >= CN) ch.normT = setTimeout(() => { ch.p = ringI(ch.p); stripTo(ch.p, false); }, 450);
   }
   $('ch').querySelectorAll('.cb').forEach((r) => r.classList.toggle('on', +r.dataset.i === i));
-  const v = ch.ws.get(sel) ?? ch.lv[i], cd = $('cd');
-  cd.style.opacity = v == null ? 0 : 1;
-  if (v != null) cd.style.transform = 'translateY(' + ch.wY(v).toFixed(1) + 'px)';
+  $('cd').style.opacity = ch.lv[i] == null ? 0 : 1;
 }
 function updChart(M) {
   const want = chPin || sel !== today() || Date.now() - navAt < 1600;
