@@ -45,7 +45,7 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .roll .dg .tr{left:0;right:0;top:50%}
 .roll .dg .r{position:absolute;left:0;right:0;height:var(--h);margin-top:calc(var(--h) / -2);display:flex;align-items:center;justify-content:center}
 .roll .rs{display:inline-block;width:.28em;text-align:center}
-/* 90일 그래프 (날짜 넘길 때·지난날 볼 때만) */
+/* 30일 창 그래프 — 고른 날이 가운데, 띠가 움직임 (날짜 넘길 때·지난날 볼 때만) */
 .ch{flex:none;max-height:0;overflow:hidden;opacity:0;transition:max-height .25s ease,opacity .2s;padding:0 18px;touch-action:none;-webkit-user-select:none;user-select:none;cursor:ew-resize}
 .ch.on{max-height:130px;opacity:1}
 .ch svg{display:block;width:100%;height:auto;margin-bottom:8px}
@@ -54,8 +54,13 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .ch .wl2{fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .ch .wd{fill:var(--ink)}
 .ch .cb.fu{fill:#F2F2F7}.ch .cb.fu.on{fill:#F9C9A8}.ch .wl2.fu{stroke:var(--mute);stroke-dasharray:4 3}
-.ch .cg line{stroke:var(--ink);stroke-opacity:.18;stroke-width:1.5}
-.ch .cg,.ch .cd{transition:transform .22s cubic-bezier(.2,.7,.3,1)}
+.ch svg{-webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)}
+.ch .cl{stroke:var(--ink);stroke-opacity:.18;stroke-width:1.5}
+.ch .cs{transition:transform .32s cubic-bezier(.2,.7,.3,1);will-change:transform}
+.ch.drag .cs{transition:transform .12s linear}
+.ch .cd{transition:transform .32s cubic-bezier(.2,.7,.3,1),opacity .2s}
+.ch .sm{stroke:var(--faint);stroke-dasharray:2 3}
+.ch text.tt{fill:var(--ink);font-weight:600}
 .ch .cd{fill:#fff;stroke:var(--acc);stroke-width:2.5}
 .ch .td{stroke:var(--mute);stroke-opacity:.5;stroke-width:1}
 .ch text{font-size:10px;fill:var(--mute)}
@@ -517,45 +522,67 @@ function Roll(host, h) {
 }
 const wRoll = Roll($('wRoll'), 68), kRoll = Roll($('kRoll'), 34);
 
-/* ---------- 90일 그래프(한 바퀴 전체): 그날 먹은 kcal 막대 + 몸무게 추세선(잰 날은 점) + 커서. 끌면 날짜가 바뀌고 숫자가 굴러감 ---------- */
-const CW = 360, CH = 118, CL = 6, CR = 6, CN = 90, CCW = (CW - CL - CR) / CN;
+/* ---------- 30일 창 그래프: 90일 한 바퀴를 띠로 그리고, 고른 날이 늘 가운데 오도록 띠가 부드럽게 움직임.
+   그날 먹은 kcal 막대 + 몸무게 추세선(잰 날은 점). 끌면 띠가 따라오며 날짜가 바뀌고 숫자가 굴러감 ---------- */
+const CW = 360, CH = 118, CN = 90, CVIS = 30, CCW = CW / CVIS, CMID = CW / 2;
 let ch = null, chPin = false, navAt = 0, chHideT = null;
-const chX = (i) => CL + (i + 0.5) * CCW;
-/* 90일이 한 바퀴: 지난 60일(오늘 포함) + 앞으로 30일(추세 예상). 그래프 하나에 전부 */
+const chX = (i) => (i + 0.5) * CCW;
+/* 90일이 한 바퀴: 지난 60일(오늘 포함) + 앞으로 30일(추세 예상). 끝과 처음이 이어지도록 띠를 세 벌 그림 */
 const RPAST = 59, RFUT = 30;
-function chartWin() { const t = today(); return { start: addDays(t, -RPAST), end: addDays(t, RFUT) }; }
+const ringI = (i) => ((i % CN) + CN) % CN;
 function drawChart(M) {
-  const { start, end } = chartWin(), key = start + '|' + dataVer + '|' + M.target;
+  const T = today(), start = addDays(T, -RPAST), key = T + '|' + dataVer + '|' + M.target;
   if (ch && ch.key === key) return;
   const by = kcalByDay(), ws = new Map(data.weights.map((w) => [w.date, w.kg]));
   const days = []; for (let i = 0; i < CN; i++) days.push(addDays(start, i));
   let mk = M.target * 1.3; days.forEach((d) => { mk = Math.max(mk, by.get(d) || 0); });
   const kB = CH - 16, kT = 40, kY = (v) => kB - v / mk * (kB - kT);
-  const T = today(), fu = days.map((d) => d > T), tv = days.map((d) => M.wAt(d)), wv = tv.filter((v) => v != null).concat(days.map((d) => ws.get(d)).filter((v) => v != null));
+  const fu = days.map((d) => d > T), tv = days.map((d) => M.wAt(d)), wv = tv.filter((v) => v != null).concat(days.map((d) => ws.get(d)).filter((v) => v != null));
   let lo = Math.min(...wv), hi = Math.max(...wv); if (!wv.length) { lo = 0; hi = 1; } if (hi - lo < 1) { const m = (hi + lo) / 2; lo = m - 0.5; hi = m + 0.5; }
   const wY = (v) => 8 + (hi - v) / (hi - lo) * 46;
-  let s = '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="지난 60일·앞으로 30일 섭취 kcal와 몸무게">';
-  days.forEach((d, i) => { const v = fu[i] ? (M.sim.has(d) ? M.sim.get(d).k : 0) : by.get(d) || 0; const y = kY(v); s += '<rect class="cb' + (fu[i] ? ' fu' : v > M.target * 1.1 ? ' hi' : '') + '" data-i="' + i + '" x="' + (chX(i) - CCW * 0.36).toFixed(2) + '" y="' + y.toFixed(1) + '" width="' + (CCW * 0.72).toFixed(2) + '" height="' + Math.max(v ? 2 : 0, kB - y).toFixed(1) + '" rx="1"/>'; });
-  s += '<line x1="' + CL + '" x2="' + (CW - CR) + '" y1="' + kY(M.target).toFixed(1) + '" y2="' + kY(M.target).toFixed(1) + '" class="tg"/>';
-  const ti = dayDiff(start, T), tx = (chX(ti) + CCW / 2).toFixed(1);
-  s += '<line class="td" x1="' + tx + '" x2="' + tx + '" y1="2" y2="' + kB + '"/>';
+  /* 띠 한 벌(90일) */
+  let b = '';
+  days.forEach((d, i) => { const v = fu[i] ? (M.sim.has(d) ? M.sim.get(d).k : 0) : by.get(d) || 0; const y = kY(v); b += '<rect class="cb' + (fu[i] ? ' fu' : v > M.target * 1.1 ? ' hi' : '') + '" data-i="' + i + '" x="' + (chX(i) - CCW * 0.36).toFixed(2) + '" y="' + y.toFixed(1) + '" width="' + (CCW * 0.72).toFixed(2) + '" height="' + Math.max(v ? 2 : 0, kB - y).toFixed(1) + '" rx="2"/>'; });
+  const ti = RPAST, tx = (chX(ti) + CCW / 2).toFixed(1);
+  b += '<line class="td" x1="' + tx + '" x2="' + tx + '" y1="2" y2="' + kB + '"/>';
+  b += '<line class="sm" x1="0" x2="0" y1="2" y2="' + kB + '"/>';
   const pp = [], pf = []; tv.forEach((v, i) => { if (v == null) return; const q = chX(i).toFixed(1) + ',' + wY(v).toFixed(1); if (i <= ti) pp.push(q); if (i >= ti) pf.push(q); });
-  if (pp.length > 1) s += '<polyline class="wl2" points="' + pp.join(' ') + '"/>';
-  if (pf.length > 1) s += '<polyline class="wl2 fu" points="' + pf.join(' ') + '"/>';
-  days.forEach((d, i) => { if (ws.has(d)) s += '<circle class="wd" cx="' + chX(i).toFixed(1) + '" cy="' + wY(ws.get(d)).toFixed(1) + '" r="1.6"/>'; });
-  s += '<g id="cg" class="cg"><line x1="0" x2="0" y1="2" y2="' + kB + '"/></g><circle id="cd" class="cd" r="4.5" cx="0" cy="0"/>';
-  s += '<text x="' + CL + '" y="' + (CH - 2) + '">' + md(start).replace(/ \(.\)$/, '') + '</text><text x="' + chX(ti).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle">오늘</text><text x="' + (CW - CR) + '" y="' + (CH - 2) + '" text-anchor="end">' + md(end).replace(/ \(.\)$/, '') + '</text></svg>';
+  if (pp.length > 1) b += '<polyline class="wl2" points="' + pp.join(' ') + '"/>';
+  if (pf.length > 1) b += '<polyline class="wl2 fu" points="' + pf.join(' ') + '"/>';
+  days.forEach((d, i) => { if (ws.has(d)) b += '<circle class="wd" cx="' + chX(i).toFixed(1) + '" cy="' + wY(ws.get(d)).toFixed(1) + '" r="2.2"/>'; });
+  days.forEach((d, i) => {
+    const dd = +d.slice(8), lab = i === ti ? '오늘' : Math.abs(i - ti) > 2 && (dd === 1 || dd === 10 || dd === 20) ? +d.slice(5, 7) + '.' + dd : '';
+    if (lab) b += '<text x="' + chX(i).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle"' + (i === ti ? ' class="tt"' : '') + '>' + lab + '</text>';
+  });
+  let s = '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="고른 날 앞뒤 30일 섭취 kcal와 몸무게">';
+  s += '<line x1="0" x2="' + CW + '" y1="' + kY(M.target).toFixed(1) + '" y2="' + kY(M.target).toFixed(1) + '" class="tg"/>';
+  s += '<g id="cs" class="cs">' + [-1, 0, 1].map((k) => '<g transform="translate(' + (k * CN * CCW).toFixed(1) + ',0)">' + b + '</g>').join('') + '</g>';
+  s += '<line class="cl" x1="' + CMID + '" x2="' + CMID + '" y1="2" y2="' + kB + '"/><circle id="cd" class="cd" r="4.5" cx="' + CMID + '" cy="0"/></svg>';
   $('ch').innerHTML = s;
-  ch = { key, start, wY, wAt: M.wAt, ws };
+  ch = { key, start, wY, wAt: M.wAt, ws, p: null, normT: null };
+}
+/* 띠 위치 p(풀린 인덱스). 고른 날까지 고리에서 가까운 쪽으로 움직이고, 멈추면 몰래 가운데 벌로 되돌림 */
+function stripTo(p, anim) {
+  const g = $('cs'); if (!g) return;
+  if (!anim) { g.style.transition = 'none'; g.getBoundingClientRect(); }
+  g.style.transform = 'translateX(' + (CMID - chX(p)).toFixed(2) + 'px)';
+  if (!anim) { g.getBoundingClientRect(); g.style.transition = ''; }
 }
 function placeCursor() {
   if (!ch) return;
   const i = dayDiff(ch.start, sel); if (i < 0 || i >= CN) return;
-  $('cg').style.transform = 'translateX(' + chX(i).toFixed(1) + 'px)';
+  clearTimeout(ch.normT);
+  if (ch.p == null) { ch.p = i; stripTo(i, false); }
+  else {
+    if (ch.p < -45 || ch.p >= CN + 45) { ch.p = ringI(ch.p); stripTo(ch.p, false); }
+    const d = ringI(i - ringI(ch.p) + CN / 2) - CN / 2;
+    if (d) { ch.p += d; stripTo(ch.p, true); }
+    if (ch.p < 0 || ch.p >= CN) ch.normT = setTimeout(() => { ch.p = ringI(ch.p); stripTo(ch.p, false); }, 450);
+  }
   $('ch').querySelectorAll('.cb').forEach((r) => r.classList.toggle('on', +r.dataset.i === i));
   const v = ch.ws.get(sel) ?? ch.wAt(sel), cd = $('cd');
   cd.style.opacity = v == null ? 0 : 1;
-  if (v != null) cd.style.transform = 'translate(' + chX(i).toFixed(1) + 'px,' + ch.wY(v).toFixed(1) + 'px)';
+  if (v != null) cd.style.transform = 'translateY(' + ch.wY(v).toFixed(1) + 'px)';
 }
 function updChart(M) {
   const want = chPin || sel !== today() || Date.now() - navAt < 1600;
@@ -572,16 +599,25 @@ function stepDay(d) {
   sel = nd; navAt = Date.now(); vib(); render(); return true;
 }
 (() => {
-  const el = $('ch'); let on = false;
-  const pick = (e) => {
-    if (!ch) return; const r = el.querySelector('svg').getBoundingClientRect();
-    const i = Math.max(0, Math.min(CN - 1, Math.floor(((e.clientX - r.left) / r.width * CW - CL) / CCW)));
-    const d = addDays(ch.start, i); navAt = Date.now();
-    if (d !== sel) { sel = d; vib(); render(); }
+  /* 띠를 끌면 손가락을 따라 날짜가 넘어가고, 그냥 탭하면 그 자리 날짜로 */
+  const el = $('ch'); let dn = null;
+  const unit = (e) => { const r = el.querySelector('svg').getBoundingClientRect(); return { r, k: CW / r.width }; };
+  const go = (i) => { const d = addDays(ch.start, ringI(i)); navAt = Date.now(); if (d !== sel) { sel = d; vib(); render(); } };
+  el.addEventListener('pointerdown', (e) => {
+    if (!ch) return; try { el.setPointerCapture(e.pointerId); } catch (er) {}
+    dn = { x: e.clientX, i: dayDiff(ch.start, sel), moved: false }; el.classList.add('drag');
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!dn) return; const dx = (e.clientX - dn.x) * unit(e).k;
+    if (Math.abs(dx) > 4) dn.moved = true;
+    if (dn.moved) go(dn.i - Math.round(dx / CCW));
+  });
+  const end = (e, tap) => {
+    if (!dn) return; el.classList.remove('drag');
+    if (tap && !dn.moved) { const { r, k } = unit(e); go(dn.i + Math.round(((e.clientX - r.left) * k - CMID) / CCW)); }
+    dn = null;
   };
-  el.addEventListener('pointerdown', (e) => { on = true; try { el.setPointerCapture(e.pointerId); } catch (er) {} pick(e); });
-  el.addEventListener('pointermove', (e) => { if (on) pick(e); });
-  el.addEventListener('pointerup', () => { on = false; }); el.addEventListener('pointercancel', () => { on = false; });
+  el.addEventListener('pointerup', (e) => end(e, true)); el.addEventListener('pointercancel', (e) => end(e, false));
 })();
 
 /* ---------- 엄지 패드 (운동 앱과 같은 3×3) ---------- */
