@@ -738,7 +738,7 @@ let pdn = null, holdT = null, holdI = null, holdR = 0, suppress = false;
 const stopHold = () => { clearTimeout(holdT); clearInterval(holdI); cancelAnimationFrame(holdR); holdT = holdI = null; holdR = 0; $('ch').classList.remove('fast'); navBlur(0); if (navFast) { navFast = false; if (listDirty) render(); } };
 /* 모션 블러 (덤벨 앱처럼 속도에 비례): 그래프 띠에만 */
 function navBlur(v) {
-  const nb = !REDUCED() && v > 20 ? Math.min(0.6, v / 400) : 0, f = nb ? 'blur(' + nb.toFixed(2) + 'px)' : '';   /* 그래프 띠만, 약하게 (최고 0.6px) */
+  const nb = !REDUCED() && v > 20 ? Math.min(0.3, v / 800) : 0, f = nb ? 'blur(' + nb.toFixed(2) + 'px)' : '';   /* 그래프 띠만, 약하게 (최고 0.3px) */
   ['cs', 'cw'].forEach((id) => { const e = $(id); if (e && e.style.filter !== f) e.style.filter = f; });
 }
 pad.addEventListener('pointerdown', (e) => {
