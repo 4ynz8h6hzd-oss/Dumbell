@@ -159,7 +159,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .fw.cx .lens{opacity:.25}.fw.cx #fwD{opacity:.35}.fw.cx #fwX{background:var(--ink);color:#fff;transform:scale(1.12)}.fw.cx .fwh{color:var(--ink);font-weight:700}
 #fwOk{position:absolute;right:calc(14px + var(--pad) / 2 - 34px);bottom:calc(14px + env(safe-area-inset-bottom) + var(--pad) / 2 - 34px);width:68px;height:68px;border-radius:50%;background:var(--acc);color:#fff;display:none;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(242,107,29,.3)}
 .fw.tp #fwOk{display:flex}
-#fwX{transition:transform .12s,background .12s;position:absolute;right:calc(14px + 8px + (var(--pad) - 16px) / 6 - 28px);bottom:calc(14px + env(safe-area-inset-bottom) + 8px + (var(--pad) - 16px) / 6 - 28px);width:56px;height:56px;border-radius:50%;background:var(--plate);color:var(--sub);display:flex;align-items:center;justify-content:center}
+#fwX{transition:transform .12s,background .12s;position:absolute;right:calc(14px + var(--pad) - 8px - (var(--pad) - 16px) / 6 - 28px);   /* 패드 왼쪽 아래 칸 */bottom:calc(14px + env(safe-area-inset-bottom) + 8px + (var(--pad) - 16px) / 6 - 28px);width:56px;height:56px;border-radius:50%;background:var(--plate);color:var(--sub);display:flex;align-items:center;justify-content:center}
 /* 양 가로 원통 */
 .hd{position:relative;height:52px;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;cursor:ew-resize;-webkit-mask-image:linear-gradient(to right,transparent,#000 24%,#000 76%,transparent);mask-image:linear-gradient(to right,transparent,#000 24%,#000 76%,transparent)}
 .hd .hl{position:absolute;top:6px;bottom:6px;left:50%;width:60px;margin-left:-30px;border-radius:12px;background:var(--plate);z-index:0}
