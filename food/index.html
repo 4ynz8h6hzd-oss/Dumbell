@@ -92,6 +92,11 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .it.gh{opacity:.45;pointer-events:none}
 .gnote{color:var(--mute);font-size:12px;padding:10px 0 2px}
 .it .mc{grid-column:2 / span 2;color:var(--mute);font-size:12px;margin-top:2px}
+.sum{display:flex;align-items:center;gap:10px;width:100%;padding:14px 0;border:0;border-bottom:.5px solid var(--line);background:none;font:inherit;color:var(--ink);text-align:left}
+.sum .sn{flex:1;min-width:0;font-size:17px;font-weight:600;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.sum .sn small{color:var(--mute);font-weight:400;font-size:14px}
+.sum .sx{color:var(--mute);font-size:13px;white-space:nowrap}
+.sum.fu{opacity:.45}
 .empty{color:var(--mute);font-size:14px;padding:28px 0 14px;line-height:1.7}
 .planb{display:block;width:100%;margin:0 0 20px;padding:14px;border:0;border-radius:14px;background:var(--acc);color:#fff;font:inherit;font-size:16px;font-weight:700}
 .planb small{display:block;margin-top:2px;font-size:12px;font-weight:400;opacity:.85}
@@ -577,12 +582,16 @@ function render() {
   const gh = fut ? ' gh' : '', fm = sm ? sm.f : 1;
   if (navFast) { listDirty = true; return; }   /* 빨리 넘기는 동안은 목록·패드를 다시 그리지 않음 (놓으면 한 번) */
   listDirty = false;
-  $('list').innerHTML = (fut && fs.length ? '<div class="gnote">예상 · ' + md(sm.src) + '처럼 먹을 듯 (±8%)</div>' : '') + (fs.length ? fs.map((f) => {
+  /* 기본은 대표 음식만 한 줄 (kcal 큰 3개, 먹은 순서대로) · 탭하면 전부 펼쳐 고치기 */
+  const open = listOpen === sel, top = fs.slice().sort((a, b) => b.kcal - a.kcal).slice(0, 3).sort((a, b) => a.ts - b.ts);
+  const sum = fs.length ? '<button type="button" class="sum' + (fut ? ' fu' : '') + '" id="sumBtn"><span class="sn">' + top.map((f) => esc(f.name)).join(' · ') +
+    (fs.length > 3 ? ' <small>외 ' + (fs.length - 3) + '</small>' : '') + '</span><span class="sx">' + (open ? '접기' : fs.length + '개 ›') + '</span></button>' : '';
+  $('list').innerHTML = (fut && fs.length ? '<div class="gnote">예상 · ' + md(sm.src) + '처럼 먹을 듯 (±8%)</div>' : '') + sum + (fs.length ? (!open ? '' : fs.map((f) => {
     const d = new Date(f.ts);
     return '<button class="it' + gh + '"' + (fut ? ' tabindex="-1"' : ' data-id="' + esc(f.id) + '"') + '><span class="tm num">' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + '</span>' +
       '<span class="nm">' + esc(f.name) + (f.amt ? '<small>' + esc(f.amt) + '</small>' : '') + '</span><span class="kc num">' + fmt(f.kcal * fm) + '</span>' +
       '<span class="mc num">단 ' + Math.round(f.p * fm) + ' · 탄 ' + Math.round(f.c * fm) + ' · 지 ' + Math.round(f.f * fm) + '</span></button>';
-  }).join('') : '<div class="empty">' + (fut ? '지난 1개월 기록이 있어야 예상해요' : isToday ? '패드 가운데 ✎ 로 먹은 걸 적고,<br>📷 사진 · ★ 자주 먹는 음식 · ＋ 직접 입력.' : '이 날 기록이 없어요') + '</div>' + (!fut && planFor(sel) ? '<button type="button" class="planb" id="planBtn">예상대로 먹었어요<small>' + md(planFor(sel).src) + '처럼 · 오른쪽 아래 ✓ 로도 돼요</small></button>' : ''));
+  }).join('')) : '<div class="empty">' + (fut ? '지난 1개월 기록이 있어야 예상해요' : isToday ? '패드 가운데 ✎ 로 먹은 걸 적고,<br>📷 사진 · ★ 자주 먹는 음식 · ＋ 직접 입력.' : '이 날 기록이 없어요') + '</div>' + (!fut && planFor(sel) ? '<button type="button" class="planb" id="planBtn">예상대로 먹었어요<small>' + md(planFor(sel).src) + '처럼 · 오른쪽 아래 ✓ 로도 돼요</small></button>' : ''));
   renderPad();
 }
 
@@ -624,7 +633,7 @@ const wRoll = Roll($('wRoll'), 68), kRoll = Roll($('kRoll'), 34);
 /* ---------- 30일 창 그래프: 90일 한 바퀴를 띠로 그리고, 고른 날이 늘 가운데 오도록 띠가 부드럽게 움직임.
    그날 먹은 kcal 막대 + 몸무게 추세선(잰 날은 점). 끌면 띠가 따라오며 날짜가 바뀌고 숫자가 굴러감 ---------- */
 const CW = 360, CH = 118, CY = 31, CN = 90, CVIS = 30, CCW = CW / CVIS, CMID = CW / 2;
-let ch = null, chHide = false, navAt = 0, chHideT = null, navFast = false, listDirty = false;
+let listOpen = null, ch = null, chHide = false, navAt = 0, chHideT = null, navFast = false, listDirty = false;
 const chX = (i) => (i + 0.5) * CCW;
 /* 90일이 한 바퀴: 지난 60일(오늘 포함) + 앞으로 30일(추세 예상). 끝과 처음이 이어지도록 띠를 세 벌 그림 */
 const RPAST = 59, RFUT = 30;
@@ -708,10 +717,13 @@ function drawChart(M) {
    [길게 누르기] delay 시작까지(ms) · v0 처음 속도 · vmax 최고 속도(일/초) · ramp 최고 속도까지 걸리는 시간(ms)
    [움직임] resp 한 칸 이동 스프링 반응(초) · respHold 길게 누르는 동안 반응(초) · blur 최고 모션 블러(px)
    [튕김] flingTau 미끄러짐 시간상수(ms, 애플 0.998/ms ≈ 500) · flingMax 최고 튕김 속도 · flingDead 이보다 느리면 튕김 없음(일/초) */
-const MAG_DEF = { dragR: 3, dragVmin: 2, dragVmax: 80, pull: 0, pullR: 1, hold: 300, resume: 0, back: 350,
+const MAG_DEF = { mag: 5, dragR: 3, dragVmin: 2, dragVmax: 80, pull: 0, pullR: 1, hold: 300, resume: 0, back: 350,
   delay: 230, v0: 14, vmax: 140, ramp: 900, resp: 0.34, respHold: 0.11, blur: 0.3, flingTau: 500, flingMax: 400, flingDead: 4 };
 const MAG = Object.assign({}, MAG_DEF, (() => { try { return JSON.parse(lsGet('food-mag')) || {}; } catch (e) { return {}; } })());
 let magPass = 0;
+/* 패널엔 4개만: 자석 세기(mag 0~10) 하나가 자석 값들을 한꺼번에 정함 (5 = 반경 3일·멈춤 300ms·되돌아옴 350ms·튕김 80일/초까지) */
+function magApply() { const k = MAG.mag / 10; Object.assign(MAG, { dragR: Math.round(6 * k), hold: Math.round(600 * k), back: Math.round(700 * k), dragVmax: 40 + 80 * k, dragVmin: 2, pull: 0, resume: 0 }); }
+magApply();
 const magLog = (t) => { const e = document.getElementById('magLog'); if (e) e.textContent = t; };
 
 function lineYf(p) { const a = Math.floor(p), f = p - a, y0 = ch.lineY(a), y1 = ch.lineY(a + 1); return y0 == null ? y1 : y1 == null ? y0 : y0 + (y1 - y0) * f; }
@@ -766,12 +778,8 @@ const todayAhead = (d) => ringI((RPAST - (dayDiff(today(), sel) + RPAST)) * d); 
 (() => {
   if (/[?&]tune\b/.test(location.search)) lsSet('food-tune', '1');
   if (!lsGet('food-tune')) return;
-  const SL = [['🧲 오늘 자석 — 끌기'], ['dragR', '튕김 붙는 반경', 0, 10, 1, '일'], ['dragVmin', '이보다 느리면 안 붙음', 0, 30, 1, '일/초'], ['dragVmax', '이보다 세면 지나감', 10, 400, 5, '일/초'],
-    ['pull', '끄는 중 오늘 쪽으로 당김', 0, 1, 0.05, '(0 = 끔)'], ['pullR', '당기는 범위', 0.5, 3, 0.1, '일'],
-    ['🧲 오늘 자석 — 길게 누르기'], ['hold', '오늘에서 멈춤', 0, 1000, 25, 'ms'], ['resume', '멈춘 뒤 원래 속도로 (1) / 처음부터 (0)', 0, 1, 1, ''], ['back', '지나친 뒤 놓으면 되돌아옴', 0, 1000, 25, 'ms'],
-    ['⏩ 길게 누르기 속도'], ['delay', '시작까지', 0, 800, 10, 'ms'], ['v0', '처음 속도', 1, 60, 1, '일/초'], ['vmax', '최고 속도', 10, 400, 5, '일/초'], ['ramp', '최고 속도까지 (가속)', 0, 3000, 50, 'ms'],
-    ['〰️ 움직임'], ['resp', '한 칸 이동 반응 (클수록 느긋)', 0.1, 1, 0.01, '초'], ['respHold', '길게 누르는 동안 반응', 0.03, 0.5, 0.01, '초'], ['blur', '모션 블러 최고', 0, 2, 0.05, 'px'],
-    ['👆 튕김'], ['flingTau', '미끄러짐 (클수록 멀리)', 100, 1500, 25, 'ms'], ['flingMax', '최고 튕김 속도', 50, 800, 10, '일/초'], ['flingDead', '이보다 느리면 튕김 없음', 0, 20, 0.5, '일/초']];
+  const SL = [['mag', '오늘 자석 세기', 0, 10, 1, '(0 = 끔)'], ['vmax', '길게 누르기 최고 속도', 10, 400, 5, '일/초'],
+    ['ramp', '최고 속도까지 (가속)', 0, 3000, 50, 'ms'], ['resp', '움직임 (클수록 느긋)', 0.1, 1, 0.01, '초']];
   const w = document.createElement('div');
   w.style.cssText = 'max-height:75vh;overscroll-behavior:contain;position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);max-width:calc(100% - var(--pad) - 40px);z-index:999;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12);font-size:13px;padding:8px 12px;touch-action:manipulation';
   const save = () => { lsSet('food-mag', JSON.stringify(MAG)); };
@@ -783,7 +791,7 @@ const todayAhead = (d) => ringI((RPAST - (dayDiff(today(), sel) + RPAST)) * d); 
       '</div>';
   };
   draw();
-  w.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; MAG[k] = +e.target.value; $('mv_' + k).textContent = MAG[k]; save(); });
+  w.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; MAG[k] = +e.target.value; $('mv_' + k).textContent = MAG[k]; if (k === 'mag') magApply(); save(); });
   w.addEventListener('click', (e) => {
     const a = e.target.dataset && e.target.dataset.a;
     if (e.target.id === 'magT') {
@@ -793,8 +801,8 @@ const todayAhead = (d) => ringI((RPAST - (dayDiff(today(), sel) + RPAST)) * d); 
       ['cs', 'cw'].forEach((id) => { const g = $(id); if (!g) return; g.style.willChange = 'auto'; g.style.transform = 'none'; void g.getBoundingClientRect(); g.style.willChange = ''; });
       requestAnimationFrame(() => { paintStrip(); requestAnimationFrame(paintStrip); });
     }
-    else if (a === 'def') { Object.assign(MAG, MAG_DEF); save(); draw(); }
-    else if (a === 'copy') { const t = JSON.stringify(MAG); try { navigator.clipboard.writeText(t); } catch (er) {} magLog('복사됨: ' + t); }
+    else if (a === 'def') { Object.assign(MAG, MAG_DEF); magApply(); save(); draw(); }
+    else if (a === 'copy') { const t = JSON.stringify({ mag: MAG.mag, vmax: MAG.vmax, ramp: MAG.ramp, resp: MAG.resp }); try { navigator.clipboard.writeText(t); } catch (er) {} magLog('복사됨: ' + t); }
     else if (a === 'off') { lsSet('food-tune', ''); w.remove(); }
   });
   document.body.appendChild(w);
@@ -1263,6 +1271,7 @@ $('file').addEventListener('change', async (e) => {
 /* ---------- 기록 수정 ---------- */
 let editing = null;
 $('list').addEventListener('click', (e) => {
+  if (e.target.closest('#sumBtn')) { listOpen = listOpen === sel ? null : sel; render(); return; }
   if (e.target.closest('#planBtn')) { confirmPlan(); return; }
   const b = e.target.closest('.it'); if (!b) return;
   editing = data.foods.find((f) => f.id === b.dataset.id); if (!editing) return;
