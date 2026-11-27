@@ -1141,7 +1141,7 @@ function chipFoods(limit) {
 /* ★ 자주 먹는 음식 원통: ★를 누른 채 위로 밀면 굴러가고 렌즈에 온 음식이 손 떼면 기록.
    그냥 탭하면 원통이 열린 채로 — 끌어서 굴리고, 줄을 탭하면 기록, 빈 곳·닫기를 누르면 닫힘 */
 const fav = { items: [], api: null, open: false, tap: false, t: 0, m: 1 };
-const FROWH = 58, FAV_PX = 30, FAV_CX = 36, FAV_MPX = 26, FAV_EDGE = 26, FAV_LOCK = 14;   /* 위아래 30px = 한 줄, 옆으로 26px = 0.1인분 */
+const FROWH = 58, FAV_PX = 12, FAV_CX = 36, FAV_MPX = 8, FAV_EDGE = 26, FAV_LOCK = 14, FAV_RS = 16;   /* 위아래 12px = 한 줄, 옆으로 8px = 0.1인분 (눈금자 간격은 보기 좋게 16px 따로) */
 /* 양 적기: 앞 숫자에 곱함 (1접시 ×1.3 = 1.3접시), 숫자 없으면 '×1.3', 양이 없으면 '1.3인분' */
 const amtX = (amt, m) => {
   if (m === 1) return amt || '';
@@ -1185,10 +1185,10 @@ function favSetM() {
 /* 눈금자: 0.1마다 눈금, 0.5마다 숫자 */
 function favRuler(x) {
   const g = fav.g, R = $('fwR');
-  if (!R.firstChild) { let h = ''; for (let k = 1; k <= 30; k++) { const v = k / 10, big = k % 5 === 0; h += '<i style="left:' + (k - 10) * FAV_MPX + 'px" class="' + (big ? 'b' : '') + '">' + (big ? '<em>' + (v === 1 ? '1인분' : v) + '</em>' : '') + '</i>'; } R.innerHTML = '<div class="rt">' + h + '</div><b class="nd"></b>'; }
+  if (!R.firstChild) { let h = ''; for (let k = 1; k <= 30; k++) { const v = k / 10, big = k % 5 === 0; h += '<i style="left:' + (k - 10) * FAV_RS + 'px" class="' + (big ? 'b' : '') + '">' + (big ? '<em>' + (v === 1 ? '1인분' : v) + '</em>' : '') + '</i>'; } R.innerHTML = '<div class="rt">' + h + '</div><b class="nd"></b>'; }
   /* 바늘은 가운데 고정, 눈금이 엄지를 따라 흐름 (엄지는 오른쪽 아래, 눈금자는 왼쪽 위) — 끊김 없이 손가락 위치 그대로 */
   const u = Math.max(-9, Math.min(20, soft((x - g.ox) / FAV_MPX)));   /* 1인분에서 몇 칸 — 눈금에 자석 */
-  R.firstChild.style.transform = 'translateX(' + (-u * FAV_MPX).toFixed(1) + 'px)';
+  R.firstChild.style.transform = 'translateX(' + (-u * FAV_RS).toFixed(1) + 'px)';
 }
 function favHint() {
   $('fwH').textContent = fav.g && pdn && pdn.cx ? '놓으면 취소' : fav.g && fav.g.mode === 'h' ? '옆으로 밀어 양 · 위아래로 밀면 다시 음식 · 떼면 기록' : '위로 밀어 고르고 · 옆으로 밀어 양 · 떼면 기록';
