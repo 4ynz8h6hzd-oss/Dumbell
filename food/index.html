@@ -748,6 +748,41 @@ function updChart(M) {
   else el.classList.remove('on');
   clearTimeout(chHideT);
 }
+/* ---------- 오늘 자석: 끌어 튕기거나 길게 눌러 넘기다 오늘 근처면 오늘에 붙음. 한 번씩 탭은 절대 안 붙음 ----------
+   dragR: 튕겨서 멈출 곳이 오늘에서 이 일수 안이면 오늘로 · dragVmin: 이보다 느리게 놓으면(천천히 맞춘 것) 안 붙음
+   dragVmax: 이보다 세게 튕기면 지나감 (일/초) · hold: 길게 눌러 지나갈 때 오늘에서 멈추는 시간(ms)
+   back: 오늘을 지나고 이 시간(ms) 안에 손 떼면 오늘로 되돌아옴. 조정: 주소 끝에 ?tune → 화면 위 🧲 패널 */
+const MAG_DEF = { dragR: 3, dragVmin: 2, dragVmax: 80, hold: 300, back: 350 };
+const MAG = Object.assign({}, MAG_DEF, (() => { try { return JSON.parse(lsGet('food-mag')) || {}; } catch (e) { return {}; } })());
+let magPass = 0;
+const magLog = (t) => { const e = document.getElementById('magLog'); if (e) e.textContent = t; };
+const todayAhead = (d) => ringI((RPAST - (dayDiff(today(), sel) + RPAST)) * d);   /* d 방향으로 오늘까지 남은 날 (0 = 오늘) */
+(() => {
+  if (/[?&]tune\b/.test(location.search)) lsSet('food-tune', '1');
+  if (!lsGet('food-tune')) return;
+  const SL = [['dragR', '튕김 붙는 반경', 0, 10, 1, '일'], ['dragVmin', '이보다 느리면 안 붙음', 0, 30, 1, '일/초'], ['dragVmax', '이보다 세면 지나감', 10, 400, 5, '일/초'],
+    ['hold', '길게 누름: 오늘에서 멈춤', 0, 1000, 25, 'ms'], ['back', '지나친 뒤 놓으면 되돌아옴', 0, 1000, 25, 'ms']];
+  const w = document.createElement('div');
+  w.style.cssText = 'position:fixed;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 8px);max-width:calc(100% - var(--pad) - 40px);z-index:999;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.12);font-size:13px;padding:8px 12px;touch-action:manipulation';
+  const save = () => { lsSet('food-mag', JSON.stringify(MAG)); };
+  const draw = () => {
+    w.innerHTML = '<div style="display:flex;gap:8px;align-items:center"><b id="magT" style="flex:1">🧲 자석 ▾</b>' +
+      '</div><div id="magLog" style="color:var(--sub);font-size:12px;margin-top:2px">끌어 튕기거나 전날·다음날을 길게 눌러 보세요</div>' +
+      '<div id="magB" hidden><div style="display:flex;gap:4px;margin-top:6px"><button data-a="def">기본값</button><button data-a="copy">복사</button><button data-a="off">끄기</button></div>' + SL.map(([k, l, a, b, st, u]) => '<label style="display:block;margin-top:6px">' + l + ' <b id="mv_' + k + '">' + MAG[k] + '</b> ' + u +
+        '<input type="range" data-k="' + k + '" min="' + a + '" max="' + b + '" step="' + st + '" value="' + MAG[k] + '" style="width:100%"></label>').join('') +
+      '</div>';
+  };
+  draw();
+  w.addEventListener('input', (e) => { const k = e.target.dataset.k; if (!k) return; MAG[k] = +e.target.value; $('mv_' + k).textContent = MAG[k]; save(); });
+  w.addEventListener('click', (e) => {
+    const a = e.target.dataset && e.target.dataset.a;
+    if (e.target.id === 'magT') { const b = $('magB'); b.hidden = !b.hidden; w.style.maxWidth = b.hidden ? 'calc(100% - var(--pad) - 40px)' : 'none'; e.target.textContent = '🧲 자석 ' + (b.hidden ? '▾' : '▴'); }
+    else if (a === 'def') { Object.assign(MAG, MAG_DEF); save(); draw(); }
+    else if (a === 'copy') { const t = JSON.stringify(MAG); try { navigator.clipboard.writeText(t); } catch (er) {} magLog('복사됨: ' + t); }
+    else if (a === 'off') { lsSet('food-tune', ''); w.remove(); }
+  });
+  document.body.appendChild(w);
+})();
 /* 다음날은 30일 뒤까지(예상), 전날은 60일 전까지. 끝에서 더 가면 반대쪽 끝으로 넘어가 뺑뺑 돎 */
 function stepDay(d) {
   const t = today(); let nd = addDays(sel, d); const o = dayDiff(t, nd);
@@ -785,7 +820,13 @@ function stepDay(d) {
       const a = dn.s[0], b = dn.s[dn.s.length - 1], t = performance.now();
       let v = b[0] > a[0] && t - b[0] < 80 ? (b[1] - a[1]) / (b[0] - a[0]) * 1000 : 0;
       v = Math.sign(v) * Math.min(400, Math.max(0, Math.abs(v) - 4));
-      ch.tgt = Math.round(ch.pos + v * CH_FTAU);
+      let tg = Math.round(ch.pos + v * CH_FTAU);
+      /* 오늘 자석: 튕겨 멈출 곳이 오늘 근처 + 속도가 적당하면 오늘로 (천천히 맞춰 놓거나 세게 튕기면 그대로) */
+      const tI = dayDiff(ch.start, today()), tu = tg + (ringI(tI - ringI(tg) + CN / 2) - CN / 2), av = Math.abs(v), gap = Math.abs(tu - tg);
+      const snap = gap > 0 && gap <= MAG.dragR && av >= MAG.dragVmin && av <= MAG.dragVmax;
+      magLog('튕김 ' + av.toFixed(1) + '일/초 · 멈출 곳 오늘에서 ' + gap + '일 → ' + (gap === 0 ? '오늘' : snap ? '붙음 🧲' : gap > MAG.dragR ? '멀어서 안 붙음' : av < MAG.dragVmin ? '느려서 안 붙음' : '세서 지나감'));
+      if (snap) tg = tu;
+      ch.tgt = tg;
       const rem = ch.tgt - ch.pos; ch.tau = v && rem * v > 0 ? Math.max(0.1, Math.min(CH_FTAU, rem / v)) : 0;
       runStrip();
     }
@@ -877,11 +918,20 @@ pad.addEventListener('pointerdown', (e) => {
   /* 150ms 뒤 시작, 속도(일/초)가 NAV_RAMP 동안 베지어로 NAV_V0 → NAV_VMAX까지 오르고 놓을 때까지 그대로.
      시간 기준(프레임이 늦어도 속도 유지) — 매 프레임 쌓인 만큼 한 번에 여러 날 넘김 + 속도에 맞춘 모션 블러 */
   if (DSTEP[pdn.k]) {
-    const d = DSTEP[pdn.k]; stepDay(d); let t0 = 0, last = 0, acc = 0;
+    const d = DSTEP[pdn.k]; stepDay(d); let t0 = 0, last = 0, acc = 0, pause = 0; magPass = 0;
     const loop = (now) => {
-      const v = NAV_V0 + (NAV_VMAX - NAV_V0) * NAV_EASE(Math.min(1, (now - t0) / NAV_RAMP));
+      if (now < pause) { last = now; holdR = requestAnimationFrame(loop); return; }   /* 오늘에서 잠깐 멈춤 */
+      const v = NAV_V0 + (NAV_VMAX - NAV_V0) * NAV_EASE(Math.min(1, Math.max(0, now - t0) / NAV_RAMP));
       acc += v * Math.min(0.1, (now - last) / 1000); last = now;
-      const n = Math.floor(acc); if (n) { acc -= n; stepDay(d * n); }
+      const n = Math.floor(acc);
+      if (n) {
+        acc -= n; const k = MAG.hold > 0 ? todayAhead(d) : 0;
+        if (k && k <= n) {   /* 오늘을 지나가려 함 → 오늘에 딱 서고 잠깐 멈췄다가 처음 속도부터 다시 */
+          stepDay(d * k); acc = 0; pause = now + MAG.hold; t0 = magPass = pause; navBlur(0);
+          magLog('길게 누름: 오늘에서 ' + MAG.hold + 'ms 멈춤 🧲'); holdR = requestAnimationFrame(loop); return;
+        }
+        stepDay(d * n);
+      }
       navBlur(v); holdR = requestAnimationFrame(loop);
     };
     holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, NAV_DELAY);
@@ -901,7 +951,13 @@ pad.addEventListener('pointermove', (e) => {
   }
 });
 const pend = (e, cancel) => {
-  if (!pdn) return; const p = pdn; pdn = null; stopHold(); pad.classList.remove('jog');
+  if (!pdn) return; const p = pdn; pdn = null;
+  const ago = magPass ? performance.now() - magPass : -1; magPass = 0;
+  const wasFast = navFast; stopHold(); pad.classList.remove('jog');
+  if (wasFast && DSTEP[p.k] && ago >= 0) {   /* 오늘을 지난 지 얼마 안 돼 손 뗌 → 오늘로 되돌아옴 */
+    if (sel !== today() && ago <= MAG.back) { sel = today(); navAt = Date.now(); vib(); render(); }
+    magLog('오늘 지난 뒤 ' + Math.round(Math.max(0, ago)) + 'ms에 놓음 → ' + (ago <= MAG.back ? '오늘 🧲' : '그대로'));
+  }
   if (p.b) p.b.classList.remove('pressed');
   if (p.k === 'fav' && fav.open) { if (cancel) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
   else if (mode === 'weight' && p.moved) wRoll.to(wVal, 160);
