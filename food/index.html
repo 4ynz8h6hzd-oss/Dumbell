@@ -1251,7 +1251,7 @@ function favTapMode() { fav.m = 1; favShowM(); fav.tap = true; fav.t = Date.now(
 
 /* ---------- 예상대로: 그날 목표까지 남은 kcal·영양소를 1줄로 기록 (몸무게는 건드리지 않음) ---------- */
 function planLeft(d) {
-  if (d > today()) return null;
+  if (d !== today()) return null;   /* 오늘만 — 지난날은 이미 끝난 날이라 '남은 kcal'이 의미 없음 */
   const M = model(), t = dayFoods(d).reduce((a, f) => ({ k: a.k + f.kcal, p: a.p + f.p, c: a.c + f.c, f: a.f + f.f }), { k: 0, p: 0, c: 0, f: 0 });
   const k = Math.round((M.target - t.k) / 10) * 10;
   return k >= 50 ? { k, p: Math.max(0, M.P - t.p), c: Math.max(0, M.C - t.c), f: Math.max(0, M.F - t.f) } : null;
