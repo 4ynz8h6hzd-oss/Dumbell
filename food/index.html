@@ -45,7 +45,7 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .roll .dg .tr{left:0;right:0;top:50%}
 .roll .dg .r{position:absolute;left:0;right:0;height:var(--h);margin-top:calc(var(--h) / -2);display:flex;align-items:center;justify-content:center}
 .roll .rs{display:inline-block;width:.28em;text-align:center}
-/* 30일 그래프 (날짜 넘길 때·지난날 볼 때만) */
+/* 90일 그래프 (날짜 넘길 때·지난날 볼 때만) */
 .ch{flex:none;max-height:0;overflow:hidden;opacity:0;transition:max-height .25s ease,opacity .2s;padding:0 18px;touch-action:none;-webkit-user-select:none;user-select:none;cursor:ew-resize}
 .ch.on{max-height:130px;opacity:1}
 .ch svg{display:block;width:100%;height:auto;margin-bottom:8px}
@@ -57,6 +57,7 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .ch .cg line{stroke:var(--ink);stroke-opacity:.18;stroke-width:1.5}
 .ch .cg,.ch .cd{transition:transform .22s cubic-bezier(.2,.7,.3,1)}
 .ch .cd{fill:#fff;stroke:var(--acc);stroke-width:2.5}
+.ch .td{stroke:var(--mute);stroke-opacity:.5;stroke-width:1}
 .ch text{font-size:10px;fill:var(--mute)}
 #list{flex:1;overflow-y:auto;padding:0 24px 8px;-webkit-overflow-scrolling:touch;border-top:.5px solid var(--line)}
 .it{display:grid;grid-template-columns:44px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;width:100%;text-align:left;padding:10px 0;border-bottom:.5px solid var(--line)}
@@ -516,37 +517,40 @@ function Roll(host, h) {
 }
 const wRoll = Roll($('wRoll'), 68), kRoll = Roll($('kRoll'), 34);
 
-/* ---------- 30일 그래프: 그날 먹은 kcal 막대 + 몸무게 추세선(잰 날은 점) + 커서. 끌면 날짜가 바뀌고 숫자가 굴러감 ---------- */
-const CW = 360, CH = 118, CL = 6, CR = 6, CCW = (CW - CL - CR) / 30;
+/* ---------- 90일 그래프(한 바퀴 전체): 그날 먹은 kcal 막대 + 몸무게 추세선(잰 날은 점) + 커서. 끌면 날짜가 바뀌고 숫자가 굴러감 ---------- */
+const CW = 360, CH = 118, CL = 6, CR = 6, CN = 90, CCW = (CW - CL - CR) / CN;
 let ch = null, chPin = false, navAt = 0, chHideT = null;
 const chX = (i) => CL + (i + 0.5) * CCW;
-/* 90일이 한 바퀴: 지난 60일(오늘 포함) + 앞으로 30일(추세 예상). 그래프는 30일씩 세 쪽 */
+/* 90일이 한 바퀴: 지난 60일(오늘 포함) + 앞으로 30일(추세 예상). 그래프 하나에 전부 */
 const RPAST = 59, RFUT = 30;
-function chartWin() { const t = today(), o = dayDiff(t, sel), end = o > 0 ? addDays(t, RFUT) : o < -29 ? addDays(t, -30) : t; return { start: addDays(end, -29), end }; }
+function chartWin() { const t = today(); return { start: addDays(t, -RPAST), end: addDays(t, RFUT) }; }
 function drawChart(M) {
   const { start, end } = chartWin(), key = start + '|' + dataVer + '|' + M.target;
   if (ch && ch.key === key) return;
   const by = kcalByDay(), ws = new Map(data.weights.map((w) => [w.date, w.kg]));
-  const days = []; for (let i = 0; i < 30; i++) days.push(addDays(start, i));
+  const days = []; for (let i = 0; i < CN; i++) days.push(addDays(start, i));
   let mk = M.target * 1.3; days.forEach((d) => { mk = Math.max(mk, by.get(d) || 0); });
   const kB = CH - 16, kT = 40, kY = (v) => kB - v / mk * (kB - kT);
   const T = today(), fu = days.map((d) => d > T), tv = days.map((d) => M.wAt(d)), wv = tv.filter((v) => v != null).concat(days.map((d) => ws.get(d)).filter((v) => v != null));
   let lo = Math.min(...wv), hi = Math.max(...wv); if (!wv.length) { lo = 0; hi = 1; } if (hi - lo < 1) { const m = (hi + lo) / 2; lo = m - 0.5; hi = m + 0.5; }
   const wY = (v) => 8 + (hi - v) / (hi - lo) * 46;
-  let s = '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="최근 30일 섭취 kcal와 몸무게">';
-  days.forEach((d, i) => { const v = fu[i] ? (M.sim.has(d) ? M.sim.get(d).k : 0) : by.get(d) || 0; const y = kY(v); s += '<rect class="cb' + (fu[i] ? ' fu' : v > M.target * 1.1 ? ' hi' : '') + '" data-i="' + i + '" x="' + (chX(i) - CCW / 2 + 1.5).toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + (CCW - 3).toFixed(1) + '" height="' + Math.max(v ? 2 : 0, kB - y).toFixed(1) + '" rx="2"/>'; });
+  let s = '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="지난 60일·앞으로 30일 섭취 kcal와 몸무게">';
+  days.forEach((d, i) => { const v = fu[i] ? (M.sim.has(d) ? M.sim.get(d).k : 0) : by.get(d) || 0; const y = kY(v); s += '<rect class="cb' + (fu[i] ? ' fu' : v > M.target * 1.1 ? ' hi' : '') + '" data-i="' + i + '" x="' + (chX(i) - CCW * 0.36).toFixed(2) + '" y="' + y.toFixed(1) + '" width="' + (CCW * 0.72).toFixed(2) + '" height="' + Math.max(v ? 2 : 0, kB - y).toFixed(1) + '" rx="1"/>'; });
   s += '<line x1="' + CL + '" x2="' + (CW - CR) + '" y1="' + kY(M.target).toFixed(1) + '" y2="' + kY(M.target).toFixed(1) + '" class="tg"/>';
-  const pts = []; tv.forEach((v, i) => { if (v != null) pts.push(chX(i).toFixed(1) + ',' + wY(v).toFixed(1)); });
-  if (pts.length > 1) s += '<polyline class="wl2' + (fu[0] ? ' fu' : '') + '" points="' + pts.join(' ') + '"/>';
-  days.forEach((d, i) => { if (ws.has(d)) s += '<circle class="wd" cx="' + chX(i).toFixed(1) + '" cy="' + wY(ws.get(d)).toFixed(1) + '" r="2.2"/>'; });
+  const ti = dayDiff(start, T), tx = (chX(ti) + CCW / 2).toFixed(1);
+  s += '<line class="td" x1="' + tx + '" x2="' + tx + '" y1="2" y2="' + kB + '"/>';
+  const pp = [], pf = []; tv.forEach((v, i) => { if (v == null) return; const q = chX(i).toFixed(1) + ',' + wY(v).toFixed(1); if (i <= ti) pp.push(q); if (i >= ti) pf.push(q); });
+  if (pp.length > 1) s += '<polyline class="wl2" points="' + pp.join(' ') + '"/>';
+  if (pf.length > 1) s += '<polyline class="wl2 fu" points="' + pf.join(' ') + '"/>';
+  days.forEach((d, i) => { if (ws.has(d)) s += '<circle class="wd" cx="' + chX(i).toFixed(1) + '" cy="' + wY(ws.get(d)).toFixed(1) + '" r="1.6"/>'; });
   s += '<g id="cg" class="cg"><line x1="0" x2="0" y1="2" y2="' + kB + '"/></g><circle id="cd" class="cd" r="4.5" cx="0" cy="0"/>';
-  s += '<text x="' + CL + '" y="' + (CH - 2) + '">' + md(start).replace(/ \(.\)$/, '') + '</text><text x="' + (CW - CR) + '" y="' + (CH - 2) + '" text-anchor="end">' + (end === T ? '오늘' : md(end).replace(/ \(.\)$/, '')) + '</text></svg>';
+  s += '<text x="' + CL + '" y="' + (CH - 2) + '">' + md(start).replace(/ \(.\)$/, '') + '</text><text x="' + chX(ti).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle">오늘</text><text x="' + (CW - CR) + '" y="' + (CH - 2) + '" text-anchor="end">' + md(end).replace(/ \(.\)$/, '') + '</text></svg>';
   $('ch').innerHTML = s;
   ch = { key, start, wY, wAt: M.wAt, ws };
 }
 function placeCursor() {
   if (!ch) return;
-  const i = dayDiff(ch.start, sel); if (i < 0 || i > 29) return;
+  const i = dayDiff(ch.start, sel); if (i < 0 || i >= CN) return;
   $('cg').style.transform = 'translateX(' + chX(i).toFixed(1) + 'px)';
   $('ch').querySelectorAll('.cb').forEach((r) => r.classList.toggle('on', +r.dataset.i === i));
   const v = ch.ws.get(sel) ?? ch.wAt(sel), cd = $('cd');
@@ -571,7 +575,7 @@ function stepDay(d) {
   const el = $('ch'); let on = false;
   const pick = (e) => {
     if (!ch) return; const r = el.querySelector('svg').getBoundingClientRect();
-    const i = Math.max(0, Math.min(29, Math.floor(((e.clientX - r.left) / r.width * CW - CL) / CCW)));
+    const i = Math.max(0, Math.min(CN - 1, Math.floor(((e.clientX - r.left) / r.width * CW - CL) / CCW)));
     const d = addDays(ch.start, i); navAt = Date.now();
     if (d !== sel) { sel = d; vib(); render(); }
   };
