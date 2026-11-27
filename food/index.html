@@ -333,10 +333,10 @@ function model() {
   const target = Math.max(1200, Math.round((tdee + (W ? rate * W * 7700 / 7 : 0)) / 10) * 10);
   const P = Math.round((W || 70) * cfg.gpk), F = Math.round(target * 0.25 / 9), C = Math.max(0, Math.round((target - 4 * P - 9 * F) / 4));
   const wk = W && tr.has(addDays(today(), -7)) ? W - tr.get(addDays(today(), -7)) : null;
-  /* 앞으로 30일 예상: 지난 6개월 중 기록한 날 하나를 골라(같은 요일 75%) 그날처럼 먹는다고 보고 ±8% 흔들어 kcal를 만듦.
+  /* 앞으로 30일 예상: 지난 1개월(30일) 중 기록한 날 하나를 골라(같은 요일 75%) 그날처럼 먹는다고 보고 ±8% 흔들어 kcal를 만듦.
      몸무게 추세는 (예상 섭취 − 소모량)÷7700 씩 쌓음. 날짜로 시드를 정해 다시 그려도 같은 값 */
   const t0 = today(), avgK = n ? sum / n : null, past = [], sim = new Map();
-  for (let i = 1; i <= 180; i++) { const d = addDays(t0, -i); if (byDay.has(d)) past.push(d); }
+  for (let i = 1; i <= 30; i++) { const d = addDays(t0, -i); if (byDay.has(d)) past.push(d); }
   let slope = 0;
   if (past.length) {
     let wt = W;
@@ -433,7 +433,7 @@ function render() {
     const val = w ? w.kg : (tv != null ? r1(tv) : null);
     wRoll.to(val); hero.classList.toggle('est', !w && val != null);
     $('lbl').textContent = val == null ? (fut ? '⚖ 몸무게를 재야 앞날을 예상해요' : '⚖ 몸무게를 재면 여기에 크게 보여요') :
-      fut ? '예상 · 지난 6개월처럼 먹으면 ' + sgn(M.slope * 7, 2) + ' kg/주' :
+      fut ? '예상 · 지난 1개월처럼 먹으면 ' + sgn(M.slope * 7, 2) + ' kg/주' :
       (w ? (tv != null ? '추세 ' + tv.toFixed(1) : '') : (isToday ? '아직 안 잼 · 추세값' : '안 잰 날 · 추세값')) + (M.wk != null && isToday ? ' · ' + sgn(M.wk, 1) + ' kg/주' : '');
   }
   if (fut) { kRoll.to(sm ? Math.round(sm.k) : null); $('kMeta').innerHTML = '/ ' + fmt(M.target) + ' · 예상'; }
@@ -451,7 +451,7 @@ function render() {
     return '<button class="it' + gh + '"' + (fut ? ' tabindex="-1"' : ' data-id="' + esc(f.id) + '"') + '><span class="tm num">' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + '</span>' +
       '<span class="nm">' + esc(f.name) + (f.amt ? '<small>' + esc(f.amt) + '</small>' : '') + '</span><span class="kc num">' + fmt(f.kcal * fm) + '</span>' +
       '<span class="mc num">단 ' + Math.round(f.p * fm) + ' · 탄 ' + Math.round(f.c * fm) + ' · 지 ' + Math.round(f.f * fm) + '</span></button>';
-  }).join('') : '<div class="empty">' + (fut ? '지난 6개월 기록이 있어야 예상해요' : isToday ? '패드 가운데 ✎ 로 먹은 걸 적고,<br>📷 사진 · ★ 자주 먹는 음식 · ＋ 직접 입력.' : '이 날 기록이 없어요') + '</div>');
+  }).join('') : '<div class="empty">' + (fut ? '지난 1개월 기록이 있어야 예상해요' : isToday ? '패드 가운데 ✎ 로 먹은 걸 적고,<br>📷 사진 · ★ 자주 먹는 음식 · ＋ 직접 입력.' : '이 날 기록이 없어요') + '</div>');
   renderPad();
 }
 
