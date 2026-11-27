@@ -813,17 +813,15 @@ function drawChart(M) {
    [오늘 자석] 한 번씩 탭은 절대 안 붙음.
    dragR: 튕겨서 멈출 곳이 오늘에서 이 일수 안이면 오늘로 · dragVmin: 이보다 느리게 놓으면(천천히 맞춘 것) 안 붙음
    dragVmax: 이보다 세게 튕기면 지나감 (일/초) · pull/pullR: 끄는 중 오늘 근처(pullR일)에서 손가락을 오늘 쪽으로 당기는 세기(0~1)
-   hold: 길게 눌러 지나갈 때 오늘에서 멈추는 시간(ms) · resume: 멈춘 뒤 1 = 원래 속도로, 0 = 처음 속도부터
    back: 오늘을 지나고 이 시간(ms) 안에 손 떼면 오늘로 되돌아옴
    [길게 누르기] delay 시작까지(ms) · v0 처음 속도 · vmax 최고 속도(일/초) · ramp 최고 속도까지 걸리는 시간(ms)
    [움직임] resp 한 칸 이동 스프링 반응(초) · respHold 길게 누르는 동안 반응(초) · blur 최고 모션 블러(px)
    [튕김] flingTau 미끄러짐 시간상수(ms, 애플 0.998/ms ≈ 500) · flingMax 최고 튕김 속도 · flingDead 이보다 느리면 튕김 없음(일/초) */
-const MAG_DEF = { mag: 5, dragR: 3, dragVmin: 2, dragVmax: 80, pull: 0, pullR: 1, hold: 300, resume: 0, back: 350,
+const MAG_DEF = { mag: 5, dragR: 3, dragVmin: 2, dragVmax: 80, pull: 0, pullR: 1,
   delay: 230, v0: 14, vmax: 140, ramp: 900, resp: 0.34, respHold: 0.11, blur: 0.3, flingTau: 500, flingMax: 400, flingDead: 4 };
 const MAG = Object.assign({}, MAG_DEF, (() => { try { return JSON.parse(lsGet('food-mag')) || {}; } catch (e) { return {}; } })());
-let magPass = 0;
-/* 패널엔 4개만: 자석 세기(mag 0~10) 하나가 자석 값들을 한꺼번에 정함 (5 = 반경 3일·멈춤 300ms·되돌아옴 350ms·튕김 80일/초까지) */
-function magApply() { const k = MAG.mag / 10; Object.assign(MAG, { dragR: Math.round(6 * k), hold: Math.round(600 * k), back: Math.round(700 * k), dragVmax: 40 + 80 * k, dragVmin: 2, pull: 0, resume: 0 }); }
+/* 패널엔 4개만: 자석 세기(mag 0~10) 하나가 자석 값들을 한꺼번에 정함 (5 = 반경 3일·튕김 80일/초까지) · 꾹 누르기엔 자석 없음 */
+function magApply() { const k = MAG.mag / 10; Object.assign(MAG, { dragR: Math.round(6 * k), dragVmax: 40 + 80 * k, dragVmin: 2, pull: 0 }); }
 magApply();
 const magLog = (t) => { const e = document.getElementById('magLog'); if (e) e.textContent = t; };
 
@@ -875,7 +873,6 @@ function updChart(M) {
   else el.classList.remove('on');
   clearTimeout(chHideT);
 }
-const todayAhead = (d) => ringI((RPAST - (dayDiff(today(), sel) + RPAST)) * d);   /* d 방향으로 오늘까지 남은 날 (0 = 오늘) */
 (() => {
   if (/[?&]tune\b/.test(location.search)) lsSet('food-tune', '1');
   if (!lsGet('food-tune')) return;
@@ -886,7 +883,7 @@ const todayAhead = (d) => ringI((RPAST - (dayDiff(today(), sel) + RPAST)) * d); 
   const save = () => { lsSet('food-mag', JSON.stringify(MAG)); };
   const draw = () => {
     w.innerHTML = '<div style="display:flex;gap:8px;align-items:center"><b id="magT" style="flex:1">🧲 자석 ▾</b>' +
-      '</div><div id="magLog" style="color:var(--sub);font-size:12px;margin-top:2px">끌어 튕기거나 전날·다음날을 길게 눌러 보세요</div>' +
+      '</div><div id="magLog" style="color:var(--sub);font-size:12px;margin-top:2px">그래프를 끌어 튕겨 보세요 (꾹 누르기엔 자석 없음)</div>' +
       '<div id="magB" hidden><div style="display:flex;gap:4px;margin-top:6px"><button data-a="def">기본값</button><button data-a="copy">복사</button><button data-a="off">끄기</button></div>' + SL.map(([k, l, a, b, st, u]) => !l ? '<div style="margin-top:10px;font-weight:700">' + k + '</div>' : '<label style="display:block;margin-top:6px">' + l + ' <b id="mv_' + k + '">' + MAG[k] + '</b> ' + u +
         '<input type="range" data-k="' + k + '" min="' + a + '" max="' + b + '" step="' + st + '" value="' + MAG[k] + '" style="width:100%"></label>').join('') +
       '</div>';
@@ -1052,20 +1049,11 @@ pad.addEventListener('pointerdown', (e) => {
   /* 150ms 뒤 시작, 속도(일/초)가 MAG.ramp 동안 베지어로 MAG.v0 → MAG.vmax까지 오르고 놓을 때까지 그대로.
      시간 기준(프레임이 늦어도 속도 유지) — 매 프레임 쌓인 만큼 한 번에 여러 날 넘김 + 속도에 맞춘 모션 블러 */
   if (DSTEP[pdn.k]) {
-    const d = DSTEP[pdn.k]; stepDay(d); let t0 = 0, last = 0, acc = 0, pause = 0; magPass = 0;
+    const d = DSTEP[pdn.k]; stepDay(d); let t0 = 0, last = 0, acc = 0;
     const loop = (now) => {
-      if (now < pause) { last = now; holdR = requestAnimationFrame(loop); return; }   /* 오늘에서 잠깐 멈춤 */
       const v = MAG.v0 + (MAG.vmax - MAG.v0) * NAV_EASE(MAG.ramp > 0 ? Math.min(1, Math.max(0, now - t0) / MAG.ramp) : 1);
       acc += v * Math.min(0.1, (now - last) / 1000); last = now;
-      const n = Math.floor(acc);
-      if (n) {
-        acc -= n; const k = MAG.hold > 0 ? todayAhead(d) : 0;
-        if (k && k <= n) {   /* 오늘을 지나가려 함 → 오늘에 딱 서고 잠깐 멈췄다가 처음 속도부터 다시 */
-          stepDay(d * k); acc = 0; pause = magPass = now + MAG.hold; t0 = MAG.resume ? t0 + MAG.hold : pause; navBlur(0);
-          magLog('길게 누름: 오늘에서 ' + MAG.hold + 'ms 멈춤 🧲'); holdR = requestAnimationFrame(loop); return;
-        }
-        stepDay(d * n);
-      }
+      const n = Math.floor(acc); if (n) { acc -= n; stepDay(d * n); }   /* 꾹 누를 땐 자석 없음 — 오늘에서 안 멈춤 */
       navBlur(v); holdR = requestAnimationFrame(loop);
     };
     holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, MAG.delay);
@@ -1086,12 +1074,7 @@ pad.addEventListener('pointermove', (e) => {
 });
 const pend = (e, cancel) => {
   if (!pdn) return; const p = pdn; pdn = null;
-  const ago = magPass ? performance.now() - magPass : -1; magPass = 0;
-  const wasFast = navFast; stopHold(); pad.classList.remove('jog');
-  if (wasFast && DSTEP[p.k] && ago >= 0) {   /* 오늘을 지난 지 얼마 안 돼 손 뗌 → 오늘로 되돌아옴 */
-    if (sel !== today() && ago <= MAG.back) { sel = today(); navAt = Date.now(); vib(); render(); }
-    magLog('오늘 지난 뒤 ' + Math.round(Math.max(0, ago)) + 'ms에 놓음 → ' + (ago <= MAG.back ? '오늘 🧲' : '그대로'));
-  }
+  stopHold(); pad.classList.remove('jog');
   if (p.b) p.b.classList.remove('pressed');
   if (p.k === 'fav' && fav.open) { if (cancel) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
   else if (mode === 'weight' && p.moved) wRoll.to(wVal, 160);
