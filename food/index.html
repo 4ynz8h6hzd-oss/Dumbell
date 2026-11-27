@@ -63,10 +63,10 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .ch .cb.fu{fill:#F2F2F7}.ch .cb.fu.on{fill:#F9C9A8}.ch .wl2.fu{stroke:var(--mute);stroke-dasharray:4 3}
 .ch .cv{-webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)}
 .ch .cl{stroke:var(--ink);stroke-opacity:.18;stroke-width:1.5}
-.ch .cs{transition:transform .32s cubic-bezier(.2,.7,.3,1);will-change:transform}
-.ch.drag .cs{transition:transform .12s linear}
+.ch .cs{transition:transform .22s cubic-bezier(.3,1.35,.5,1);will-change:transform}   /* 짧고 살짝 튕기는 경쾌한 멈춤 */
+.ch.drag .cs{transition:transform .07s linear}
 .ch.fast .cs{transition:none}   /* 길게 누르는 동안은 매 프레임 직접 움직임 (끝↔처음 넘어갈 때 튀지 않게) */
-.ch .cd{transition:transform .32s cubic-bezier(.2,.7,.3,1),opacity .2s}
+.ch .cd{transition:transform .22s cubic-bezier(.3,1.35,.5,1),opacity .15s}
 .ch .sm{stroke:var(--faint);stroke-dasharray:2 3}
 .ch text.tt{fill:var(--ink);font-weight:600}
 .ch .cd{fill:#fff;stroke:var(--acc);stroke-width:2.5}
@@ -531,7 +531,7 @@ function Roll(host, h) {
       if (x == null || v == null) { this.set(x); return; }
       if (x === v) return;
       cancelAnimationFrame(raf);
-      const from = v, t0 = performance.now(), d = ms || 340;
+      const from = v, t0 = performance.now(), d = ms || 220;
       const tick = (t) => { const k = Math.min(1, (t - t0) / d); show(from + (x - from) * (1 - Math.pow(1 - k, 3))); if (k < 1) raf = requestAnimationFrame(tick); };
       raf = requestAnimationFrame(tick);
     }
@@ -693,7 +693,7 @@ const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x �
   let lo = 0, hi = 1, t = x; for (let k = 0; k < 20; k++) { t = (lo + hi) / 2; if (f(t, x1, x2) < x) lo = t; else hi = t; }
   return f(t, y1, y2);
 };
-const NAV_EASE = bez(0.35, 0, 0.15, 1), NAV_V0 = 8, NAV_VMAX = 240, NAV_RAMP = 1200;   /* 일/초 · 최고 = 90일 한 바퀴 0.4초 */
+const NAV_EASE = bez(0.3, 0, 0.2, 1), NAV_V0 = 15, NAV_VMAX = 360, NAV_RAMP = 500;   /* 일/초 · 0.5초 만에 최고 = 90일 한 바퀴 0.25초 */
 const WSTEP = { 'w+.1': 0.1, 'w-.1': -0.1, 'w+1': 1, 'w-1': -1 };
 function renderPad() {
   const isToday = sel === today(), fut = sel > today(), big = (s) => '<b style="font-size:19px;letter-spacing:-.02em">' + s + '</b>';
@@ -760,7 +760,7 @@ pad.addEventListener('pointerdown', (e) => {
       const n = Math.floor(acc); if (n) { acc -= n; stepDay(d * n); }
       navBlur(v); holdR = requestAnimationFrame(loop);
     };
-    holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, 150);
+    holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, 130);
   }
   if (pdn.k === 'fav' && favOpen()) pdn.p0 = fav.api.pos;
 });
