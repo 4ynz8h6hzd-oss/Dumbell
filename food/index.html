@@ -42,6 +42,8 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .k2 small{font-size:15px;font-weight:600;letter-spacing:0;color:var(--mute);margin:0 0 3px 5px}
 .k2 .meta{font-size:14px;font-weight:500;letter-spacing:0;color:var(--sub);margin:0 0 3px 8px;white-space:nowrap}
 .k2 .meta b{color:var(--red);font-weight:600}
+.coach{font-size:13px;color:var(--sub);margin-top:8px;min-height:1.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.coach b{color:var(--accTxt);font-weight:700}
 /* 굴러가는 숫자 */
 .roll{display:inline-flex;align-items:center;height:var(--h);font-variant-numeric:tabular-nums}
 .big .roll{--h:68px}.k2 .roll{--h:34px}
@@ -217,7 +219,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
     <a class="lnk" href="../">운동</a>
     <button id="setBtn" aria-label="설정"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </div>
-  <button class="hero" id="hero"><div class="big"><span class="roll" id="wRoll" data-dp="1"></span><small>kg</small></div><div class="lbl num" id="lbl"></div><div class="k2"><span class="roll" id="kRoll" data-comma="1"></span><small>kcal</small><span class="meta num" id="kMeta"></span></div></button>
+  <button class="hero" id="hero"><div class="big"><span class="roll" id="wRoll" data-dp="1"></span><small>kg</small></div><div class="lbl num" id="lbl"></div><div class="k2"><span class="roll" id="kRoll" data-comma="1"></span><small>kcal</small><span class="meta num" id="kMeta"></span></div><div class="coach num" id="coach"></div></button>
   <div class="ch" id="ch"></div>
   <section id="list"></section>
   <section class="bottom">
@@ -337,8 +339,15 @@ function trendSeries() {
   const out = new Map(); if (!ws.length) return out;
   const m = new Map(ws.map((w) => [w.date, w.kg]));
   const end = ws[ws.length - 1].date > today() ? ws[ws.length - 1].date : today();
-  let t = ws[0].kg;
-  for (let d = ws[0].date; d <= end; d = addDays(d, 1)) { if (m.has(d)) t += 0.1 * (m.get(d) - t); out.set(d, t); }
+  /* 안 잰 날은 앞뒤 측정값을 직선으로 이어 채운 뒤 EMA (며칠 쉬어도 추세가 굳지 않음). 마지막 측정 이후는 그대로 */
+  let t = ws[0].kg, i = 0;
+  for (let d = ws[0].date; d <= end; d = addDays(d, 1)) {
+    while (i + 1 < ws.length && ws[i + 1].date <= d) i++;
+    const a = ws[i], b = ws[i + 1];
+    if (a.date === d) t += 0.1 * (m.get(d) - t);
+    else if (b) t += 0.1 * (a.kg + (b.kg - a.kg) * dayDiff(a.date, d) / dayDiff(a.date, b.date) - t);
+    out.set(d, t);
+  }
   return out;
 }
 /* 날짜 문자열로 시드를 정하는 난수 (mulberry32) */
@@ -355,17 +364,35 @@ function model0() {
   const tr = trendSeries();
   const W = tr.size ? (tr.get(today()) ?? [...tr.values()].pop()) : null;
   const prior = cfg.tdee0 > 0 ? cfg.tdee0 : (W ? Math.round(W * 31 / 10) * 10 : 2200);
-  /* 어제까지 28일 중 기록한 날: 평균 섭취 − 추세 변화×7700/일수 = 실제 소모량. 기록 21일이면 100% 반영 */
-  const end = addDays(today(), -1), byDay = kcalByDay(), byReal = kcalByDay(true);
-  let n = 0, sum = 0, first = null;
-  for (let i = 27; i >= 0; i--) { const d = addDays(end, -i); if (byReal.has(d) && tr.has(d)) { n++; sum += byReal.get(d); if (!first) first = d; } }
-  let tdee = prior, obs = null, conf = 0;
-  if (n >= 7 && tr.has(end)) {
+  const T = today(), byDay = kcalByDay(), byReal = kcalByDay(true);
+  /* 부분 기록(끼니를 빠뜨린 날): 지난 60일 기록일 중앙값의 60% 미만이면 소모량·예상 계산에서 뺌 */
+  const rec = []; for (let i = 1; i <= 60; i++) { const v = byReal.get(addDays(T, -i)); if (v) rec.push(v); }
+  rec.sort((a, b) => a - b);
+  const med = rec.length >= 5 ? rec[rec.length >> 1] : 0, okK = (v) => v >= med * 0.6;
+  const ok = (d) => byReal.has(d) && okK(byReal.get(d)) && tr.has(d);
+  const partial = rec.filter((v) => !okK(v)).length;
+  /* 실제 소모량 = 28일 창의 온전한 기록일 평균 섭취 − 추세 변화×7700/일수.
+     창 끝(anchor) = 마지막 몸무게 이전의 가장 최근 기록일 중, 끝 14일에 온전한 기록일이 6일 이상인 날.
+     못 찾으면(쉬는 중·드문드문) 마지막으로 계산된 값을 그대로 유지 — 시작값으로 되돌아가지 않음 */
+  let lastW = ''; data.weights.forEach((w) => { if (w.date > lastW) lastW = w.date; });
+  let tdee = prior, obs = null, conf = 0, n = 0, anchor = null;
+  for (let i = 1; i <= 120 && lastW; i++) {
+    const e = addDays(T, -i); if (e > lastW || !ok(e)) continue;
+    let c14 = 0; for (let j = 0; j < 14; j++) if (ok(addDays(e, -j))) c14++;
+    if (c14 < 6) continue;
+    let s = 0, k = 0, first = null;
+    for (let j = 27; j >= 0; j--) { const d = addDays(e, -j); if (ok(d)) { k++; s += byReal.get(d); if (!first) first = d; } }
+    if (k < 7) continue;
     const t0 = tr.get(addDays(first, -1)) ?? tr.get(first);
-    obs = sum / n - (tr.get(end) - t0) * 7700 / (dayDiff(first, end) + 1);
-    conf = Math.min(1, n / 21);
+    obs = s / k - (tr.get(e) - t0) * 7700 / (dayDiff(first, e) + 1); n = k; anchor = e; break;
+  }
+  if (obs != null) {
+    /* 반영 비율은 누적 기록량 기준(21일 = 100%) — 며칠 쉬었다고 줄지 않음 */
+    let all = 0; for (const d of byReal.keys()) if (d <= anchor && ok(d)) all++;
+    conf = Math.min(1, all / 21);
     tdee = prior + (obs - prior) * conf;
   }
+  const stale = anchor ? dayDiff(anchor, addDays(T, -1)) : null;
   tdee = Math.max(1200, Math.min(5000, tdee));
   const rate = { cut: -0.005, keep: 0, bulk: 0.0025 }[cfg.goal] || 0;
   const target = Math.max(1200, Math.round((tdee + (W ? rate * W * 7700 / 7 : 0)) / 10) * 10);
@@ -373,8 +400,10 @@ function model0() {
   const wk = W && tr.has(addDays(today(), -7)) ? W - tr.get(addDays(today(), -7)) : null;
   /* 앞으로 30일 예상: 지난 1개월(30일) 중 기록한 날 하나를 골라(같은 요일 75%) 그날처럼 먹는다고 보고 ±8% 흔들어 kcal를 만듦.
      몸무게 추세는 (예상 섭취 − 소모량)÷7700 씩 쌓음. 날짜로 시드를 정해 다시 그려도 같은 값 */
-  const t0 = today(), avgK = n ? sum / n : null, past = [], sim = new Map();
-  for (let i = 1; i <= 30; i++) { const d = addDays(t0, -i); if (byDay.has(d)) past.push(d); }
+  /* 최근 7일(어제까지) 온전한 기록일 평균 — 3일 이상일 때만. 한 줄 코칭(더/덜 먹기) 기준 */
+  let s7 = 0, n7 = 0; for (let i = 1; i <= 7; i++) { const d = addDays(T, -i); if (byReal.has(d) && okK(byReal.get(d))) { s7 += byReal.get(d); n7++; } }
+  const t0 = T, avgK = n7 >= 3 ? s7 / n7 : null, past = [], sim = new Map();
+  for (let i = 1; i <= 30; i++) { const d = addDays(t0, -i); if (byDay.has(d) && okK(byDay.get(d))) past.push(d); }
   let slope = 0;
   if (past.length) {
     let wt = W;
@@ -388,7 +417,7 @@ function model0() {
     if (W != null) slope = (sim.get(addDays(t0, 30)).w - W) / 30;
   }
   const wAt = (d) => (d > t0 ? (sim.has(d) ? sim.get(d).w : W) : tr.get(d));
-  return { W, tdee: Math.round(tdee / 10) * 10, prior, obs, n, conf, target, P, C, F, tr, wk, slope, avgK, wAt, sim };
+  return { W, tdee: Math.round(tdee / 10) * 10, prior, obs, n, conf, target, P, C, F, tr, wk, slope, avgK, n7, partial, stale, wAt, sim };
 }
 
 /* ---------- 원통(드럼): 덤벨 앱 운동 바퀴와 같은 3D 원통. 렌즈는 제자리, 줄만 원통 둘레로 굴러감 ----------
@@ -481,6 +510,14 @@ const weightOn = (d) => data.weights.find((w) => w.date === d && !w.sample) || d
 const lastWeight = (d) => data.weights.filter((w) => w.date <= d).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
 const sgn = (v, d) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d);
 let mode = 'main', wVal = 70, lastAdd = [];
+/* 한 줄 코칭: 최근 7일 평균 섭취 vs 목표 → 하루 몇 kcal 더/덜 (50 단위, ±100 미만이면 지금처럼) */
+function coachLine(M) {
+  const g = { cut: '감량', keep: '유지', bulk: '증량' }[cfg.goal] || '유지';
+  if (M.avgK == null) return g + ' · 하루 <b>' + fmt(M.target) + ' kcal</b> 목표로 드세요';
+  const d = Math.round((M.target - M.avgK) / 50) * 50, via = ' · 7일 평균 ' + fmt(M.avgK);
+  if (Math.abs(d) < 100) return g + ' · <b>지금처럼 드세요</b>' + via;
+  return g + ' · 하루 <b>' + fmt(Math.abs(d)) + ' kcal ' + (d > 0 ? '더' : '덜') + '</b> 드세요' + via;
+}
 function render() {
   const M = model(), isToday = sel === today(), fut = sel > today(), sm = fut ? M.sim.get(sel) : null, fs = dayFoods(sm ? sm.src : sel), hero = $('hero');
   const t = fs.reduce((a, f) => ({ k: a.k + f.kcal, p: a.p + f.p, c: a.c + f.c, f: a.f + f.f }), { k: 0, p: 0, c: 0, f: 0 });
@@ -502,6 +539,7 @@ function render() {
   }
   if (fut) { kRoll.to(sm ? Math.round(sm.k) : null); $('kMeta').innerHTML = '/ ' + fmt(M.target) + ' · 예상'; }
   else { kRoll.to(Math.round(t.k)); $('kMeta').innerHTML = '/ ' + fmt(M.target) + ' · ' + (left >= 0 ? fmt(left) + ' 남음' : '<b>' + fmt(-left) + ' 초과</b>'); }
+  $('coach').innerHTML = isToday && mode !== 'weight' ? coachLine(M) : '';
   [['p', t.p, M.P], ['c', t.c, M.C], ['f', t.f, M.F]].forEach(([k, v, g]) => {
     $(k + 'V').textContent = Math.round(v) + '/' + g + 'g';
     const b = $(k + 'B'); b.style.width = Math.min(100, g ? v / g * 100 : 0) + '%';
@@ -1183,7 +1221,9 @@ function openHist() {
     '<div>추정 소모량<b class="num">' + fmt(M.tdee) + ' kcal</b></div>' +
     '<div>기록 반영<b class="num">' + (M.obs == null ? '시작값 사용' : M.n + '일 · ' + Math.round(M.conf * 100) + '%') + '</b></div>' +
     '<div>오늘 목표<b class="num">' + fmt(M.target) + ' kcal</b></div></div>' + chartK(M) +
-    '<p class="st">' + (M.obs == null ? '7일 이상 먹은 것과 몸무게를 함께 기록하면 실제 소모량을 계산해 목표를 자동으로 맞춰요.' : '최근 28일 실측 소모량 ' + fmt(M.obs) + ' kcal를 ' + Math.round(M.conf * 100) + '% 반영 (21일 기록이면 100%). 빠뜨린 끼니가 많으면 낮게 잡혀요.') + '</p>';
+    '<p class="st">' + (M.obs == null ? '7일 이상 먹은 것과 몸무게를 함께 기록하면 실제 소모량을 계산해 목표를 자동으로 맞춰요.' : '실측 소모량 ' + fmt(M.obs) + ' kcal를 ' + Math.round(M.conf * 100) + '% 반영 (누적 21일 기록이면 100%).' +
+      (M.stale > 0 ? ' 최근 기록이 뜸해서 ' + M.stale + '일 전 값을 유지 중 — 14일 중 6일 이상 적으면 다시 갱신돼요.' : '')) +
+    (M.partial ? ' 지난 60일 중 끼니를 빠뜨린 것 같은 ' + M.partial + '일(평소의 60% 미만)은 계산에서 뺐어요.' : '') + '</p>';
   $('hist').showModal();
 }
 $('hClose').addEventListener('click', () => $('hist').close());
