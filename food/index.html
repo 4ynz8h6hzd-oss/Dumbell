@@ -84,7 +84,10 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .it.gh{opacity:.45;pointer-events:none}
 .gnote{color:var(--mute);font-size:12px;padding:10px 0 2px}
 .it .mc{grid-column:2 / span 2;color:var(--mute);font-size:12px;margin-top:2px}
-.empty{color:var(--mute);font-size:14px;padding:28px 0;line-height:1.7}
+.empty{color:var(--mute);font-size:14px;padding:28px 0 14px;line-height:1.7}
+.planb{display:block;width:100%;margin:0 0 20px;padding:14px;border:0;border-radius:14px;background:var(--acc);color:#fff;font:inherit;font-size:16px;font-weight:700}
+.planb small{display:block;margin-top:2px;font-size:12px;font-weight:400;opacity:.85}
+.planb:active{transform:scale(.98)}
 .bottom{flex:none;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:14px 14px 0 24px}
 .side{flex:1;display:flex;flex-direction:column;gap:12px;align-self:stretch;justify-content:flex-end;max-width:150px}
 .mh{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--sub);margin-bottom:5px}
@@ -340,7 +343,7 @@ function trendSeries() {
 }
 /* 날짜 문자열로 시드를 정하는 난수 (mulberry32) */
 function rng(seed) { let a = 0; for (const ch of seed) a = Math.imul(a ^ ch.charCodeAt(0), 2654435761); return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const kcalByDay = () => { const m = new Map(); data.foods.forEach((f) => m.set(f.date, (m.get(f.date) || 0) + f.kcal)); return m; };
+const kcalByDay = (real) => { const m = new Map(); data.foods.forEach((f) => { if (real && f.src === 'plan') return; m.set(f.date, (m.get(f.date) || 0) + f.kcal); }); return m; };   /* real=true: '예상대로' 기록은 뺌 */
 /* 기록·설정·날짜가 그대로면 다시 계산하지 않음 (길게 눌러 날짜를 빨리 넘길 때 매 프레임 부르므로) */
 let modelC = null, modelK = '';
 function model() {
@@ -353,9 +356,9 @@ function model0() {
   const W = tr.size ? (tr.get(today()) ?? [...tr.values()].pop()) : null;
   const prior = cfg.tdee0 > 0 ? cfg.tdee0 : (W ? Math.round(W * 31 / 10) * 10 : 2200);
   /* 어제까지 28일 중 기록한 날: 평균 섭취 − 추세 변화×7700/일수 = 실제 소모량. 기록 21일이면 100% 반영 */
-  const end = addDays(today(), -1), byDay = kcalByDay();
+  const end = addDays(today(), -1), byDay = kcalByDay(), byReal = kcalByDay(true);
   let n = 0, sum = 0, first = null;
-  for (let i = 27; i >= 0; i--) { const d = addDays(end, -i); if (byDay.has(d) && tr.has(d)) { n++; sum += byDay.get(d); if (!first) first = d; } }
+  for (let i = 27; i >= 0; i--) { const d = addDays(end, -i); if (byReal.has(d) && tr.has(d)) { n++; sum += byReal.get(d); if (!first) first = d; } }
   let tdee = prior, obs = null, conf = 0;
   if (n >= 7 && tr.has(end)) {
     const t0 = tr.get(addDays(first, -1)) ?? tr.get(first);
@@ -517,7 +520,7 @@ function render() {
     return '<button class="it' + gh + '"' + (fut ? ' tabindex="-1"' : ' data-id="' + esc(f.id) + '"') + '><span class="tm num">' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + '</span>' +
       '<span class="nm">' + esc(f.name) + (f.amt ? '<small>' + esc(f.amt) + '</small>' : '') + '</span><span class="kc num">' + fmt(f.kcal * fm) + '</span>' +
       '<span class="mc num">단 ' + Math.round(f.p * fm) + ' · 탄 ' + Math.round(f.c * fm) + ' · 지 ' + Math.round(f.f * fm) + '</span></button>';
-  }).join('') : '<div class="empty">' + (fut ? '지난 1개월 기록이 있어야 예상해요' : isToday ? '패드 가운데 ✎ 로 먹은 걸 적고,<br>📷 사진 · ★ 자주 먹는 음식 · ＋ 직접 입력.' : '이 날 기록이 없어요') + '</div>');
+  }).join('') : '<div class="empty">' + (fut ? '지난 1개월 기록이 있어야 예상해요' : isToday ? '패드 가운데 ✎ 로 먹은 걸 적고,<br>📷 사진 · ★ 자주 먹는 음식 · ＋ 직접 입력.' : '이 날 기록이 없어요') + '</div>' + (!fut && planFor(sel) ? '<button type="button" class="planb" id="planBtn">예상대로 먹었어요<small>' + md(planFor(sel).src) + '처럼 · 오른쪽 아래 ✓ 로도 돼요</small></button>' : ''));
   renderPad();
 }
 
@@ -744,7 +747,7 @@ const I = {
   plus: '<path d="M12 5v14M5 12h14"/>', trend: '<path d="M4 18l5-6 4 3 7-9"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>', x: '<path d="M6 6l12 12M18 6L6 18"/>', trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>'
 };
-const AL = { prev: '전날', next: '다음날', photo: '사진으로 기록', weight: '몸무게 기록', write: '먹은 것 적기', fav: '자주 먹는 음식', undo: '방금 기록 되돌리기', manual: '직접 입력', trend: '추세 보기',
+const AL = { prev: '전날', next: '다음날', photo: '사진으로 기록', weight: '몸무게 기록', write: '먹은 것 적기', fav: '자주 먹는 음식', undo: '방금 기록 되돌리기', manual: '직접 입력', trend: '추세 보기', plan: '예상대로 먹었어요',
   wx: '취소', 'w+.1': '0.1kg 올리기', 'w-.1': '0.1kg 내리기', 'w+1': '1kg 올리기', 'w-1': '1kg 내리기', wok: '몸무게 저장', wdel: '이 날 몸무게 지우기' };
 const DSTEP = { prev: -1, next: 1 };
 const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x → y (이분법) */
@@ -757,7 +760,7 @@ const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x �
 const NAV_EASE = bez(0.4, 0, 0.2, 1), NAV_V0 = 14, NAV_VMAX = 140, NAV_RAMP = 900, NAV_DELAY = 230;   /* 일/초 */
 const WSTEP = { 'w+.1': 0.1, 'w-.1': -0.1, 'w+1': 1, 'w-1': -1 };
 function renderPad() {
-  const isToday = sel === today(), fut = sel > today(), big = (s) => '<b style="font-size:19px;letter-spacing:-.02em">' + s + '</b>';
+  const isToday = sel === today(), fut = sel > today(), planOK = !fut && !dayFoods(sel).length && !!planFor(sel), big = (s) => '<b style="font-size:19px;letter-spacing:-.02em">' + s + '</b>';
   const K = mode === 'weight' ? [
     ['wx', 'cor', ic(I.x), '취소'], ['w+.1', 'arm', ic(I.up), '0.1'], ['wdel', 'cor', ic(I.trash, 20), '지우기', !weightOn(sel)],
     ['w-1', 'arm', big('−1'), 'kg'], ['wok', 'go', ic(I.check, 30), ''], ['w+1', 'arm', big('+1'), 'kg'],
@@ -765,7 +768,7 @@ function renderPad() {
   ] : [
     ['prev', 'cor', ic(I.left), '전날'], ['photo', 'arm', ic(I.cam), '사진', fut], ['next', 'cor', ic(I.right), '다음날'],
     ['weight', 'arm', ic(I.scale), '몸무게', fut, isToday && !weightOn(sel)], ['write', 'go', ic(I.pen, 28), '', fut], ['fav', 'arm', ic(I.star), '자주', fut || !data.foods.length],
-    ['undo', 'cor', ic(I.undo, 20), '되돌리기', !lastAdd.length], ['manual', 'arm', ic(I.plus), '직접', fut], ['trend', 'cor', ic(I.trend, 20), '추세']
+    ['undo', 'cor', ic(I.undo, 20), '되돌리기', !lastAdd.length], ['manual', 'arm', ic(I.plus), '직접', fut], planOK ? ['plan', 'go', ic(I.check, 26), '예상대로'] : ['trend', 'cor', ic(I.trend, 20), '추세']
   ];
   const html = K.map(([k, cls, inner, lab, dis, dot]) => '<button type="button" class="k ' + cls + '"' + (k ? ' data-k="' + k + '" aria-label="' + AL[k] + '"' : ' tabindex="-1" aria-hidden="true"') + (dis ? ' disabled' : '') + '>' +
     (inner || '') + (lab ? '<span>' + lab + '</span>' : '') + (dot ? '<i class="dot"></i>' : '') + '</button>').join('');
@@ -778,6 +781,7 @@ function act(k) {
   if (k === 'photo') $('file').click();
   else if (k === 'write') { $('bar').hidden = false; $('q').focus(); }
   else if (k === 'manual') openCard([rowFrom({}, true)], '직접 입력', 'manual');
+  else if (k === 'plan') confirmPlan();
   else if (k === 'trend') openHist();
   else if (k === 'undo') { const ids = lastAdd[lastAdd.length - 1]; if (!ids) return; const n = data.foods.filter((f) => ids.includes(f.id)).map((f) => f.name); removeFoods(ids); toast('되돌림: ' + n.join(', ')); }
   else if (k === 'weight') { const w = weightOn(sel) || lastWeight(sel); wVal = w ? w.kg : (model().W ? r1(model().W) : 70); mode = 'weight'; render(); }
@@ -906,6 +910,31 @@ function favTapMode() { fav.tap = true; fav.t = Date.now(); $('fwH').textContent
   $('fwX').addEventListener('click', favClose);
 })();
 
+
+/* ---------- 예상대로: 그날 예상 식단을 실제 기록으로 1탭에 저장 (몸무게는 건드리지 않음) ---------- */
+function planFor(d) {
+  const M = model();
+  if (d > today()) { const x = M.sim.get(d); return x ? { src: x.src, f: x.f } : null; }
+  const by = kcalByDay(), past = [];
+  for (let i = 1; i <= 30; i++) { const x = addDays(d, -i); if (by.has(x)) past.push(x); }
+  if (!past.length) return null;
+  const r = rng(d), wd = pd(d).getDay(), same = past.filter((x) => pd(x).getDay() === wd), pool = same.length >= 3 && r() < 0.75 ? same : past;
+  return { src: pool[Math.floor(r() * pool.length)], f: 0.92 + 0.16 * r() };
+}
+function confirmPlan() {
+  if (sel > today() || dayFoods(sel).length) return;
+  const pl = planFor(sel); if (!pl) { toast('지난 1개월 기록이 있어야 예상해요'); return; }
+  const now = Date.now(), base = pd(pl.src).getTime(), day0 = pd(sel).getTime(), ids = [];
+  dayFoods(pl.src).forEach((x, i) => {
+    const o = { id: uid(), date: sel, ts: day0 + (x.ts - base) + i, name: x.name, kcal: nn(x.kcal * pl.f), p: nn(x.p * pl.f), c: nn(x.c * pl.f), f: nn(x.f * pl.f), src: 'plan', u: now };
+    if (x.amt) o.amt = x.amt;
+    data.foods.push(o); ids.push(o.id);
+  });
+  if (!ids.length) return;
+  lastAdd.push(ids); if (lastAdd.length > 20) lastAdd.shift();
+  persist(); render(); vib();
+  toast('예상대로 기록 · ' + ids.length + '개', () => removeFoods(ids));
+}
 
 /* ---------- 기록 추가·삭제 ---------- */
 function addFoods(items, src) {
@@ -1092,6 +1121,7 @@ $('file').addEventListener('change', async (e) => {
 /* ---------- 기록 수정 ---------- */
 let editing = null;
 $('list').addEventListener('click', (e) => {
+  if (e.target.closest('#planBtn')) { confirmPlan(); return; }
   const b = e.target.closest('.it'); if (!b) return;
   editing = data.foods.find((f) => f.id === b.dataset.id); if (!editing) return;
   $('eN').value = editing.name; $('eA').value = editing.amt || '';
@@ -1198,7 +1228,7 @@ async function ghPull() {
   return { sha: j.sha, doc: txt.trim() ? JSON.parse(txt) : null };
 }
 /* 밖에서 들어온 기록 검사: 형식이 맞는 것만 받음 */
-const ID_RE = /^[\w.-]{1,64}$/, D_RE = /^\d{4}-\d\d-\d\d$/, SRC = ['ai', 'photo', 'manual', 'chip'];
+const ID_RE = /^[\w.-]{1,64}$/, D_RE = /^\d{4}-\d\d-\d\d$/, SRC = ['ai', 'photo', 'manual', 'chip', 'plan'];
 const okF = (x) => !!x && ID_RE.test(String(x.id)) && typeof x.date === 'string' && D_RE.test(x.date) && num(x.ts) && typeof x.name === 'string' && x.name.length <= 60 &&
   (x.amt === undefined || (typeof x.amt === 'string' && x.amt.length <= 40)) && ['kcal', 'p', 'c', 'f'].every((k) => num(x[k]) && x[k] >= 0) && (x.u === undefined || num(x.u)) && (x.src === undefined || SRC.includes(x.src));
 const okW = (x) => !!x && ID_RE.test(String(x.id)) && typeof x.date === 'string' && D_RE.test(x.date) && num(x.kg) && x.kg >= 20 && x.kg <= 300 && (x.u === undefined || num(x.u));
@@ -1225,7 +1255,7 @@ function merge(doc) {
 function docText() {
   const head = {
     app: 'food-log', updated: new Date().toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
-    note: '음식 1개 = 1줄. date=먹은 날, ts=기록 시각(epoch ms), name=음식, amt=양, kcal, p=단백질 g, c=탄수화물 g, f=지방 g, src=ai|photo|manual|chip(어떻게 기록했는지), u=수정 시각. weights: 날짜별 몸무게 kg(하루 1개). deleted=삭제된 id.',
+    note: '음식 1개 = 1줄. date=먹은 날, ts=기록 시각(epoch ms), name=음식, amt=양, kcal, p=단백질 g, c=탄수화물 g, f=지방 g, src=ai|photo|manual|chip|plan(어떻게 기록했는지, plan=예상대로 1탭), u=수정 시각. weights: 날짜별 몸무게 kg(하루 1개). deleted=삭제된 id.',
     settings: { goal: cfg.goal, gpk: cfg.gpk, tdee0: cfg.tdee0 }
   };
   const fs = sortF(realF()), ws = sortW(realW());
