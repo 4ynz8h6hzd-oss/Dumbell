@@ -25,12 +25,11 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:480px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 0 calc(14px + env(safe-area-inset-bottom))}
 .top{display:flex;align-items:center;gap:4px;padding:0 14px 0 24px;height:40px;flex:none}
 #dayLbl{font-weight:600;font-size:13px;color:var(--sub);padding:8px 0}
-/* 미리보기 (?t=abcd): 오늘 표시 방법 후보 */
+/* 오늘 표시: 상단 주황 배지·며칠 전/뒤, 그래프 오늘 칸 띠·알약 */
 #dayLbl .tdy{display:inline-block;background:var(--acc);color:#fff;border-radius:999px;padding:2px 9px;margin-right:6px;font-size:12px}
 #dayLbl .rel{color:var(--ink);font-weight:700;margin-right:2px}
-.ch .tband{fill:var(--acc);fill-opacity:.1}.ch .fbg{fill:#F6F6F9}.ch.pvd .cb.fu{fill:#E4E4EA}
+.ch .tband{fill:var(--acc);fill-opacity:.1}
 .ch .tpill{fill:var(--acc)}.ch text.tpt{fill:#fff;font-weight:700}
-.ch text.tar{fill:var(--acc);font-weight:700;font-size:11px}
 .sp{flex:1}
 .lnk{color:var(--mute);font-size:13px;font-weight:600;text-decoration:none;padding:10px 8px}
 #setBtn{width:40px;height:40px;color:var(--mute);display:flex;align-items:center;justify-content:center}
@@ -333,8 +332,6 @@ function rng(seed) { let a = 0; for (const ch of seed) a = Math.imul(a ^ ch.char
 const kcalByDay = () => { const m = new Map(); data.foods.forEach((f) => m.set(f.date, (m.get(f.date) || 0) + f.kcal)); return m; };
 /* 기록·설정·날짜가 그대로면 다시 계산하지 않음 (길게 눌러 날짜를 빨리 넘길 때 매 프레임 부르므로) */
 let modelC = null, modelK = '';
-/* 미리보기 스위치: 주소 끝 ?t=abcd 처럼 붙이면 그 후보만 켜짐 (없으면 지금 그대로) */
-const PV = (() => { const t = new URLSearchParams(location.search).get('t') || ''; return { a: t.includes('a'), b: t.includes('b'), c: t.includes('c'), d: t.includes('d') }; })();
 function model() {
   const k = dataVer + '|' + today() + '|' + JSON.stringify(cfg) + '|' + data.foods.length + '|' + data.weights.length;
   if (modelC && k === modelK) return modelC;
@@ -496,10 +493,10 @@ function render() {
     const b = $(k + 'B'); b.style.width = Math.min(100, g ? v / g * 100 : 0) + '%';
     b.classList.toggle('over', k !== 'p' && v > g * 1.1);
   });
-  if (PV.a) {   /* 미리보기 a: 오늘이면 주황 배지, 아니면 며칠 전·뒤를 크게 */
+  {   /* 오늘이면 주황 배지, 아니면 며칠 전·뒤를 굵게 */
     const o = dayDiff(today(), sel), rel = o === -1 ? '어제' : o === 1 ? '내일' : o < 0 ? -o + '일 전' : o + '일 뒤';
     $('dayLbl').innerHTML = isToday ? '<span class="tdy">오늘</span>' + md(sel) : '<span class="rel">' + rel + '</span> · ' + md(sel) + (fut ? ' · 예상' : '') + ' · 오늘로 ›';
-  } else $('dayLbl').textContent = isToday ? '오늘 · ' + md(sel) : md(sel) + (fut ? ' · 예상' : '') + ' · 오늘로 ›';
+  }
   updChart(M);
   const gh = fut ? ' gh' : '', fm = sm ? sm.f : 1;
   if (navFast) { listDirty = true; return; }   /* 빨리 넘기는 동안은 목록·패드를 다시 그리지 않음 (놓으면 한 번) */
@@ -582,8 +579,7 @@ function drawChart(M) {
   const wY = (v) => 8 + (hi - v) / (hi - lo) * 46;
   /* 띠 한 벌(90일) */
   let b = ''; const bar = [];
-  if (PV.d) b += '<rect class="fbg" x="' + (chX(RPAST) + CCW / 2).toFixed(1) + '" y="0" width="' + ((CN - RPAST - 1) * CCW).toFixed(1) + '" height="' + CH + '"/>';   /* 미리보기 d: 앞날 배경 */
-  if (PV.b) b += '<rect class="tband" x="' + (chX(RPAST) - CCW / 2).toFixed(1) + '" y="0" width="' + CCW + '" height="' + (CH - 13) + '" rx="3"/>';   /* 미리보기 b: 오늘 칸 띠 */
+  b += '<rect class="tband" x="' + (chX(RPAST) - CCW / 2).toFixed(1) + '" y="0" width="' + CCW + '" height="' + (CH - 13) + '" rx="3"/>';   /* 오늘 칸 띠 */
   days.forEach((d, i) => { const v = fu[i] ? (M.sim.has(d) ? M.sim.get(d).k : 0) : by.get(d) || 0; const y = kY(v); bar.push([y, Math.max(v ? 2 : 0, kB - y), fu[i]]); b += '<rect class="cb' + (fu[i] ? ' fu' : v > M.target * 1.1 ? ' hi' : '') + '" data-i="' + i + '" x="' + (chX(i) - CCW * 0.36).toFixed(2) + '" y="' + y.toFixed(1) + '" width="' + (CCW * 0.72).toFixed(2) + '" height="' + Math.max(v ? 2 : 0, kB - y).toFixed(1) + '" rx="2"/>'; });
   const ti = RPAST, tx = (chX(ti) + CCW / 2).toFixed(1);
   b += '<line class="td" x1="' + tx + '" x2="' + tx + '" y1="2" y2="' + kB + '"/>';
@@ -595,7 +591,7 @@ function drawChart(M) {
   days.forEach((d, i) => { if (ws.has(d)) w += '<circle class="wd" cx="' + chX(i).toFixed(1) + '" cy="' + wY(ws.get(d)).toFixed(1) + '" r="2.2"/>'; });
   days.forEach((d, i) => {
     const dd = +d.slice(8), lab = i === ti ? '오늘' : Math.abs(i - ti) > 2 && (dd === 1 || dd === 10 || dd === 20) ? +d.slice(5, 7) + '.' + dd : '';
-    if (PV.b && i === ti) { b += '<rect class="tpill" x="' + (chX(i) - 15).toFixed(1) + '" y="' + (CH - 13) + '" width="30" height="13" rx="6.5"/><text class="tpt" x="' + chX(i).toFixed(1) + '" y="' + (CH - 3) + '" text-anchor="middle">오늘</text>'; return; }
+    if (i === ti) {   /* 오늘 = 주황 알약 */ b += '<rect class="tpill" x="' + (chX(i) - 15).toFixed(1) + '" y="' + (CH - 13) + '" width="30" height="13" rx="6.5"/><text class="tpt" x="' + chX(i).toFixed(1) + '" y="' + (CH - 3) + '" text-anchor="middle">오늘</text>'; return; }
     if (lab) b += '<text x="' + chX(i).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle"' + (i === ti ? ' class="tt"' : '') + '>' + lab + '</text>';
   });
   /* 층마다 따로 된 <svg>: 움직이는 띠(막대·몸무게)는 HTML 요소째 transform → GPU 합성만, 다시 그리지 않음 */
@@ -620,9 +616,8 @@ function drawChart(M) {
   const strip = (id, x, g) => '<svg id="' + id + '" class="cs" viewBox="' + (-CN * CCW) + ' 0 ' + SW + ' ' + CH + '">' + [-1, 0, 1].map((k) => '<g transform="translate(' + (k * CN * CCW).toFixed(1) + ',' + (k * (g || 0)).toFixed(2) + ')">' + x + '</g>').join('') + '</svg>';
   /* 막대 띠는 옆으로만, 몸무게 띠는 옆+위아래로 움직여 가운데 고정 점(CMID, CY)을 선이 지나가게 함 */
   s += strip('cs', b) + vb + '><line class="cl" x1="' + CMID + '" x2="' + CMID + '" y1="2" y2="' + kB + '"/></svg>' + strip('cw', w, G);
-  if (PV.c) s += vb + '><text id="tarL" class="tar" x="30" y="11"></text><text id="tarR" class="tar" x="' + (CW - 30) + '" y="11" text-anchor="end"></text></svg>';   /* 미리보기 c: 화면 밖 오늘 화살표 */
   s += vb + '><rect id="cbx" class="cb on" x="' + (CMID - CCW * 0.36).toFixed(2) + '" width="' + (CCW * 0.72).toFixed(2) + '" y="0" height="0" rx="2"/><circle id="cd" class="cd" r="4.5" cx="' + CMID + '" cy="' + CY + '"/></svg></div>';
-  $('ch').innerHTML = s; $('ch').classList.toggle('pvd', PV.d);
+  $('ch').innerHTML = s;
   ch = { key, start, lv, lineY, ws, bar, pos: null, tgt: 0, ty: 0, raf: 0, tau: 0, vel: 0, drag: false, follow: false };
 }
 /* 띠 위치 ch.pos(풀린 인덱스, 소수). 덤벨 앱 바퀴와 같은 물리: 목표 ch.tgt로 지수 감속 추적(τ 0.1초 —
@@ -672,7 +667,6 @@ function placeCursor() {
   /* 고른 날 막대 강조는 가운데 고정 막대 하나로 (띠 전체를 다시 그리지 않게) */
   const [by, bh, bf] = ch.bar[i], cb = $('cbx'); cb.setAttribute('y', by.toFixed(1)); cb.setAttribute('height', bh.toFixed(1)); cb.classList.toggle('fu', bf);
   $('cd').style.opacity = ch.lineY(i) == null ? 0 : 1;
-  if (PV.c) { const o = RPAST - i, L = $('tarL'), Rr = $('tarR'); L.textContent = o < -14 ? '← 오늘 ' + -o + '일' : ''; Rr.textContent = o > 14 ? '오늘 ' + o + '일 →' : ''; }
 }
 function updChart(M) {
   const want = !chHide;   /* 늘 펼침 · 숫자 탭 = 접기/펼치기 */
