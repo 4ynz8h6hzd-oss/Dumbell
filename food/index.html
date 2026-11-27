@@ -1141,7 +1141,7 @@ function chipFoods(limit) {
 /* ★ 자주 먹는 음식 원통: ★를 누른 채 위로 밀면 굴러가고 렌즈에 온 음식이 손 떼면 기록.
    그냥 탭하면 원통이 열린 채로 — 끌어서 굴리고, 줄을 탭하면 기록, 빈 곳·닫기를 누르면 닫힘 */
 const fav = { items: [], api: null, open: false, tap: false, t: 0, m: 1 };
-const FROWH = 58, FAV_PX = 22, FAV_CX = 36, FAV_MPX = 16, FAV_EDGE = 26, FAV_LOCK = 14;   /* 옆으로 10px = 0.1인분 */
+const FROWH = 58, FAV_PX = 30, FAV_CX = 36, FAV_MPX = 26, FAV_EDGE = 26, FAV_LOCK = 14;   /* 옆으로 10px = 0.1인분 */
 /* 양 적기: 앞 숫자에 곱함 (1접시 ×1.3 = 1.3접시), 숫자 없으면 '×1.3', 양이 없으면 '1.3인분' */
 const amtX = (amt, m) => {
   if (m === 1) return amt || '';
@@ -1198,7 +1198,7 @@ function favShowM() {
   const f = fav.items[fav.api ? fav.api.cur : 0]; if (!f) return;
   $('fwM').innerHTML = '<b>' + esc(amtX(f.amt || '1인분', fav.m)) + '</b><span class="num">' + fmt(f.kcal * fav.m) + ' kcal</span>';
   $('fw').classList.toggle('mx', fav.m !== 1);
-}   /* 누른 채 밀기: 22px = 한 줄, 36px 넘게 아래로 = 취소 */
+}   /* 누른 채 밀기: 30px = 한 줄, 36px 넘게 아래로 = 취소 */
 function favOpen() {
   if (fav.api) fav.api.stop();
   $('toast').classList.remove('on');   /* 직전 기록 알림이 렌즈 위를 덮어 탭을 먹지 않게 */
