@@ -570,17 +570,31 @@ function drawChart(M) {
   });
   let s = '<svg viewBox="0 0 ' + CW + ' ' + CH + '" role="img" aria-label="고른 날 앞뒤 30일 섭취 kcal와 몸무게">';
   s += '<line x1="0" x2="' + CW + '" y1="' + kY(M.target).toFixed(1) + '" y2="' + kY(M.target).toFixed(1) + '" class="tg"/>';
-  const strip = (id, x) => '<g id="' + id + '" class="cs">' + [-1, 0, 1].map((k) => '<g transform="translate(' + (k * CN * CCW).toFixed(1) + ',0)">' + x + '</g>').join('') + '</g>';
+  /* 이음새 잇기(나선): 몸무게 띠는 한 바퀴마다 G만큼 위아래로 밀어 그려, 끝(+30일) 다음 날이 다음 바퀴 첫 기록으로 끊김 없이 이어짐.
+     가운데 점 높이를 고정하고 선만 움직이므로 실제 높이 차이는 보이지 않고 선이 계속 내려가거나 올라감 */
+  const fi = lv.findIndex((v) => v != null), le = lv[CN - 1], le2 = lv[CN - 2];
+  let G = 0, dpx = 0;
+  if (fi >= 0 && le != null) {
+    dpx = le2 != null ? wY(le) - wY(le2) : 0;
+    G = wY(le) + dpx * (fi + 1) - wY(lv[fi]);
+    w += '<polyline class="wl2 fu" points="' + chX(CN - 1).toFixed(1) + ',' + wY(le).toFixed(1) + ' ' + chX(CN + fi).toFixed(1) + ',' + (wY(lv[fi]) + G).toFixed(1) + '"/>';
+  }
+  const lineY = (p) => {   /* 풀린 위치 p의 선 높이(px) */
+    const i = ringI(p), lap = Math.floor(p / CN);
+    if (lv[i] != null) return wY(lv[i]) + lap * G;
+    return le != null ? wY(le) + dpx * (i + 1) + (lap - 1) * G : null;
+  };
+  const strip = (id, x, g) => '<g id="' + id + '" class="cs">' + [-1, 0, 1].map((k) => '<g transform="translate(' + (k * CN * CCW).toFixed(1) + ',' + (k * (g || 0)).toFixed(2) + ')">' + x + '</g>').join('') + '</g>';
   /* 막대 띠는 옆으로만, 몸무게 띠는 옆+위아래로 움직여 가운데 고정 점(CMID, CY)을 선이 지나가게 함 */
-  s += strip('cs', b) + '<line class="cl" x1="' + CMID + '" x2="' + CMID + '" y1="2" y2="' + kB + '"/>' + strip('cw', w);
+  s += strip('cs', b) + '<line class="cl" x1="' + CMID + '" x2="' + CMID + '" y1="2" y2="' + kB + '"/>' + strip('cw', w, G);
   s += '<circle id="cd" class="cd" r="4.5" cx="' + CMID + '" cy="' + CY + '"/></svg>';
   $('ch').innerHTML = s;
-  ch = { key, start, wY, lv, ws, p: null, ty: 0, normT: null };
+  ch = { key, start, lv, lineY, ws, p: null, ty: 0, normT: null };
 }
 /* 띠 위치 p(풀린 인덱스). 고른 날까지 고리에서 가까운 쪽으로 움직이고, 멈추면 몰래 가운데 벌로 되돌림 */
 function stripTo(p, anim) {
   const g = $('cs'), gw = $('cw'); if (!g || !ch) return;
-  const v = ch.lv[ringI(p)]; if (v != null) ch.ty = CY - ch.wY(v);
+  const y = ch.lineY(p); if (y != null) ch.ty = CY - y;
   const x = (CMID - chX(p)).toFixed(2);
   [[g, 'translate(' + x + 'px,0)'], [gw, 'translate(' + x + 'px,' + ch.ty.toFixed(2) + 'px)']].forEach(([e, t]) => {
     if (!anim) { e.style.transition = 'none'; e.getBoundingClientRect(); }
@@ -600,7 +614,7 @@ function placeCursor() {
     if (ch.p < 0 || ch.p >= CN) ch.normT = setTimeout(() => { ch.p = ringI(ch.p); stripTo(ch.p, false); }, 450);
   }
   $('ch').querySelectorAll('.cb').forEach((r) => r.classList.toggle('on', +r.dataset.i === i));
-  $('cd').style.opacity = ch.lv[i] == null ? 0 : 1;
+  $('cd').style.opacity = ch.lineY(i) == null ? 0 : 1;
 }
 function updChart(M) {
   const want = chPin || sel !== today() || Date.now() - navAt < 1600;
