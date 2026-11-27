@@ -1009,7 +1009,7 @@ const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x �
 const NAV_EASE = bez(0.4, 0, 0.2, 1);   /* 속도·가속은 MAG.delay·v0·vmax·ramp (🧲 패널) */
 const WSTEP = { 'w+.1': 0.1, 'w-.1': -0.1, 'w+1': 1, 'w-1': -1 };
 function renderPad() {
-  const isToday = sel === today(), planOK = sel <= today() && !dayFoods(sel).length && !!planFor(sel), big = (s) => '<b style="font-size:19px;letter-spacing:-.02em">' + s + '</b>';
+  const isToday = sel === today(), planOK = !!planLeft(sel), big = (s) => '<b style="font-size:19px;letter-spacing:-.02em">' + s + '</b>';
   const K = mode === 'weight' ? [
     ['wx', 'cor', ic(I.x), '취소'], ['w+.1', 'arm', ic(I.up), '0.1'], ['wdel', 'cor', ic(I.trash, 20), '지우기', !weightOn(sel)],
     ['w-1', 'arm', big('−1'), 'kg'], ['wok', 'go', ic(I.check, 30), ''], ['w+1', 'arm', big('+1'), 'kg'],
@@ -1249,29 +1249,20 @@ function favTapMode() { fav.m = 1; favShowM(); fav.tap = true; fav.t = Date.now(
 })();
 
 
-/* ---------- 예상대로: 그날 예상 식단을 실제 기록으로 1탭에 저장 (몸무게는 건드리지 않음) ---------- */
-function planFor(d) {
-  const M = model();
-  if (d > today()) { const x = M.sim.get(d); return x ? { src: x.src, f: x.f } : null; }
-  const by = kcalByDay(), past = [];
-  for (let i = 1; i <= 30; i++) { const x = addDays(d, -i); if (by.has(x)) past.push(x); }
-  if (!past.length) return null;
-  const r = rng(d), wd = pd(d).getDay(), same = past.filter((x) => pd(x).getDay() === wd), pool = same.length >= 3 && r() < 0.75 ? same : past;
-  return { src: pool[Math.floor(r() * pool.length)], f: 0.92 + 0.16 * r() };
+/* ---------- 예상대로: 그날 목표까지 남은 kcal·영양소를 1줄로 기록 (몸무게는 건드리지 않음) ---------- */
+function planLeft(d) {
+  if (d > today()) return null;
+  const M = model(), t = dayFoods(d).reduce((a, f) => ({ k: a.k + f.kcal, p: a.p + f.p, c: a.c + f.c, f: a.f + f.f }), { k: 0, p: 0, c: 0, f: 0 });
+  const k = Math.round((M.target - t.k) / 10) * 10;
+  return k >= 50 ? { k, p: Math.max(0, M.P - t.p), c: Math.max(0, M.C - t.c), f: Math.max(0, M.F - t.f) } : null;
 }
 function confirmPlan() {
-  if (sel > today() || dayFoods(sel).length) return;
-  const pl = planFor(sel); if (!pl) { toast('지난 1개월 기록이 있어야 예상해요'); return; }
-  const now = Date.now(), base = pd(pl.src).getTime(), day0 = pd(sel).getTime(), ids = [];
-  dayFoods(pl.src).forEach((x, i) => {
-    const o = { id: uid(), date: sel, ts: day0 + (x.ts - base) + i, name: x.name, kcal: nn(x.kcal * pl.f), p: nn(x.p * pl.f), c: nn(x.c * pl.f), f: nn(x.f * pl.f), src: 'plan', u: now };
-    if (x.amt) o.amt = x.amt;
-    data.foods.push(o); ids.push(o.id);
-  });
-  if (!ids.length) return;
-  lastAdd.push(ids); if (lastAdd.length > 20) lastAdd.shift();
+  const l = planLeft(sel); if (!l) { toast('남은 kcal이 없어요'); return; }
+  const now = Date.now(), o = { id: uid(), date: sel, ts: sel === today() ? now : pd(sel).getTime() + 20 * 3600e3, name: '예상대로', kcal: l.k, p: nn(l.p), c: nn(l.c), f: nn(l.f), src: 'plan', u: now };
+  data.foods.push(o);
+  lastAdd.push([o.id]); if (lastAdd.length > 20) lastAdd.shift();
   persist(); render(); vib(false); sfx('ex');
-  toast('예상대로 기록 · ' + ids.length + '개', () => removeFoods(ids));
+  toast('예상대로 기록 · ' + fmt(l.k) + ' kcal', () => removeFoods([o.id]));
 }
 
 /* ---------- 기록 추가·삭제 ---------- */
