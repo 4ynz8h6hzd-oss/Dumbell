@@ -316,11 +316,11 @@ dialog.sheet[open]{animation:up .22s ease-out}
     <label class="fld">시작 소모량 kcal<input id="sT0" type="number" inputmode="numeric" placeholder="자동"></label>
   </div>
   <p>소모량은 기록이 쌓이면 섭취량과 몸무게 추세로 자동 보정돼요. 시작값은 처음 몇 주만 영향 있어요.</p>
-  <h3>AI 추정 (Claude API 키)</h3>
+  <h3>AI 추정 (Gemini 무료 키 또는 Claude 키)</h3>
   <p class="st" id="aiSt"></p>
-  <label class="fld"><input id="sKey" type="password" placeholder="sk-ant-…" autocomplete="off"></label>
+  <label class="fld"><input id="sKey" type="password" placeholder="Gemini 키 또는 sk-ant-…" autocomplete="off"></label>
   <div class="row" style="margin-top:0"><button class="b2" id="sKeyOff">키 지우기</button><button class="b1" id="sKeyOk">키 저장</button></div>
-  <p>키는 이 기기 브라우저에만 저장돼요. Anthropic 콘솔에서 이 키에 월 사용 한도를 걸어두세요.</p>
+  <p>키는 이 기기 브라우저에만 저장돼요. 무료 키는 aistudio.google.com/apikey 에서 받아요. sk-ant- 로 시작하면 Claude로 써요.</p>
   <h3>샘플 데이터</h3>
   <p id="smpSt"></p>
   <div class="row" style="margin-top:0"><button class="b2" id="smpBtn"></button></div>
@@ -342,6 +342,8 @@ dialog.sheet[open]{animation:up .22s ease-out}
 const $ = (id) => document.getElementById(id);
 const KEY = 'food-log', CFGK = 'food-cfg', AIK = 'food-claude-key', TOKK = 'dumbbell-gh-token', SYNCK = 'food-gh-sync';
 const MODEL = 'claude-haiku-5-5';
+const GMODELS = ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-flash-lite-latest']; // 무료 Gemini 키 — 혼잡(503·429)이면 다음 모델
+const isClaudeKey = () => lsGet(AIK).startsWith('sk-ant-');
 const lsGet = (k) => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
 const lsSet = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} };
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -1392,7 +1394,7 @@ $('cQ').addEventListener('click', (e) => {
   runAI();
 });
 
-/* ---------- Claude ---------- */
+/* ---------- AI (Gemini 무료 / Claude) ---------- */
 function sysPrompt() {
   const mine = chipFoods(30).map((f) => '- ' + f.name + (f.amt ? ' (' + f.amt + ')' : '') + ': ' + Math.round(f.kcal) + 'kcal 단' + Math.round(f.p) + ' 탄' + Math.round(f.c) + ' 지' + Math.round(f.f)).join('\n');
   return '너는 한국 사용자의 식단 기록을 돕는 영양 추정기다. 사용자가 먹은 것(글, 사진, 또는 둘 다)을 음식별 항목으로 나누고 각 항목의 kcal·단백질(p)·탄수화물(c)·지방(f) g을 추정한다.\n' +
@@ -1413,6 +1415,24 @@ async function callClaude(messages) {
   const j = await r.json();
   return (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
 }
+async function callGemini(messages) {
+  const contents = messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: (typeof m.content === 'string' ? [{ type: 'text', text: m.content }] : m.content).map((b) => b.type === 'image' ? { inlineData: { mimeType: b.source.media_type, data: b.source.data } } : { text: b.text }) }));
+  const body = JSON.stringify({ systemInstruction: { parts: [{ text: sysPrompt() }] }, contents, generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 4000 } });
+  let st = 0;
+  for (const m of GMODELS) {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + m + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': lsGet(AIK) }, body });
+    if (r.ok) {
+      const j = await r.json();
+      const t = ((j.candidates || [])[0]?.content?.parts || []).filter((x) => x.text && !x.thought).map((x) => x.text).join('');
+      if (t) return t;
+      st = 500; continue;
+    }
+    st = r.status;
+    if (st === 400 || st === 401 || st === 403) throw 401;
+  }
+  throw st;
+}
+const callAI = (m) => isClaudeKey() ? callClaude(m) : callGemini(m);
 function parseAI(t) {
   const a = t.indexOf('{'), b = t.lastIndexOf('}');
   const j = JSON.parse(t.slice(a, b + 1));
@@ -1424,7 +1444,7 @@ function parseAI(t) {
 async function runAI() {
   const g = ++card.gen; card.busy = true; card.stat = '추정 중…'; renderCard();
   try {
-    const txt = await callClaude(card.conv);
+    const txt = await callAI(card.conv);
     if (g !== card.gen) return;
     card.conv.push({ role: 'assistant', content: txt });
     const p = parseAI(txt);
@@ -1433,7 +1453,7 @@ async function runAI() {
     card.stat = p.items.length ? (card.src === 'photo' ? '사진 추정 · 양이 다르면 ½·1½로 맞춰요' : 'AI 추정 · 틀리면 탭해서 고쳐요') : '알아보지 못했어요';
   } catch (e) {
     if (g !== card.gen) return;
-    card.stat = (e === 401 ? 'API 키를 확인해 주세요' : e === 429 || e === 529 ? 'AI가 바빠요 · 잠시 후 다시' : typeof e === 'number' ? 'AI 오류 ' + e : '연결 실패') + ' · 직접 입력해요';
+    card.stat = (e === 401 ? 'API 키를 확인해 주세요' : e === 429 || e === 529 || e === 503 ? 'AI가 바빠요 · 잠시 후 다시' : typeof e === 'number' ? 'AI 오류 ' + e : '연결 실패') + ' · 직접 입력해요';
     if (!card.rows.length) card.rows = [rowFrom({ name: card.text }, true)];
   }
   card.busy = false; renderCard();
@@ -1553,7 +1573,7 @@ function renderSet() {
   const hs = hasSample();
   $('smpSt').textContent = hs ? '지난 60일 가짜 기록이 들어 있어요. GitHub에는 안 올라가지만 목표 kcal 계산에는 섞여요.' : '화면을 미리 보려면 지난 60일 가짜 기록을 넣을 수 있어요.';
   $('smpBtn').textContent = hs ? '샘플 지우기' : '샘플 넣기'; $('smpBtn').className = hs ? 'bd' : 'b2';
-  $('aiSt').textContent = lsGet(AIK) ? '키 저장됨 · 모델 ' + MODEL : '키 없음 · 직접 입력만 가능';
+  $('aiSt').textContent = lsGet(AIK) ? '키 저장됨 · ' + (isClaudeKey() ? 'Claude ' + MODEL : 'Gemini (무료)') : '키 없음 · 직접 입력만 가능';
   showSync();
 }
 $('smpBtn').addEventListener('click', () => { const hs = hasSample(); if (hs) clearSample(); else seedSample(); ch = null; renderSet(); render(); toast(hs ? '샘플을 지웠어요' : '샘플 60일을 넣었어요'); });
