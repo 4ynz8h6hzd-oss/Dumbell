@@ -1483,6 +1483,23 @@ $('bar').addEventListener('submit', (e) => {
   if (m) { openCard([rowFrom({ name: '간식', kcal: +m[1] }, true)], '숫자만 적으면 바로 kcal로 기록해요', 'manual'); return; }
   ask(text);
 });
+// 사진 → 긴 변 1280px JPEG base64 (머리말 없이). AI로 보내는 크기·용량을 줄임
+function shrink(f) {
+  return new Promise((ok, no) => {
+    const u = URL.createObjectURL(f), im = new Image();
+    im.onload = () => {
+      URL.revokeObjectURL(u);
+      const k = Math.min(1, 1280 / Math.max(im.naturalWidth, im.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      const d = c.toDataURL('image/jpeg', 0.82);
+      d.startsWith('data:image/jpeg') ? ok(d.slice(d.indexOf(',') + 1)) : no(new Error('encode'));
+    };
+    im.onerror = () => { URL.revokeObjectURL(u); no(new Error('decode')); };
+    im.src = u;
+  });
+}
 $('file').addEventListener('change', async (e) => {
   const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
   try {
