@@ -669,7 +669,8 @@ function coach(M) {
 }
 let kDet = false, macDet = false;   /* 탭하면 숨긴 숫자 보기 */
 function render() {
-  const M = model(), isToday = sel === today(), fut = sel > today(), sm = fut ? M.sim.get(sel) : null, fs = dayFoods(sm ? sm.src : sel), hero = $('hero');
+  /* 앞날도 기록 가능 — 그날 진짜 기록이 있으면 예상 대신 그걸 보여줌 */
+  const M = model(), isToday = sel === today(), fut = sel > today() && !dayFoods(sel).length, sm = fut ? M.sim.get(sel) : null, fs = dayFoods(sm ? sm.src : sel), hero = $('hero');
   const t = fs.reduce((a, f) => ({ k: a.k + f.kcal, p: a.p + f.p, c: a.c + f.c, f: a.f + f.f }), { k: 0, p: 0, c: 0, f: 0 });
   if (fut) { const m = sm ? sm.f : 0; t.k *= m; t.p *= m; t.c *= m; t.f *= m; }
   const left = M.target - t.k;
@@ -684,7 +685,7 @@ function render() {
     const val = w ? w.kg : (tv != null ? r1(tv) : null);
     wRoll.to(val); hero.classList.toggle('est', !w && val != null);
     $('lbl').textContent = val == null ? (fut ? '⚖ 몸무게를 재야 앞날을 예상해요' : '⚖ 몸무게를 재면 여기에 크게 보여요') :
-      fut ? '예상' : w ? '' : (isToday ? '아직 안 잼 · 추정' : '안 잰 날 · 추정');
+      w ? '' : fut || sel > today() ? '예상' : (isToday ? '아직 안 잼 · 추정' : '안 잰 날 · 추정');
   }
   /* 큰 숫자 하나: 오늘 = 남은 kcal(넘으면 초과, 빨강), 다른 날 = 먹은 kcal. 탭하면 먹음 / 목표 */
   const det = '먹음 ' + fmt(t.k) + ' / 목표 ' + fmt(M.target);
@@ -1010,15 +1011,17 @@ const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x �
 const NAV_EASE = bez(0.4, 0, 0.2, 1);   /* 속도·가속은 MAG.delay·v0·vmax·ramp (🧲 패널) */
 const WSTEP = { 'w+.1': 0.1, 'w-.1': -0.1, 'w+1': 1, 'w-1': -1 };
 function renderPad() {
-  const isToday = sel === today(), fut = sel > today(), planOK = !fut && !dayFoods(sel).length && !!planFor(sel), big = (s) => '<b style="font-size:19px;letter-spacing:-.02em">' + s + '</b>';
+  const isToday = sel === today(), planOK = sel < today() && !dayFoods(sel).length && !!planFor(sel), big = (s) => '<b style="font-size:19px;letter-spacing:-.02em">' + s + '</b>';
   const K = mode === 'weight' ? [
     ['wx', 'cor', ic(I.x), '취소'], ['w+.1', 'arm', ic(I.up), '0.1'], ['wdel', 'cor', ic(I.trash, 20), '지우기', !weightOn(sel)],
     ['w-1', 'arm', big('−1'), 'kg'], ['wok', 'go', ic(I.check, 30), ''], ['w+1', 'arm', big('+1'), 'kg'],
     ['', 'blank'], ['w-.1', 'arm', ic(I.down), '0.1'], ['', 'blank']
   ] : [
-    ['prev', 'cor', ic(I.left), '전날'], isToday ? ['photo', 'arm', ic(I.cam), '사진', fut] : ['today', 'arm tdk', ic(I.today), '오늘'], ['next', 'cor', ic(I.right), '다음날'],
-    ['weight', 'arm', ic(I.scale), '몸무게', fut, isToday && !weightOn(sel)], ['write', 'go', ic(I.pen, 28), '', fut], ['fav', 'arm', ic(I.star), '자주', fut || !data.foods.length],
-    ['undo', 'cor', ic(I.undo, 20), '되돌리기', !lastAdd.length], ['manual', 'arm', ic(I.plus), '직접', fut], planOK ? ['plan', 'go', ic(I.check, 26), '예상대로'] : ['trend', 'cor', ic(I.trend, 20), '추세']
+    ['prev', 'cor', ic(I.left), '전날'], ['photo', 'arm', ic(I.cam), '사진'], ['next', 'cor', ic(I.right), '다음날'],
+    ['weight', 'arm', ic(I.scale), '몸무게', false, isToday && !weightOn(sel)], ['write', 'go', ic(I.pen, 28), ''], ['fav', 'arm', ic(I.star), '자주', !data.foods.length],
+    /* 오늘이 아닌 날: 오른쪽 아래 = 오늘 (추세는 코칭 글자를 탭해도 열림). 예상대로가 그 자리를 쓰면 오늘은 왼쪽 아래 */
+    planOK ? ['today', 'arm tdk', ic(I.today), '오늘'] : ['undo', 'cor', ic(I.undo, 20), '되돌리기', !lastAdd.length], ['manual', 'arm', ic(I.plus), '직접'],
+    planOK ? ['plan', 'go', ic(I.check, 26), '예상대로'] : isToday ? ['trend', 'cor', ic(I.trend, 20), '추세'] : ['today', 'arm tdk', ic(I.today), '오늘']
   ];
   const html = K.map(([k, cls, inner, lab, dis, dot]) => '<button type="button" class="k ' + cls + '"' + (k ? ' data-k="' + k + '" aria-label="' + AL[k] + '"' : ' tabindex="-1" aria-hidden="true"') + (dis ? ' disabled' : '') + '>' +
     (inner || '') + (lab ? '<span>' + lab + '</span>' : '') + (dot ? '<i class="dot"></i>' : '') + '</button>').join('');
@@ -1141,7 +1144,7 @@ function chipFoods(limit) {
 /* ★ 자주 먹는 음식 원통: ★를 누른 채 위로 밀면 굴러가고 렌즈에 온 음식이 손 떼면 기록.
    그냥 탭하면 원통이 열린 채로 — 끌어서 굴리고, 줄을 탭하면 기록, 빈 곳·닫기를 누르면 닫힘 */
 const fav = { items: [], api: null, open: false, tap: false, t: 0, m: 1 };
-const FROWH = 58, FAV_PX = 12, FAV_CX = 36, FAV_MPX = 8, FAV_EDGE = 26, FAV_LOCK = 14, FAV_RS = 16;   /* 위아래 12px = 한 줄, 옆으로 8px = 0.1인분 (눈금자 간격은 보기 좋게 16px 따로) */
+const FROWH = 58, FAV_PX = 6, FAV_CX = 36, FAV_MPX = 5, FAV_EDGE = 26, FAV_LOCK = 14, FAV_RS = 16;   /* 위아래 6px = 한 줄(15개 = 90px, 패드 안), 옆으로 5px = 0.1인분 (눈금자 간격은 보기 좋게 16px 따로) */
 /* 양 적기: 앞 숫자에 곱함 (1접시 ×1.3 = 1.3접시), 숫자 없으면 '×1.3', 양이 없으면 '1.3인분' */
 const amtX = (amt, m) => {
   if (m === 1) return amt || '';
