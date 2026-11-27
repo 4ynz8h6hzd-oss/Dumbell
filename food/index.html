@@ -913,7 +913,7 @@ function stepDay(d) {
   const t = today(); let nd = addDays(sel, d); const o = dayDiff(t, nd);
   if (o > RFUT) nd = addDays(t, -RPAST); else if (o < -RPAST) nd = addDays(t, RFUT);
   if (ch) ch.follow = false;
-  sel = nd; navAt = Date.now(); if (navFast) vib(); else { vib(false); sfx('nav'); } render(); return true;
+  sel = nd; navAt = Date.now(); vib(); render(); return true;   /* 넘길 땐 '뚜앙'(nav) 없이 짧은 tick만 */
 }
 (() => {
   /* 띠를 끌면 손가락 그대로 따라오고(날짜도 같이), 놓으면 그 속도로 미끄러져 멈춤. 그냥 탭하면 그 자리 날짜로 */
