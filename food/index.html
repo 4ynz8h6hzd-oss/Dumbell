@@ -132,31 +132,33 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .tr{position:absolute;transform-style:preserve-3d}
 .r{backface-visibility:hidden;-webkit-backface-visibility:hidden;will-change:transform,opacity}
 /* ★ 원통 (덤벨 앱 pwheel처럼 화면 전체, 렌즈 고정) */
-.fw{position:fixed;inset:0;z-index:7;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:opacity .16s ease-out;touch-action:none;-webkit-user-select:none;user-select:none;--ly:calc(100% - var(--pad) - 14px - env(safe-area-inset-bottom) - 70px)}   /* 렌즈 = 패드 바로 위, 엄지 높이 */
+.fw{position:fixed;inset:0;z-index:7;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:opacity .16s ease-out;touch-action:none;-webkit-user-select:none;user-select:none;--ly:calc(env(safe-area-inset-top) + 34%);--fx:12px;--fwW:min(calc(100% - 24px),320px)}   /* 엄지 안 떼고 쓰니까 원통은 왼쪽 위 — 엄지가 안 가림 */
 .fw[hidden]{display:none}.fw.out{opacity:0}
 #fwD{position:absolute;inset:0;overflow:hidden;--mk:linear-gradient(to bottom,transparent calc(var(--ly) - 230px),#000 calc(var(--ly) - 120px),#000 calc(var(--ly) + 110px),transparent calc(var(--ly) + 215px));-webkit-mask-image:var(--mk);mask-image:var(--mk)}
-#fwD .wp{perspective:2000px;perspective-origin:50% var(--ly)}
-#fwD .tr{left:16px;right:16px;top:var(--ly);max-width:448px;margin:0 auto}
+#fwD .wp{perspective:2000px;perspective-origin:calc(var(--fx) + var(--fwW) / 2) var(--ly)}
+#fwD .tr{left:calc(var(--fx) + 4px);width:calc(var(--fwW) - 8px);top:var(--ly)}
 #fwD .r{position:absolute;left:0;right:0;height:58px;margin-top:-29px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px 0 22px;font-size:18px}
 #fwD .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #fwD .fn small{font-size:13px;color:var(--mute);margin-left:8px}
 #fwD .r em{font-style:normal;color:var(--mute);font-size:15px;flex:none}
-#fwD .r.cur{font-weight:700}#fwD .r.cur em{color:var(--accTxt)}
-.fw .lens{position:absolute;left:12px;right:12px;max-width:456px;margin:-29px auto 0;top:var(--ly);height:58px;border-radius:16px;pointer-events:none;background:rgba(242,107,29,.07);box-shadow:inset 0 0 0 1.5px rgba(242,107,29,.26),0 2px 14px rgba(242,107,29,.1)}
+#fwD .r.cur{font-weight:700}#fwD .r.cur em{visibility:hidden}   /* 렌즈 오른쪽 양·kcal 상자가 대신 보여줌 — 겹쳐 비치지 않게 */
+.fw .lens{position:absolute;left:var(--fx);width:var(--fwW);margin-top:-29px;top:var(--ly);height:58px;border-radius:16px;pointer-events:none;background:rgba(242,107,29,.07);box-shadow:inset 0 0 0 1.5px rgba(242,107,29,.26),0 2px 14px rgba(242,107,29,.1)}
 /* 양 눈금자: 렌즈 바로 아래, 옆으로 밀 때만 */
-#fwR{position:absolute;left:0;right:0;top:calc(var(--ly) + 32px);height:40px;padding-top:4px;background:#fff;pointer-events:none;opacity:0;transition:opacity .12s;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+#fwR{position:absolute;left:var(--fx);width:var(--fwW);top:calc(var(--ly) + 32px);height:40px;padding-top:4px;background:#fff;pointer-events:none;opacity:0;transition:opacity .12s;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
 .fw.hz #fwR{opacity:1}.fw.hz #fwD .r:not(.cur){opacity:.15!important}
-#fwR .rt{position:absolute;left:0;top:6px;bottom:0}
+#fwR .rt{position:absolute;left:50%;top:6px;bottom:0}
 #fwR i{position:absolute;top:0;width:1.5px;height:9px;margin-left:-.75px;background:var(--faint)}
 #fwR i.b{height:15px;background:var(--mute)}
 #fwR em{position:absolute;top:18px;left:0;transform:translateX(-50%);font-style:normal;font-size:12px;font-weight:600;color:var(--sub);white-space:nowrap}
-#fwR .nd{position:absolute;left:0;top:2px;width:3px;height:22px;margin-left:-1.5px;border-radius:2px;background:var(--acc)}
+#fwR .nd{position:absolute;left:50%;top:2px;width:3px;height:22px;margin-left:-1.5px;border-radius:2px;background:var(--acc)}
 #fwM{position:absolute;right:18px;top:0;bottom:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;line-height:1.15;background:linear-gradient(90deg,transparent,#FEF3EC 18px);padding-left:26px}
 #fwM b{font-size:17px;color:var(--ink)}#fwM span{font-size:12px;color:var(--accTxt);font-weight:600}
 .fw.mx #fwM b{color:var(--accTxt)}
 .fw .lens::before{content:'';position:absolute;left:0;top:15px;bottom:15px;width:3px;border-radius:0 2px 2px 0;background:var(--acc)}
-.fwh{position:absolute;left:0;right:0;top:max(calc(14px + env(safe-area-inset-top)),calc(var(--ly) - 250px));margin:0;text-align:center;font-size:13px;color:var(--mute)}
+.fwh{position:absolute;left:calc(var(--fx) + 6px);right:12px;top:calc(14px + env(safe-area-inset-top));margin:0;text-align:left;font-size:13px;color:var(--mute)}
 .fw.cx .lens{opacity:.25}.fw.cx #fwD{opacity:.35}.fw.cx #fwX{background:var(--ink);color:#fff;transform:scale(1.12)}.fw.cx .fwh{color:var(--ink);font-weight:700}
+#fwOk{position:absolute;right:calc(14px + var(--pad) / 2 - 34px);bottom:calc(14px + env(safe-area-inset-bottom) + var(--pad) / 2 - 34px);width:68px;height:68px;border-radius:50%;background:var(--acc);color:#fff;display:none;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(242,107,29,.3)}
+.fw.tp #fwOk{display:flex}
 #fwX{transition:transform .12s,background .12s;position:absolute;right:calc(14px + 8px + (var(--pad) - 16px) / 6 - 28px);bottom:calc(14px + env(safe-area-inset-bottom) + 8px + (var(--pad) - 16px) / 6 - 28px);width:56px;height:56px;border-radius:50%;background:var(--plate);color:var(--sub);display:flex;align-items:center;justify-content:center}
 /* 양 가로 원통 */
 .hd{position:relative;height:52px;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;cursor:ew-resize;-webkit-mask-image:linear-gradient(to right,transparent,#000 24%,#000 76%,transparent);mask-image:linear-gradient(to right,transparent,#000 24%,#000 76%,transparent)}
@@ -262,7 +264,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <button id="send" aria-label="기록"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 </form>
 <input type="file" id="file" accept="image/*" hidden>
-<div class="fw" id="fw" hidden><div id="fwD"><div class="wp"><div class="tr"></div></div></div><div class="lens"><div id="fwM"></div></div><div id="fwR"></div><p class="fwh" id="fwH"></p><button id="fwX" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+<div class="fw" id="fw" hidden><div id="fwD"><div class="wp"><div class="tr"></div></div></div><div class="lens"><div id="fwM"></div></div><div id="fwR"></div><button id="fwOk" aria-label="렌즈 음식 기록"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><p class="fwh" id="fwH"></p><button id="fwX" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 
 <dialog class="sheet" id="card"><div class="sh">
   <div class="grab"></div>
@@ -1152,6 +1154,7 @@ const soft = (x) => { const n = Math.round(x), f = x - n; return n + 4 * f * f *
 function favMove(e) {
   const g = fav.g, x = e.clientX, y = e.clientY, cx = pdn.y - y < -FAV_CX;
   if (cx !== !!pdn.cx) { pdn.cx = cx; $('fw').classList.toggle('cx', cx); favHint(); vib(); }
+  if (cx) { g.lx = x; g.ly = y; return; }   /* 취소 자리에선 음식·양 그대로 둠 */
   /* 방향 판단은 '최근' 움직임으로: 같은 방향으로 계속 가면 기준점을 따라 옮김 */
   let ax = x - g.lx, ay = y - g.ly;
   if ((g.mode === 'v' ? Math.abs(ay) > Math.abs(ax) : Math.abs(ax) > Math.abs(ay)) && Math.hypot(ax, ay) > FAV_LOCK) { g.lx = x; g.ly = y; ax = ay = 0; }
@@ -1161,7 +1164,6 @@ function favMove(e) {
   if (g.mode === 'h' && Math.abs(ay) > FAV_LOCK * 1.6 && Math.abs(ay) > Math.abs(ax) * 1.2) {   /* → 음식 모드 */
     g.mode = 'v'; g.lx = x; g.ly = y; g.ay = y; g.p0 = Math.round(fav.api.pos); favEdge(0); $('fw').classList.remove('hz'); favHint(); return;
   }
-  if (cx) return;
   if (g.mode === 'v') {
     const c0 = fav.api.cur; fav.api.set(Math.max(0, soft(g.p0 + (g.ay - y) / FAV_PX)));
     if (fav.api.cur !== c0 && fav.m !== 1) { fav.m = 1; favShowM(); }   /* 다른 음식으로 가면 양은 1로 */
@@ -1180,13 +1182,13 @@ function favSetM() {
   if (m !== fav.m) { fav.m = m; vib(); favShowM(); }
   favRuler(g.x);
 }
-/* 눈금자: 0.1마다 눈금, 0.5마다 숫자. 바늘(주황)은 엄지 x에, 눈금은 그 값이 바늘에 오도록 */
+/* 눈금자: 0.1마다 눈금, 0.5마다 숫자 */
 function favRuler(x) {
   const g = fav.g, R = $('fwR');
   if (!R.firstChild) { let h = ''; for (let k = 1; k <= 30; k++) { const v = k / 10, big = k % 5 === 0; h += '<i style="left:' + (k - 10) * FAV_MPX + 'px" class="' + (big ? 'b' : '') + '">' + (big ? '<em>' + (v === 1 ? '1인분' : v) + '</em>' : '') + '</i>'; } R.innerHTML = '<div class="rt">' + h + '</div><b class="nd"></b>'; }
-  const nx = g.ox + (fav.m - 1) * 10 * FAV_MPX;
-  R.firstChild.style.transform = 'translateX(' + g.ox.toFixed(1) + 'px)';
-  R.lastChild.style.transform = 'translateX(' + nx.toFixed(1) + 'px)';
+  /* 바늘은 가운데 고정, 눈금이 엄지를 따라 흐름 (엄지는 오른쪽 아래, 눈금자는 왼쪽 위) — 끊김 없이 손가락 위치 그대로 */
+  const u = Math.max(-9, Math.min(20, soft((x - g.ox) / FAV_MPX)));   /* 1인분에서 몇 칸 — 눈금에 자석 */
+  R.firstChild.style.transform = 'translateX(' + (-u * FAV_MPX).toFixed(1) + 'px)';
 }
 function favHint() {
   $('fwH').textContent = fav.g && pdn && pdn.cx ? '놓으면 취소' : fav.g && fav.g.mode === 'h' ? '옆으로 밀어 양 · 위아래로 밀면 다시 음식 · 떼면 기록' : '위로 밀어 고르고 · 옆으로 밀어 양 · 떼면 기록';
@@ -1211,7 +1213,7 @@ function favOpen() {
   return true;
 }
 function favClose() {
-  if (!fav.open) return; fav.open = false; fav.tap = false; $('fw').classList.remove('cx', 'hz'); if (fav.api) fav.api.stop(); if (fav.g) { clearInterval(fav.g.edI); fav.g.ed = 0; }
+  if (!fav.open) return; fav.open = false; fav.tap = false; $('fw').classList.remove('cx', 'hz', 'tp'); if (fav.api) fav.api.stop(); if (fav.g) { clearInterval(fav.g.edI); fav.g.ed = 0; }
   const w = $('fw'); w.classList.add('out'); setTimeout(() => { if (!fav.open) w.hidden = true; }, 160);
 }
 function favAdd(f) { const ids = addFoods([f], 'chip'); toast(f.name + ' · ' + fmt(f.kcal) + ' kcal', () => removeFoods(ids)); }
@@ -1220,12 +1222,12 @@ function favCommit() {
   const f = fav.items[fav.api.cur], m = fav.m; favClose(); if (!f) return;
   favAdd(m === 1 ? f : { name: f.name, amt: amtX(f.amt || '1인분', m), kcal: f.kcal * m, p: f.p * m, c: f.c * m, f: f.f * m });
 }
-function favTapMode() { fav.m = 1; favShowM(); fav.tap = true; fav.t = Date.now(); $('fwH').textContent = '굴려서 고르고, 탭하면 기록'; }
+function favTapMode() { fav.m = 1; favShowM(); fav.tap = true; fav.t = Date.now(); $('fw').classList.add('tp'); $('fwH').textContent = '아무 데나 끌어 굴리고 · ✓ 또는 줄 탭 = 기록'; }
 /* 탭 모드: 원통을 직접 끌기 */
 (() => {
   const el = $('fw'); let s = null, p0 = 0, moved = false; const vt = VelT();
   el.addEventListener('pointerdown', (e) => {
-    if (!fav.open || e.target.closest('#fwX')) return;
+    if (!fav.open || e.target.closest('#fwX,#fwOk')) return;
     if (pdn && pdn.id !== e.pointerId) { const q = pdn; pdn = null; stopHold(); if (q.b) q.b.classList.remove('pressed'); }   /* 놓친 손가락은 정리 */
     if (!fav.tap) { if (pdn) return; fav.tap = true; fav.t = 0; $('fwH').textContent = '굴려서 고르고, 탭하면 기록'; }   /* ★ 손 뗀 걸 놓쳤어도 바로 쓸 수 있게 */
     fav.api.stop(); s = e.clientY; p0 = fav.api.pos; vt.reset(p0); moved = false; try { el.setPointerCapture(e.pointerId); } catch (er) {} });
@@ -1242,6 +1244,7 @@ function favTapMode() { fav.m = 1; favShowM(); fav.tap = true; fav.t = Date.now(
   });
   el.addEventListener('pointercancel', () => { s = null; });
   $('fwX').addEventListener('click', favClose);
+  $('fwOk').addEventListener('click', () => { if (fav.open && fav.tap) favCommit(); });
 })();
 
 
