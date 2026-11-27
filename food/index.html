@@ -241,6 +241,9 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <label class="fld"><input id="sKey" type="password" placeholder="sk-ant-…" autocomplete="off"></label>
   <div class="row" style="margin-top:0"><button class="b2" id="sKeyOff">키 지우기</button><button class="b1" id="sKeyOk">키 저장</button></div>
   <p>키는 이 기기 브라우저에만 저장돼요. Anthropic 콘솔에서 이 키에 월 사용 한도를 걸어두세요.</p>
+  <h3>샘플 데이터</h3>
+  <p id="smpSt"></p>
+  <div class="row" style="margin-top:0"><button class="b2" id="smpBtn"></button></div>
   <h3>GitHub 자동 저장 (운동 앱과 같은 토큰)</h3>
   <p class="st" id="ghSt"></p>
   <label class="fld" id="tokF"><input id="sTok" type="password" placeholder="github_pat_…" autocomplete="off"></label>
@@ -380,7 +383,7 @@ const portDrum = (el, m, onPick) => { const hd = el.querySelector('.hd'); return
 
 /* ---------- 화면 ---------- */
 const dayFoods = (d) => data.foods.filter((f) => f.date === d).sort((a, b) => a.ts - b.ts);
-const weightOn = (d) => data.weights.find((w) => w.date === d);
+const weightOn = (d) => data.weights.find((w) => w.date === d && !w.sample) || data.weights.find((w) => w.date === d);
 const lastWeight = (d) => data.weights.filter((w) => w.date <= d).sort((a, b) => (a.date < b.date ? 1 : -1))[0];
 const sgn = (v, d) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d);
 let mode = 'main', wVal = 70, lastAdd = [];
@@ -552,11 +555,12 @@ function act(k) {
   else if (k === 'wx') { mode = 'main'; render(); }
   else if (k === 'wok') {
     const kg = r1(wVal), w = weightOn(sel);
-    if (w) { w.kg = kg; w.u = Date.now(); } else data.weights.push({ id: uid(), date: sel, kg, u: Date.now() });
+    if (w && !w.sample) { w.kg = kg; w.u = Date.now(); }
+    else { if (w) data.weights = data.weights.filter((x) => x !== w); data.weights.push({ id: uid(), date: sel, kg, u: Date.now() }); }   /* 샘플 날에 재면 진짜 기록으로 바꿈 */
     mode = 'main'; persist(); render(); toast('몸무게 ' + kg.toFixed(1) + ' kg');
   } else if (k === 'wdel') {
     const w = weightOn(sel); if (!w) return;
-    data.weights = data.weights.filter((x) => x !== w); tomb(w.id); mode = 'main'; persist(); render(); toast('몸무게를 지웠어요');
+    data.weights = data.weights.filter((x) => x !== w); if (!w.sample) tomb(w.id); mode = 'main'; persist(); render(); toast('몸무게를 지웠어요');
   }
 }
 /* 누르기: 몸무게 ±는 누르는 즉시(길게 = 반복), 몸무게 모드에서 패드를 위아래로 밀면 조그(14px = 0.1kg),
@@ -670,7 +674,11 @@ function addFoods(items, src) {
   persist(); render();
   return ids;
 }
-function removeFoods(ids) { lastAdd = lastAdd.map((a) => a.filter((id) => !ids.includes(id))).filter((a) => a.length); data.foods = data.foods.filter((f) => !ids.includes(f.id)); ids.forEach(tomb); persist(); render(); }
+function removeFoods(ids) {
+  lastAdd = lastAdd.map((a) => a.filter((id) => !ids.includes(id))).filter((a) => a.length);
+  const smp = new Set(data.foods.filter((f) => f.sample).map((f) => f.id));   /* 샘플은 지워도 GitHub 삭제 목록에 안 남김 */
+  data.foods = data.foods.filter((f) => !ids.includes(f.id)); ids.filter((id) => !smp.has(id)).forEach(tomb); persist(); render();
+}
 const scaleAmt = (amt, m) => m === 1 ? (amt || '') : ((amt ? amt + ' ' : '') + '×' + plab(m));
 
 let toastT = null;
@@ -888,9 +896,9 @@ function chartK(M) {
   let mx = M.target * 1.4; for (let i = 0; i < 28; i++) mx = Math.max(mx, by.get(addDays(start, i)) || 0);
   const bw = (W - 8) / 28, y = (v) => H - 18 - v / mx * (H - 26);
   let s = '';
-  for (let i = 0; i < 28; i++) { const v = by.get(addDays(start, i)); if (!v) continue; s += '<rect x="' + (4 + i * bw + 1).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + (bw - 2).toFixed(1) + '" height="' + (H - 18 - y(v)).toFixed(1) + '" rx="2" fill="' + (v > M.target * 1.1 ? 'var(--red)' : 'var(--faint)') + '"/>'; }
+  for (let i = 0; i < 28; i++) { const v = by.get(addDays(start, i)); if (!v) continue; s += '<rect x="' + (4 + i * bw + 1).toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + (bw - 2).toFixed(1) + '" height="' + (H - 18 - y(v)).toFixed(1) + '" rx="2" fill="' + (v > M.target * 1.1 ? '#F3C9C7' : '#E5E5EA') + '"/>'; }
   return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="섭취 kcal 28일">' + s +
-    '<line x1="4" x2="' + (W - 4) + '" y1="' + y(M.target) + '" y2="' + y(M.target) + '" stroke="var(--blue)" stroke-dasharray="4 3"/>' +
+    '<line x1="4" x2="' + (W - 4) + '" y1="' + y(M.target) + '" y2="' + y(M.target) + '" stroke="var(--faint)" stroke-dasharray="3 3"/>' +
     '<text x="4" y="' + (H - 4) + '" font-size="11" fill="var(--mute)">섭취 28일 · 점선 = 오늘 목표 ' + fmt(M.target) + '</text></svg>';
 }
 function openHist() {
@@ -909,9 +917,13 @@ $('hClose').addEventListener('click', () => $('hist').close());
 function renderSet() {
   document.querySelectorAll('#gSeg button').forEach((b) => b.classList.toggle('on', b.dataset.g === cfg.goal));
   $('sGpk').value = cfg.gpk; $('sT0').value = cfg.tdee0 || ''; $('sT0').placeholder = '자동 ' + fmt(model().prior);
+  const hs = hasSample();
+  $('smpSt').textContent = hs ? '지난 60일 가짜 기록이 들어 있어요. GitHub에는 안 올라가지만 목표 kcal 계산에는 섞여요.' : '화면을 미리 보려면 지난 60일 가짜 기록을 넣을 수 있어요.';
+  $('smpBtn').textContent = hs ? '샘플 지우기' : '샘플 넣기'; $('smpBtn').className = hs ? 'bd' : 'b2';
   $('aiSt').textContent = lsGet(AIK) ? '키 저장됨 · 모델 ' + MODEL : '키 없음 · 직접 입력만 가능';
   showSync();
 }
+$('smpBtn').addEventListener('click', () => { const hs = hasSample(); if (hs) clearSample(); else seedSample(); ch = null; renderSet(); render(); toast(hs ? '샘플을 지웠어요' : '샘플 60일을 넣었어요'); });
 $('setBtn').addEventListener('click', () => { renderSet(); $('set').showModal(); });
 $('gSeg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; cfg.goal = b.dataset.g; saveCfg(); renderSet(); render(); });
 $('sGpk').addEventListener('change', () => { const v = nn($('sGpk').value); cfg.gpk = v >= 0.8 && v <= 3.5 ? v : 1.8; saveCfg(); renderSet(); render(); });
@@ -950,18 +962,20 @@ const pickW = (x) => ({ id: x.id, date: x.date, kg: x.kg, ...(x.u !== undefined 
 const sortF = (a) => a.slice().sort((p, q) => p.ts - q.ts || (p.id < q.id ? -1 : 1));
 const sortW = (a) => a.slice().sort((p, q) => (p.date < q.date ? -1 : p.date > q.date ? 1 : 0));
 const stateKey = (foods, weights, del) => JSON.stringify([sortF(foods), sortW(weights), del.slice().sort()]);
+const realF = () => data.foods.filter((x) => !x.sample), realW = () => data.weights.filter((x) => !x.sample);
 function merge(doc) {
   if (!doc) return false;
   const del = new Set([].concat(data.deleted, (Array.isArray(doc.deleted) ? doc.deleted : []).filter((id) => typeof id === 'string')));
-  const before = stateKey(data.foods, data.weights, data.deleted);
+  const sF = data.foods.filter((x) => x.sample), sW = data.weights.filter((x) => x.sample);
+  const before = stateKey(realF(), realW(), data.deleted);
   const mf = new Map(), mw = new Map();
   const putF = (x) => { if (!okF(x) || del.has(x.id)) return; const o = mf.get(x.id); if (!o || (x.u || x.ts) > (o.u || o.ts)) mf.set(x.id, pickF(x)); };
   const putW = (x) => { if (!okW(x) || del.has(x.id)) return; const o = mw.get(x.date); if (!o || (x.u || 0) > (o.u || 0)) mw.set(x.date, pickW(x)); };
-  data.foods.forEach(putF); (Array.isArray(doc.foods) ? doc.foods : []).forEach(putF);
-  data.weights.forEach(putW); (Array.isArray(doc.weights) ? doc.weights : []).forEach(putW);
-  data.foods = [...mf.values()]; data.weights = [...mw.values()]; data.deleted = [...del].sort();
+  realF().forEach(putF); (Array.isArray(doc.foods) ? doc.foods : []).forEach(putF);
+  realW().forEach(putW); (Array.isArray(doc.weights) ? doc.weights : []).forEach(putW);
+  data.foods = [...mf.values(), ...sF]; data.weights = [...mw.values(), ...sW]; data.deleted = [...del].sort();
   saveLocal();
-  return before !== stateKey(data.foods, data.weights, data.deleted);
+  return before !== stateKey(realF(), realW(), data.deleted);
 }
 function docText() {
   const head = {
@@ -969,7 +983,7 @@ function docText() {
     note: '음식 1개 = 1줄. date=먹은 날, ts=기록 시각(epoch ms), name=음식, amt=양, kcal, p=단백질 g, c=탄수화물 g, f=지방 g, src=ai|photo|manual|chip(어떻게 기록했는지), u=수정 시각. weights: 날짜별 몸무게 kg(하루 1개). deleted=삭제된 id.',
     settings: { goal: cfg.goal, gpk: cfg.gpk, tdee0: cfg.tdee0 }
   };
-  const fs = sortF(data.foods), ws = sortW(data.weights);
+  const fs = sortF(realF()), ws = sortW(realW());
   const block = (a) => a.length ? '\n' + a.map((x) => '    ' + JSON.stringify(x)).join(',\n') + '\n  ' : '';
   return '{\n' + Object.keys(head).map((k) => '  ' + JSON.stringify(k) + ': ' + JSON.stringify(head[k])).join(',\n') +
     ',\n  "foods": [' + block(fs) + '],\n  "weights": [' + block(ws) + '],\n  "deleted": ' + JSON.stringify(data.deleted) + '\n}\n';
@@ -983,8 +997,8 @@ async function sync(force) {
       const p = await ghPull();
       if (merge(p.doc)) render();
       const remoteKey = p.doc ? stateKey((p.doc.foods || []).filter(okF).map(pickF), (p.doc.weights || []).filter(okW).map(pickW), (p.doc.deleted || []).filter((x) => typeof x === 'string')) : null;
-      if (!force && remoteKey === stateKey(data.foods, data.weights, data.deleted)) break;
-      const r = await ghApi('PUT', { message: '식단 기록 ' + today() + ' · 음식 ' + data.foods.length + ' · 몸무게 ' + data.weights.length, content: b64e(docText()), branch: GH.branch, ...(p.sha ? { sha: p.sha } : {}) });
+      if (!force && remoteKey === stateKey(realF(), realW(), data.deleted)) break;
+      const r = await ghApi('PUT', { message: '식단 기록 ' + today() + ' · 음식 ' + realF().length + ' · 몸무게 ' + realW().length, content: b64e(docText()), branch: GH.branch, ...(p.sha ? { sha: p.sha } : {}) });
       if (r.ok) break;
       if ((r.status === 409 || r.status === 422) && tries < 2) continue;
       throw r.status;
@@ -1020,6 +1034,41 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') { if (sel !== today() && !dayFoods(sel).length) sel = today(); render(); queueSync(0); }
   else if (syncTimer) sync(false);
 });
+/* ---------- 샘플 데이터 (sample: true — GitHub에 안 올라감, 설정에서 한 번에 지움) ----------
+   지난 60일: 하루 3~4끼 한국식 식사, 평균 약 1,850kcal(주말 더 많이), 몸무게는 그 적자에 맞게 75.2 → 약 71.7kg + 하루 ±0.4 출렁임, 80% 날만 잼 */
+const SMEALS = {
+  b: [['그릭요거트+그래놀라', '1컵', 280, 16, 34, 8], ['계란 2개+토스트', '1접시', 340, 18, 30, 15], ['바나나+프로틴', '1잔', 250, 26, 30, 3], ['오트밀', '1그릇', 300, 11, 50, 6], ['김밥', '1줄', 420, 12, 64, 12]],
+  l: [['김치찌개+공기밥', '1인분', 640, 26, 80, 22], ['제육볶음 정식', '1인분', 780, 32, 90, 30], ['닭가슴살 샐러드', '1접시', 420, 38, 22, 18], ['비빔밥', '1그릇', 620, 22, 92, 16], ['쌀국수', '1그릇', 520, 24, 80, 10], ['돈까스', '1인분', 860, 30, 88, 40]],
+  d: [['연어 포케', '1그릇', 560, 32, 62, 18], ['된장찌개+공기밥', '1인분', 580, 24, 82, 14], ['닭가슴살+고구마', '1접시', 450, 42, 50, 6], ['삼겹살+쌈', '1인분', 920, 38, 20, 74], ['순두부찌개+공기밥', '1인분', 600, 26, 80, 18], ['치킨', '반 마리', 1100, 70, 40, 72]],
+  s: [['아메리카노', '1잔', 10, 1, 1, 0], ['프로틴 쉐이크', '1잔', 130, 25, 4, 2], ['바나나', '1개', 105, 1, 27, 0], ['아몬드', '한 줌', 170, 6, 6, 15], ['라떼', '1잔', 190, 10, 15, 9]]
+};
+function seedSample() {
+  let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const t = today(), realF = new Set(data.foods.filter((f) => !f.sample).map((f) => f.date)), realW = new Set(data.weights.filter((w) => !w.sample).map((w) => w.date));
+  let w = 75.2;
+  for (let i = 60; i >= 1; i--) {
+    const d = addDays(t, -i), day = pd(d), wkend = day.getDay() === 0 || day.getDay() === 6;
+    let kcal = 0;
+    if (!realF.has(d)) {
+      const meals = [[8, 'b'], [12.5, 'l'], [19, 'd']]; if (rnd() < 0.7) meals.push([15.5, 's']); if (wkend && rnd() < 0.5) meals.push([21.5, 'd']);
+      meals.forEach(([h, k], j) => {
+        if (k === 'b' && rnd() < 0.15) return;   /* 가끔 아침 거름 */
+        const [name, amt, kc, p, c, f] = pick(SMEALS[k]), ts = day.getTime() + (h - 12) * 36e5 + Math.round(rnd() * 40) * 6e4;
+        data.foods.push({ id: 'smp' + i + '_' + j, date: d, ts, name, amt, kcal: kc, p, c, f, src: 'manual', u: ts, sample: true }); kcal += kc;
+      });
+    } else kcal = 1850;
+    w += (kcal - 2300) / 7700;
+    if (!realW.has(d) && rnd() < 0.8) data.weights.push({ id: 'smpw' + i, date: d, kg: r1(w + (rnd() - 0.5) * 0.8), u: day.getTime(), sample: true });
+  }
+  saveLocal();
+}
+const hasSample = () => data.foods.some((f) => f.sample) || data.weights.some((w) => w.sample);
+function clearSample() { data.foods = data.foods.filter((f) => !f.sample); data.weights = data.weights.filter((w) => !w.sample); saveLocal(); }
+/* 처음 열었는데 기록이 하나도 없으면 샘플로 채워서 화면이 어떻게 움직이는지 바로 보이게 */
+if (!data.foods.length && !data.weights.length) seedSample();
+
+
 render();
 queueSync(0);
 })();
