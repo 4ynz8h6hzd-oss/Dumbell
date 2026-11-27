@@ -410,12 +410,16 @@ function model0() {
   const W = tr.size ? (tr.get(today()) ?? [...tr.values()].pop()) : null;
   const prior = cfg.tdee0 > 0 ? cfg.tdee0 : (W ? Math.round(W * 31 / 10) * 10 : 2200);
   const T = today(), byDay = kcalByDay(), byReal = kcalByDay(true);
-  /* 부분 기록(끼니를 빠뜨린 날): 지난 60일 기록일 중앙값의 60% 미만이면 소모량·예상 계산에서 뺌 */
+  /* 부분 기록(끼니를 빠뜨린 날): 그날 앞 7일·뒤 7일 기록일 중앙값(각 3일 이상) 중 낮은 쪽의 60% 미만이면 소모량·예상 계산에서 뺌.
+     한쪽만 있으면 그쪽, 둘 다 없으면 지난 60일 중앙값. 식단을 확 줄여도 며칠 안에 새 식단을 '평소'로 봄(60일 기준이면 한 달 넘게 걸림) */
   const rec = []; for (let i = 1; i <= 60; i++) { const v = byReal.get(addDays(T, -i)); if (v) rec.push(v); }
   rec.sort((a, b) => a - b);
-  const med = rec.length >= 5 ? rec[rec.length >> 1] : 0, okK = (v) => v >= med * 0.6;
-  const ok = (d) => byReal.has(d) && okK(byReal.get(d)) && tr.has(d);
-  const partial = rec.filter((v) => !okK(v)).length;
+  const med = rec.length >= 5 ? rec[rec.length >> 1] : 0;
+  const side = (d, s) => { const a = []; for (let i = 1; i <= 7; i++) { const v = byReal.get(addDays(d, s * i)); if (v) a.push(v); } return a.length >= 3 ? a.sort((x, y) => x - y)[a.length >> 1] : null; };
+  const medC = new Map(), medAt = (d) => { if (!medC.has(d)) { const b = side(d, -1), f = side(d, 1); medC.set(d, b != null && f != null ? Math.min(b, f) : b ?? f ?? med); } return medC.get(d); };
+  const okK = (v, d) => v >= medAt(d) * 0.6;
+  const ok = (d) => byReal.has(d) && okK(byReal.get(d), d) && tr.has(d);
+  let partial = 0; for (let i = 1; i <= 60; i++) { const d = addDays(T, -i), v = byReal.get(d); if (v && !okK(v, d)) partial++; }
   /* 실제 소모량 = 28일 창의 온전한 기록일 평균 섭취 − 추세 변화×7700/일수.
      창 끝(anchor) = 마지막 몸무게 이전의 가장 최근 기록일 중, 끝 14일에 온전한 기록일이 6일 이상인 날.
      못 찾으면(쉬는 중·드문드문) 마지막으로 계산된 값을 그대로 유지 — 시작값으로 되돌아가지 않음 */
@@ -450,9 +454,9 @@ function model0() {
   /* 앞으로 30일 예상: 지난 1개월(30일) 중 기록한 날 하나를 골라(같은 요일 75%) 그날처럼 먹는다고 보고 ±8% 흔들어 kcal를 만듦.
      몸무게 추세는 (예상 섭취 − 소모량)÷7700 씩 쌓음. 날짜로 시드를 정해 다시 그려도 같은 값 */
   /* 최근 7일(어제까지) 온전한 기록일 평균 — 3일 이상일 때만. 한 줄 코칭(더/덜 먹기) 기준 */
-  let s7 = 0, n7 = 0; for (let i = 1; i <= 7; i++) { const d = addDays(T, -i); if (byReal.has(d) && okK(byReal.get(d))) { s7 += byReal.get(d); n7++; } }
+  let s7 = 0, n7 = 0; for (let i = 1; i <= 7; i++) { const d = addDays(T, -i); if (byReal.has(d) && okK(byReal.get(d), d)) { s7 += byReal.get(d); n7++; } }
   const t0 = T, avgK = n7 >= 3 ? s7 / n7 : null, past = [], sim = new Map();
-  for (let i = 1; i <= 30; i++) { const d = addDays(t0, -i); if (byDay.has(d) && okK(byDay.get(d))) past.push(d); }
+  for (let i = 1; i <= 30; i++) { const d = addDays(t0, -i); if (byDay.has(d) && okK(byDay.get(d), d)) past.push(d); }
   let slope = 0;
   if (past.length) {
     let wt = W;
@@ -1537,7 +1541,7 @@ function openHist() {
     '<div>오늘 목표<b class="num">' + fmt(M.target) + ' kcal</b></div></div>' + chartK(M) +
     '<p class="st">' + (M.obs == null ? '7일 이상 먹은 것과 몸무게를 함께 기록하면 실제 소모량을 계산해 목표를 자동으로 맞춰요.' : '실측 소모량 ' + fmt(M.obs) + ' kcal를 ' + Math.round(M.conf * 100) + '% 반영 (누적 21일 기록이면 100%).' +
       (M.stale > 0 ? ' 최근 기록이 뜸해서 ' + M.stale + '일 전 값을 유지 중 — 14일 중 6일 이상 적으면 다시 갱신돼요.' : '')) +
-    (M.partial ? ' 지난 60일 중 끼니를 빠뜨린 것 같은 ' + M.partial + '일(평소의 60% 미만)은 계산에서 뺐어요.' : '') + '</p>';
+    (M.partial ? ' 지난 60일 중 끼니를 빠뜨린 것 같은 ' + M.partial + '일(앞뒤 1주 평소의 60% 미만)은 계산에서 뺐어요.' : '') + '</p>';
   $('hist').showModal();
 }
 $('hClose').addEventListener('click', () => $('hist').close());
