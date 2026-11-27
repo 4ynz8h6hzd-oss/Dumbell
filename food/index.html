@@ -820,7 +820,8 @@ const MAG_DEF = { mag: 5, dragR: 3, dragVmin: 2, dragVmax: 80, pull: 0, pullR: 1
   delay: 230, v0: 14, vmax: 140, ramp: 900, resp: 0.34, respHold: 0.11, blur: 0.3, flingTau: 500, flingMax: 400, flingDead: 4 };
 const MAG = Object.assign({}, MAG_DEF, (() => { try { return JSON.parse(lsGet('food-mag')) || {}; } catch (e) { return {}; } })());
 /* 패널엔 4개만: 자석 세기(mag 0~10) 하나가 자석 값들을 한꺼번에 정함 (5 = 반경 3일·튕김 80일/초까지) · 꾹 누르기엔 자석 없음 */
-function magApply() { const k = MAG.mag / 10; Object.assign(MAG, { dragR: Math.round(6 * k), dragVmax: 40 + 80 * k, dragVmin: 2, pull: 0 }); }
+/* 세기 k: 반경 1~6일, 이보다 세면 지나감 60~무한(10이면 아무리 세게 튕겨도 붙음), 끄는 중 한 번이라도 이 속도(dragPeak) 넘게 '막 가다가' 멈추면 놓는 속도가 0이어도 붙음 */
+function magApply() { const k = MAG.mag / 10; Object.assign(MAG, { dragR: k ? Math.round(1 + 5 * k) : 0, dragVmax: k >= 1 ? 1e9 : 60 + 240 * k, dragVmin: 2, dragPeak: 12 - 8 * k, pull: 0 }); }
 magApply();
 const magLog = (t) => { const e = document.getElementById('magLog'); if (e) e.textContent = t; };
 
@@ -932,6 +933,7 @@ function stepDay(d) {
     }
     ch.tgt = raw;
     dn.s.push([t, ch.tgt]); while (dn.s.length > 2 && t - dn.s[0][0] > 60) dn.s.shift();
+    const s0 = dn.s[0]; if (t - s0[0] > 20) dn.pk = Math.max(dn.pk || 0, Math.abs(ch.tgt - s0[1]) / (t - s0[0]) * 1000);   /* 끄는 중 최고 속도 (일/초) */
   });
   const end = (e, tap) => {
     if (!dn || !ch) { dn = null; return; }
@@ -949,8 +951,9 @@ function stepDay(d) {
       let tg = Math.round(ch.pos + v * MAG.flingTau / 1000);
       /* 오늘 자석: 튕겨 멈출 곳이 오늘 근처 + 속도가 적당하면 오늘로 (천천히 맞춰 놓거나 세게 튕기면 그대로) */
       const tI = dayDiff(ch.start, today()), tu = tg + (ringI(tI - ringI(tg) + CN / 2) - CN / 2), av = Math.abs(v), gap = Math.abs(tu - tg);
-      const snap = gap > 0 && gap <= MAG.dragR && av >= MAG.dragVmin && av <= MAG.dragVmax;
-      magLog('튕김 ' + av.toFixed(1) + '일/초 · 멈출 곳 오늘에서 ' + gap + '일 → ' + (gap === 0 ? '오늘' : snap ? '붙음 🧲' : gap > MAG.dragR ? '멀어서 안 붙음' : av < MAG.dragVmin ? '느려서 안 붙음' : '세서 지나감'));
+      const pk = dn.pk || 0, moving = av >= MAG.dragVmin || pk >= MAG.dragPeak;   /* 튕겼거나, 막 가다가 멈춤 → 붙을 수 있음 (처음부터 천천히 맞춘 건 안 붙음) */
+      const snap = gap > 0 && gap <= MAG.dragR && moving && av <= MAG.dragVmax;
+      magLog('놓을 때 ' + av.toFixed(1) + ' · 최고 ' + pk.toFixed(0) + '일/초 · 오늘에서 ' + gap + '일 → ' + (gap === 0 ? '오늘' : snap ? '붙음 🧲' : gap > MAG.dragR ? '멀어서 안 붙음' : !moving ? '천천히 맞춰서 안 붙음' : '세서 지나감'));
       if (snap) tg = tu;
       ch.tgt = tg;
       const rem = ch.tgt - ch.pos; ch.tau = v && rem * v > 0 ? Math.max(0.1, Math.min(MAG.flingTau / 1000, rem / v)) : 0;
