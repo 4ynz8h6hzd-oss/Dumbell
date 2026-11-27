@@ -145,7 +145,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .fw .lens{position:absolute;left:12px;right:12px;max-width:456px;margin:-29px auto 0;top:var(--ly);height:58px;border-radius:16px;pointer-events:none;background:rgba(242,107,29,.07);box-shadow:inset 0 0 0 1.5px rgba(242,107,29,.26),0 2px 14px rgba(242,107,29,.1)}
 .fw .lens::before{content:'';position:absolute;left:0;top:15px;bottom:15px;width:3px;border-radius:0 2px 2px 0;background:var(--acc)}
 .fwh{position:absolute;left:0;right:0;top:max(calc(14px + env(safe-area-inset-top)),calc(var(--ly) - 250px));margin:0;text-align:center;font-size:13px;color:var(--mute)}
-#fwX{position:absolute;right:calc(14px + 8px + (var(--pad) - 16px) / 6 - 28px);bottom:calc(14px + env(safe-area-inset-bottom) + 8px + (var(--pad) - 16px) / 6 - 28px);width:56px;height:56px;border-radius:50%;background:var(--plate);color:var(--sub);display:flex;align-items:center;justify-content:center}
+.fw.cx .lens{opacity:.25}.fw.cx #fwD{opacity:.35}.fw.cx #fwX{background:var(--ink);color:#fff;transform:scale(1.12)}.fw.cx .fwh{color:var(--ink);font-weight:700}
+#fwX{transition:transform .12s,background .12s;position:absolute;right:calc(14px + 8px + (var(--pad) - 16px) / 6 - 28px);bottom:calc(14px + env(safe-area-inset-bottom) + 8px + (var(--pad) - 16px) / 6 - 28px);width:56px;height:56px;border-radius:50%;background:var(--plate);color:var(--sub);display:flex;align-items:center;justify-content:center}
 /* 양 가로 원통 */
 .hd{position:relative;height:52px;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;cursor:ew-resize;-webkit-mask-image:linear-gradient(to right,transparent,#000 24%,#000 76%,transparent);mask-image:linear-gradient(to right,transparent,#000 24%,#000 76%,transparent)}
 .hd .hl{position:absolute;top:6px;bottom:6px;left:50%;width:60px;margin-left:-30px;border-radius:12px;background:var(--plate);z-index:0}
@@ -262,6 +263,14 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <div class="tot"><span id="cMac" class="num"></span><span><b class="num" id="cTot">0</b> kcal</span></div>
   <div class="row"><button class="b2" id="cNo">취소</button><button class="b1" id="cOk">기록</button></div>
 </div></dialog>
+
+<dialog class="sheet" id="man"><form class="sh" id="manF" autocomplete="off">
+  <div class="grab"></div>
+  <label class="fld">kcal<input id="mK" type="number" inputmode="decimal" enterkeyhint="next" required style="height:56px;font-size:24px;font-weight:700;color:var(--ink)"></label>
+  <label class="fld">단백질 g (몰라도 돼요)<input id="mP" type="number" inputmode="decimal" enterkeyhint="next"></label>
+  <label class="fld">음식 이름 (몰라도 돼요)<input id="mN" maxlength="60" enterkeyhint="done"></label>
+  <div class="row"><button type="button" class="b2" id="mNo">취소</button><button class="b1" id="mOk">기록</button></div>
+</form></dialog>
 
 <dialog class="sheet" id="edit"><div class="sh">
   <div class="grab"></div>
@@ -1014,7 +1023,7 @@ function act(k) {
   if (k === 'today') { if (sel !== today()) { if (ch) ch.follow = false; sel = today(); navAt = Date.now(); vib(); sfx('tick'); render(); } }
   else if (k === 'photo') $('file').click();
   else if (k === 'write') { $('bar').hidden = false; $('q').focus(); }
-  else if (k === 'manual') openCard([rowFrom({}, true)], '직접 입력', 'manual');
+  else if (k === 'manual') openMan();
   else if (k === 'plan') confirmPlan();
   else if (k === 'trend') openHist();
   else if (k === 'undo') { const ids = lastAdd[lastAdd.length - 1]; if (!ids) return; const n = data.foods.filter((f) => ids.includes(f.id)).map((f) => f.name); removeFoods(ids); sfx('undo'); toast('되돌림: ' + n.join(', ')); }
@@ -1067,7 +1076,12 @@ pad.addEventListener('pointermove', (e) => {
   if (!pdn) return;
   if (!pdn.moved && Math.abs(e.clientY - pdn.y) > 10) { pdn.moved = true; suppress = true; stopHold(); }
   if (!pdn.moved) return;
-  if (pdn.k === 'fav' && fav.open) { fav.api.set(pdn.p0 + (pdn.y - e.clientY) / FROWH); return; }
+  if (pdn.k === 'fav' && fav.open) {   /* 엄지 FAV_PX마다 한 줄 (줄 높이보다 훨씬 적게) · 처음 자리보다 아래로 내리면 '놓으면 취소' */
+    const dy = pdn.y - e.clientY, cx = dy < -FAV_CX;
+    if (cx !== !!pdn.cx) { pdn.cx = cx; $('fw').classList.toggle('cx', cx); $('fwH').textContent = cx ? '놓으면 취소' : '위로 밀어서 고르고, 손을 떼면 기록'; vib(); }
+    if (!cx) fav.api.set(pdn.p0 + Math.max(0, dy) / FAV_PX);
+    return;
+  }
   if (mode === 'weight') {
     /* 조그: 14px = 0.1kg, 숫자 원통은 손가락 따라 연속으로 굴러감 */
     const disp = Math.max(20, Math.min(299.9, pdn.w0 + (pdn.y - e.clientY) / 140)), q = r1(disp);
@@ -1079,7 +1093,7 @@ const pend = (e, cancel) => {
   if (!pdn) return; const p = pdn; pdn = null;
   stopHold(); pad.classList.remove('jog');
   if (p.b) p.b.classList.remove('pressed');
-  if (p.k === 'fav' && fav.open) { if (cancel) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
+  if (p.k === 'fav' && fav.open) { if (cancel || p.cx) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
   else if (mode === 'weight' && p.moved) wRoll.to(wVal, 160);
   if (padLater) { padLater = false; renderPad(); }
 };
@@ -1107,6 +1121,7 @@ $('dayLbl').addEventListener('click', () => { if (sel !== today()) { sel = today
 function chipFoods(limit) {
   const m = new Map(), cut = Date.now() - 60 * 864e5, h = new Date().getHours();
   data.foods.forEach((f) => {
+    if (f.src === 'manual' && f.name === '직접 입력') return;   /* 이름 없이 kcal만 쓴 건 자주에 안 넣음 */
     const k = f.name + '|' + (f.amt || '');
     const o = m.get(k) || { f, n: 0, h: 0, last: 0 };
     if (f.ts >= cut) { o.n++; const dh = Math.abs(new Date(f.ts).getHours() - h); if (Math.min(dh, 24 - dh) <= 2) o.h++; }
@@ -1118,7 +1133,7 @@ function chipFoods(limit) {
 /* ★ 자주 먹는 음식 원통: ★를 누른 채 위로 밀면 굴러가고 렌즈에 온 음식이 손 떼면 기록.
    그냥 탭하면 원통이 열린 채로 — 끌어서 굴리고, 줄을 탭하면 기록, 빈 곳·닫기를 누르면 닫힘 */
 const fav = { items: [], api: null, open: false, tap: false, t: 0 };
-const FROWH = 58;
+const FROWH = 58, FAV_PX = 22, FAV_CX = 36;   /* 누른 채 밀기: 22px = 한 줄, 36px 넘게 아래로 = 취소 */
 function favOpen() {
   if (fav.api) fav.api.stop();
   $('toast').classList.remove('on');   /* 직전 기록 알림이 렌즈 위를 덮어 탭을 먹지 않게 */
@@ -1131,7 +1146,7 @@ function favOpen() {
   return true;
 }
 function favClose() {
-  if (!fav.open) return; fav.open = false; fav.tap = false; if (fav.api) fav.api.stop();
+  if (!fav.open) return; fav.open = false; fav.tap = false; $('fw').classList.remove('cx'); if (fav.api) fav.api.stop();
   const w = $('fw'); w.classList.add('out'); setTimeout(() => { if (!fav.open) w.hidden = true; }, 160);
 }
 function favAdd(f) { const ids = addFoods([f], 'chip'); toast(f.name + ' · ' + fmt(f.kcal) + ' kcal', () => removeFoods(ids)); }
@@ -1217,6 +1232,19 @@ function toast(msg, undo) {
 /* ---------- 결과 카드 (AI·사진·직접 입력 공통) ---------- */
 const card = { rows: [], conv: null, q: null, busy: false, gen: 0, src: 'manual', text: '' };
 const rowFrom = (x, open) => ({ name: x.name || '', amt: x.amt || '', kcal: nn(x.kcal), p: nn(x.p), c: nn(x.c), f: nn(x.f), m: 1, open: !!open, ka: !x.kcal });
+/* 직접 입력: kcal만 있어도 기록 (단백질·이름은 선택, 탄수·지방 0) */
+function openMan() { ['mK', 'mP', 'mN'].forEach((id) => { $(id).value = ''; }); $('man').showModal(); $('mK').focus(); }
+(() => {
+  const nx = { mK: 'mP', mP: 'mN' };
+  $('manF').addEventListener('keydown', (e) => { if (e.key === 'Enter' && nx[e.target.id]) { e.preventDefault(); $(nx[e.target.id]).focus(); } });
+  $('mNo').addEventListener('click', () => $('man').close());
+  $('manF').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const kcal = nn($('mK').value); if (!(kcal > 0)) { $('mK').focus(); return; }
+    const name = $('mN').value.trim() || '직접 입력', ids = addFoods([{ name, amt: '', kcal, p: nn($('mP').value), c: 0, f: 0 }], 'manual');
+    $('man').close(); toast(name + ' · ' + fmt(kcal) + ' kcal', () => removeFoods(ids));
+  });
+})();
 function openCard(rows, stat, src, img) {
   card.rows = rows; card.stat = stat || ''; card.src = src || 'manual'; card.q = null; card.busy = false; card.gen++;
   $('cImg').hidden = !img; if (img) $('cImg').src = 'data:image/jpeg;base64,' + img;
