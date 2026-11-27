@@ -90,14 +90,13 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .it .nm small{color:var(--mute);font-weight:400;font-size:13px;margin-left:6px}
 .it .kc{font-size:16px;font-weight:600;text-align:right}
 .it.gh{opacity:.45;pointer-events:none}
-.gnote{color:var(--mute);font-size:12px;padding:10px 0 2px}
 .it .mc{grid-column:2 / span 2;color:var(--mute);font-size:12px;margin-top:2px}
-.sum{display:flex;align-items:center;gap:10px;width:100%;padding:14px 0;border:0;border-bottom:.5px solid var(--line);background:none;font:inherit;color:var(--ink);text-align:left}
+.sum{display:flex;align-items:center;gap:10px;width:100%;padding:10px 0;border:0;border-bottom:.5px solid var(--line);background:none;font:inherit;color:var(--ink);text-align:left}
 .sum .sn{flex:1;min-width:0;font-size:17px;font-weight:600;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 .sum .sn small{color:var(--mute);font-weight:400;font-size:14px}
 .sum .sx{color:var(--mute);font-size:13px;white-space:nowrap}
 .sum.fu{opacity:.45}
-.empty{color:var(--mute);font-size:14px;padding:28px 0 14px;line-height:1.7}
+.empty{color:var(--mute);font-size:14px;padding:12px 0;line-height:1.5}
 .planb{display:block;width:100%;margin:0 0 20px;padding:14px;border:0;border-radius:14px;background:var(--acc);color:#fff;font:inherit;font-size:16px;font-weight:700}
 .planb small{display:block;margin-top:2px;font-size:12px;font-weight:400;opacity:.85}
 .planb:active{transform:scale(.98)}
@@ -687,12 +686,12 @@ function render() {
   const open = listOpen === sel, top = fs.slice().sort((a, b) => b.kcal - a.kcal).slice(0, 3).sort((a, b) => a.ts - b.ts);
   const sum = fs.length ? '<button type="button" class="sum' + (fut ? ' fu' : '') + '" id="sumBtn"><span class="sn">' + top.map((f) => esc(f.name)).join(' · ') +
     (fs.length > 3 ? ' <small>외 ' + (fs.length - 3) + '</small>' : '') + '</span><span class="sx">' + (open ? '접기' : fs.length + '개 ›') + '</span></button>' : '';
-  $('list').innerHTML = (fut && fs.length ? '<div class="gnote">예상 · ' + md(sm.src) + '처럼 먹을 듯 (±8%)</div>' : '') + sum + (fs.length ? (!open ? '' : fs.map((f) => {
+  $('list').innerHTML = sum + (fs.length ? (!open ? '' : fs.map((f) => {
     const d = new Date(f.ts);
     return '<button class="it' + gh + '"' + (fut ? ' tabindex="-1"' : ' data-id="' + esc(f.id) + '"') + '><span class="tm num">' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + '</span>' +
       '<span class="nm">' + esc(f.name) + (f.amt ? '<small>' + esc(f.amt) + '</small>' : '') + '</span><span class="kc num">' + fmt(f.kcal * fm) + '</span>' +
       '<span class="mc num">단 ' + Math.round(f.p * fm) + ' · 탄 ' + Math.round(f.c * fm) + ' · 지 ' + Math.round(f.f * fm) + '</span></button>';
-  }).join('')) : '<div class="empty">' + (fut ? '지난 1개월 기록이 있어야 예상해요' : isToday ? '패드 가운데 ✎ 로 먹은 걸 적고,<br>📷 사진 · ★ 자주 먹는 음식 · ＋ 직접 입력.' : '이 날 기록이 없어요') + '</div>' + (!fut && planFor(sel) ? '<button type="button" class="planb" id="planBtn">예상대로 먹었어요<small>' + md(planFor(sel).src) + '처럼 · 오른쪽 아래 ✓ 로도 돼요</small></button>' : ''));
+  }).join('')) : (isToday ? '' : '<div class="empty">' + (fut ? '지난 1개월 기록이 있어야 예상해요' : '이 날 기록이 없어요') + '</div>') + (!fut && planFor(sel) ? '<button type="button" class="planb" id="planBtn">예상대로 먹었어요<small>' + md(planFor(sel).src) + '처럼 · 오른쪽 아래 ✓ 로도 돼요</small></button>' : ''));
   renderPad();
 }
 
@@ -734,7 +733,7 @@ const wRoll = Roll($('wRoll'), 68), kRoll = Roll($('kRoll'), 34);
 /* ---------- 30일 창 그래프: 90일 한 바퀴를 띠로 그리고, 고른 날이 늘 가운데 오도록 띠가 부드럽게 움직임.
    그날 먹은 kcal 막대 + 몸무게 추세선(잰 날은 점). 끌면 띠가 따라오며 날짜가 바뀌고 숫자가 굴러감 ---------- */
 const CW = 360, CH = 118, CY = 31, CN = 90, CVIS = 30, CCW = CW / CVIS, CMID = CW / 2;
-let listOpen = null, ch = null, chHide = false, navAt = 0, chHideT = null, navFast = false, listDirty = false;
+let listOpen = null, ch = null, navAt = 0, navFast = false, listDirty = false;
 const chX = (i) => (i + 0.5) * CCW;
 /* 90일이 한 바퀴: 지난 60일(오늘 포함) + 앞으로 30일(추세 예상). 끝과 처음이 이어지도록 띠를 세 벌 그림 */
 const RPAST = 59, RFUT = 30;
@@ -867,11 +866,7 @@ function placeCursor() {
   $('cd').style.opacity = ch.lineY(i) == null ? 0 : 1;
 }
 function updChart(M) {
-  const want = !chHide;   /* 늘 펼침 · 숫자 탭 = 접기/펼치기 */
-  const el = $('ch');
-  if (want) { drawChart(M); placeCursor(); el.classList.add('on'); }
-  else el.classList.remove('on');
-  clearTimeout(chHideT);
+  drawChart(M); placeCursor(); $('ch').classList.add('on');   /* 그래프는 늘 펼침 (접기 없음) */
 }
 (() => {
   if (/[?&]tune\b/.test(location.search)) lsSet('food-tune', '1');
@@ -1094,9 +1089,8 @@ $('hero').addEventListener('click', (e) => {
   if (mode !== 'main') return;
   if (e.target.closest('#coach')) openHist();               /* 코칭 탭 = 근거 숫자(추세 시트) */
   else if (e.target.closest('.k2,.kbar')) { kDet = !kDet; render(); }   /* kcal 탭 = 먹음 / 목표 */
-  else { chHide = !chHide; render(); }                        /* 몸무게 탭 = 그래프 접기/펼치기 */
 });
-document.querySelector('.side').addEventListener('click', () => { macDet = !macDet; render(); });   /* 영양소 탭 = 탄수·지방 숫자 */   /* 숫자 탭 = 그래프 접기/펼치기 */
+document.querySelector('.side').addEventListener('click', () => { macDet = !macDet; render(); });   /* 영양소 탭 = 탄수·지방 숫자 */
 $('dayLbl').addEventListener('click', () => { if (sel !== today()) { sel = today(); navAt = Date.now(); render(); } });
 
 /* ---------- ★ 자주 먹는 음식 (최근 60일 빈도 + 지금 시간대 ±2시간 ×2) ---------- */
