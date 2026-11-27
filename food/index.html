@@ -308,7 +308,9 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <div class="grab"></div>
   <h2>설정</h2>
   <h3>목표</h3>
-  <div class="seg" id="gSeg"><button data-g="cut">감량 −0.5%/주</button><button data-g="keep">유지</button><button data-g="bulk">증량 +0.25%/주</button></div>
+  <div class="seg" id="gSeg"><button data-k="-1">빠른 감량</button><button data-k="-0.5">감량</button><button data-k="0">유지</button><button data-k="0.25">증량</button></div>
+  <label class="fld" style="margin-top:12px">몸무게 변화 <b id="gV" style="color:var(--ink);font-size:15px"></b><input type="range" id="gRng" min="-1.5" max="0.75" step="0.05" style="accent-color:var(--acc,#F26B1D)"></label>
+  <p id="gInfo"></p>
   <div class="g2" style="margin-top:12px;grid-template-columns:1fr 1fr">
     <label class="fld">단백질 g/kg<input id="sGpk" type="number" inputmode="decimal" step="0.1"></label>
     <label class="fld">시작 소모량 kcal<input id="sT0" type="number" inputmode="numeric" placeholder="자동"></label>
@@ -392,6 +394,12 @@ function rng(seed) { let a = 0; for (const ch of seed) a = Math.imul(a ^ ch.char
 const kcalByDay = (real) => { const m = new Map(), pl = new Set(); data.foods.forEach((f) => { if (f.src === 'plan') pl.add(f.date); m.set(f.date, (m.get(f.date) || 0) + f.kcal); }); if (real) pl.forEach((d) => m.delete(d)); return m; };   /* real=true: '예상대로'가 하나라도 있는 날은 통째로 뺌 — 일부만 적고 나머지를 채운 날의 실제 섭취는 모름 */
 /* 기록·설정·날짜가 그대로면 다시 계산하지 않음 (길게 눌러 날짜를 빨리 넘길 때 매 프레임 부르므로) */
 let modelC = null, modelK = '';
+/* 목표 몸무게 변화(kg/주). 설정 cfg.wk(−1.5~+0.75, 0.05 단위). 예전 설정(goal)만 있으면 체중 %로 환산 */
+const KMIN = 800;   /* 목표 kcal 바닥 */
+function goalKg(W) {
+  if (typeof cfg.wk === 'number') return cfg.wk;
+  return Math.round(({ cut: -0.005, keep: 0, bulk: 0.0025 }[cfg.goal] || 0) * (W || 70) * 20) / 20;
+}
 function model() {
   const k = dataVer + '|' + today() + '|' + JSON.stringify(cfg) + '|' + data.foods.length + '|' + data.weights.length;
   if (modelC && k === modelK) return modelC;
@@ -431,8 +439,8 @@ function model0() {
   }
   const stale = anchor ? dayDiff(anchor, addDays(T, -1)) : null;
   tdee = Math.max(1200, Math.min(5000, tdee));
-  const rate = { cut: -0.005, keep: 0, bulk: 0.0025 }[cfg.goal] || 0;
-  const target = Math.max(1200, Math.round((tdee + (W ? rate * W * 7700 / 7 : 0)) / 10) * 10);
+  const gk = goalKg(W), rate = W ? gk / W : 0;
+  const target = Math.max(KMIN, Math.round((tdee + (W ? gk * 7700 / 7 : 0)) / 10) * 10);
   const P = Math.round((W || 70) * cfg.gpk), F = Math.round(target * 0.25 / 9), C = Math.max(0, Math.round((target - 4 * P - 9 * F) / 4));
   /* 몸무게 기준 하루 kcal 조정(양수 = 더 먹어야 함): 최근 14일 추세 속도 vs 목표 속도. 14일 중 3번 이상 잰 경우만 */
   let wN = 0; data.weights.forEach((x) => { if (x.date > addDays(T, -14) && x.date <= T) wN++; });
@@ -662,7 +670,7 @@ function coach(M) {
       : { cls: 'hi', word: '너무 많이 먹고 있어요', why: '하루 ' + n + ' kcal 덜 · ' + why };
   };
   if (M.dW != null && (dK == null || Math.abs(dK - M.dW) >= 150))   /* 둘이 150 kcal 넘게 다르면 몸무게 쪽 */
-    return say(M.dW, 150, '몸무게 기준 (최근 2주 추세 ' + sgn(M.r14, 2) + ' kg/주, 목표 ' + sgn({ cut: -0.005, keep: 0, bulk: 0.0025 }[cfg.goal] * M.W, 2) + ')');
+    return say(M.dW, 150, '몸무게 기준 (최근 2주 추세 ' + sgn(M.r14, 2) + ' kg/주, 목표 ' + sgn(goalKg(M.W), 2) + ')');
   if (dK == null) return { cls: '', word: '남은 만큼 드세요', why: '최근 기록이 적어서 목표 kcal 기준이에요' };
   return say(dK, 100, '최근 7일 평균 ' + fmt(M.avgK) + ' kcal 기준');
 }
@@ -1536,7 +1544,7 @@ $('hClose').addEventListener('click', () => $('hist').close());
 
 /* ---------- 설정 ---------- */
 function renderSet() {
-  document.querySelectorAll('#gSeg button').forEach((b) => b.classList.toggle('on', b.dataset.g === cfg.goal));
+  showGoal();
   $('sGpk').value = cfg.gpk; $('sT0').value = cfg.tdee0 || ''; $('sT0').placeholder = '자동 ' + fmt(model().prior);
   const hs = hasSample();
   $('smpSt').textContent = hs ? '지난 60일 가짜 기록이 들어 있어요. GitHub에는 안 올라가지만 목표 kcal 계산에는 섞여요.' : '화면을 미리 보려면 지난 60일 가짜 기록을 넣을 수 있어요.';
@@ -1551,7 +1559,20 @@ $('sndTog').addEventListener('click', () => { soundOn = !soundOn; lsSet(SNDK, so
 $('sndMix').addEventListener('input', () => { sMixF = +$('sndMix').value; showSnd(); });
 $('sndMix').addEventListener('change', () => { lsSet(SMIXK, String(sMixF)); sfx('set1'); });
 showSnd();
-$('gSeg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; cfg.goal = b.dataset.g; saveCfg(); renderSet(); render(); });
+function showGoal() {
+  const M = model(), W = M.W, k = goalKg(W);
+  document.querySelectorAll('#gSeg button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.k - k) < 0.001));
+  $('gRng').value = k;
+  $('gV').textContent = k === 0 ? '유지' : sgn(k, 2) + ' kg/주 · 한 달 ' + sgn(k * 30 / 7, 1) + ' kg';
+  const pct = W ? k / W * 100 : null, day = Math.round(k * 7700 / 7 / 10) * 10, raw = M.tdee + day;
+  let t = (pct != null && k ? '체중의 ' + sgn(pct, 2) + '%/주 · 하루 ' + (day > 0 ? '+' : '−') + fmt(Math.abs(day)) + ' kcal → ' : '') + '목표 ' + fmt(M.target) + ' kcal';
+  if (raw < KMIN) t += ' (바닥 ' + KMIN + ' kcal에 막혀 실제론 더 느려요)';
+  if (k <= -0.75 || (pct != null && pct <= -1)) t += ' · 빠른 감량: 단백질을 꼭 채우고 근력 운동을 이어가세요. 2~3달 넘게 이어가지 말고 중간에 유지 기간을 두세요.';
+  $('gInfo').textContent = t;
+}
+const setGoal = (v) => { cfg.wk = Math.round(Math.max(-1.5, Math.min(0.75, v)) * 20) / 20; saveCfg(); showGoal(); render(); };
+$('gSeg').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; setGoal(+b.dataset.k); sfx('tick'); });
+$('gRng').addEventListener('input', () => { setGoal(+$('gRng').value); sfx('tick'); });
 $('sGpk').addEventListener('change', () => { const v = nn($('sGpk').value); cfg.gpk = v >= 0.8 && v <= 3.5 ? v : 1.8; saveCfg(); renderSet(); render(); });
 $('sT0').addEventListener('change', () => { const v = nn($('sT0').value); cfg.tdee0 = v >= 1000 && v <= 6000 ? Math.round(v) : 0; saveCfg(); renderSet(); render(); });
 $('sKeyOk').addEventListener('click', () => { const v = $('sKey').value.trim(); if (!v) return; lsSet(AIK, v); $('sKey').value = ''; renderSet(); toast('AI 키를 저장했어요'); });
@@ -1607,7 +1628,7 @@ function docText() {
   const head = {
     app: 'food-log', updated: new Date().toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
     note: '음식 1개 = 1줄. date=먹은 날, ts=기록 시각(epoch ms), name=음식, amt=양, kcal, p=단백질 g, c=탄수화물 g, f=지방 g, src=ai|photo|manual|chip|plan(어떻게 기록했는지, plan=예상대로 1탭), u=수정 시각. weights: 날짜별 몸무게 kg(하루 1개). deleted=삭제된 id.',
-    settings: { goal: cfg.goal, gpk: cfg.gpk, tdee0: cfg.tdee0 }
+    settings: { goal: cfg.goal, wk: cfg.wk, gpk: cfg.gpk, tdee0: cfg.tdee0 }
   };
   const fs = sortF(realF()), ws = sortW(realW());
   const block = (a) => a.length ? '\n' + a.map((x) => '    ' + JSON.stringify(x)).join(',\n') + '\n  ' : '';
