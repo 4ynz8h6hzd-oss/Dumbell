@@ -1214,8 +1214,20 @@ $('sTokOk').addEventListener('click', async () => {
 });
 $('sTokOff').addEventListener('click', () => { lsSet(TOKK, ''); lsSet(SYNCK, ''); syncAt = ''; syncErr = ''; showSync(); toast('GitHub 연결을 해제했어요 (운동 앱도 같이 해제돼요)'); });
 
+/* 홈 화면 앱은 메모리에 남아 있어 다시 열어도 새로 안 불러옴 → 앱으로 돌아올 때 서버의 이 파일이 처음 열 때와 달라졌으면 새로고침.
+   ?v=시각 + no-store 로 GitHub Pages 캐시(10분)도 건너뜀. 글 쓰는 중이거나 몸무게 모드면 다음 번에 */
+let selfSrc = null;
+const fetchSelf = () => fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' }).then((r) => (r.ok ? r.text() : null)).catch(() => null);
+fetchSelf().then((t) => { selfSrc = t; });
+async function checkUpdate() {
+  if (selfSrc == null) return;
+  const t = await fetchSelf();
+  if (!t || t === selfSrc || document.visibilityState !== 'visible' || mode !== 'main' || !$('bar').hidden) return;
+  if (syncTimer) await sync(false);
+  location.reload();
+}
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { if (sel !== today() && !dayFoods(sel).length) sel = today(); render(); queueSync(0); }
+  if (document.visibilityState === 'visible') { if (sel !== today() && !dayFoods(sel).length) sel = today(); render(); queueSync(0); checkUpdate(); }
   else if (syncTimer) sync(false);
 });
 /* ---------- 샘플 데이터 (sample: true — GitHub에 안 올라감, 설정에서 한 번에 지움) ----------
