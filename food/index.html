@@ -81,7 +81,6 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .ch .sm{stroke:var(--faint);stroke-dasharray:2 3}
 .ch text.tt{fill:var(--ink);font-weight:600}
 .ch .cd{fill:#fff;stroke:var(--acc);stroke-width:2.5}
-.ch .td{stroke:var(--mute);stroke-opacity:.5;stroke-width:1}
 .ch text{font-size:10px;fill:var(--mute)}
 #list{flex:1;overflow-y:auto;padding:0 24px 8px;-webkit-overflow-scrolling:touch;border-top:.5px solid var(--line)}
 .it{display:grid;grid-template-columns:44px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;width:100%;text-align:left;padding:10px 0;border-bottom:.5px solid var(--line)}
@@ -791,8 +790,7 @@ function drawChart(M) {
   let b = ''; const bar = [];
   b += '<rect class="tband" x="' + (chX(RPAST) - CCW / 2).toFixed(1) + '" y="0" width="' + CCW + '" height="' + (CH - 13) + '" rx="3"/>';   /* 오늘 칸 띠 */
   days.forEach((d, i) => { const v = fu[i] ? (M.sim.has(d) ? M.sim.get(d).k : 0) : by.get(d) || 0; const y = kY(v); bar.push([y, Math.max(v ? 2 : 0, kB - y), fu[i]]); b += '<rect class="cb' + (fu[i] ? ' fu' : v > M.target * 1.1 ? ' hi' : '') + '" data-i="' + i + '" x="' + (chX(i) - CCW * 0.36).toFixed(2) + '" y="' + y.toFixed(1) + '" width="' + (CCW * 0.72).toFixed(2) + '" height="' + Math.max(v ? 2 : 0, kB - y).toFixed(1) + '" rx="2"/>'; });
-  const ti = RPAST, tx = (chX(ti) + CCW / 2).toFixed(1);
-  b += '<line class="td" x1="' + tx + '" x2="' + tx + '" y1="2" y2="' + kB + '"/>';
+  const ti = RPAST;
   b += '<line class="sm" x1="0" x2="0" y1="2" y2="' + kB + '"/>';
   let w = '';
   const pp = [], pf = []; lv.forEach((v, i) => { if (v == null) return; const q = chX(i).toFixed(1) + ',' + wY(v).toFixed(1); if (i <= ti) pp.push(q); if (i >= ti) pf.push(q); });
