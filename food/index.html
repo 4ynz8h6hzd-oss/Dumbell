@@ -32,7 +32,7 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .big{font-size:68px;font-weight:700;letter-spacing:-.045em;line-height:1}
 .big small{font-size:20px;font-weight:600;letter-spacing:0;color:var(--mute);margin-left:6px}
 .hero.over .big{color:var(--red)}
-.hero.wmode .big{color:var(--ink)}
+.hero.wmode .big{color:var(--ink);height:68px}
 .lbl{color:var(--sub);font-size:14px;margin-top:6px;min-height:1.3em}
 #list{flex:1;overflow-y:auto;padding:0 24px 8px;-webkit-overflow-scrolling:touch;border-top:.5px solid var(--line)}
 .it{display:grid;grid-template-columns:44px minmax(0,1fr) auto;grid-template-rows:auto auto;column-gap:10px;width:100%;text-align:left;padding:10px 0;border-bottom:.5px solid var(--line)}
@@ -68,15 +68,40 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .bar2[hidden]{display:none}
 #q{flex:1;height:48px;border-radius:24px;border:0;background:var(--plate);padding:0 18px;font-size:16px;outline:none}
 #send{flex:none;width:48px;height:48px;border-radius:50%;background:var(--acc);color:#fff;display:flex;align-items:center;justify-content:center}
-.fav{position:fixed;right:14px;z-index:7;width:min(300px,calc(100vw - 28px));max-height:60dvh;overflow-y:auto;background:#fff;border-radius:22px;box-shadow:0 12px 40px rgba(0,0,0,.18),0 0 0 .5px rgba(0,0,0,.06);padding:6px;display:flex;flex-direction:column-reverse}
-.fav[hidden]{display:none}
-.fav button{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:52px;padding:0 14px;border-radius:16px;font-size:16px;text-align:left}
-.fav button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fav button em{font-style:normal;color:var(--mute);font-size:13px;flex:none}
-.fav button.on,.fav button:active{background:#FDF0E8;color:var(--accTxt)}
-.fav .hint{font-size:12px;color:var(--mute);padding:8px 14px 4px}
-.scrim{position:fixed;inset:0;z-index:6;background:rgba(0,0,0,.12)}
-.scrim[hidden]{display:none}
+/* 원통 공통 */
+.wp{position:absolute;inset:0}
+.tr{position:absolute;transform-style:preserve-3d}
+.r{backface-visibility:hidden;-webkit-backface-visibility:hidden;will-change:transform,opacity}
+/* ★ 원통 (덤벨 앱 pwheel처럼 화면 전체, 렌즈 고정) */
+.fw{position:fixed;inset:0;z-index:7;background:rgba(255,255,255,.95);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:opacity .16s ease-out;touch-action:none;-webkit-user-select:none;user-select:none;--ly:36%}
+.fw[hidden]{display:none}.fw.out{opacity:0}
+#fwD{position:absolute;inset:0;overflow:hidden;-webkit-mask-image:linear-gradient(to bottom,transparent 4%,#000 22%,#000 82%,transparent 98%);mask-image:linear-gradient(to bottom,transparent 4%,#000 22%,#000 82%,transparent 98%)}
+#fwD .wp{perspective:2000px;perspective-origin:50% var(--ly)}
+#fwD .tr{left:16px;right:16px;top:var(--ly);max-width:448px;margin:0 auto}
+#fwD .r{position:absolute;left:0;right:0;height:58px;margin-top:-29px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px 0 22px;font-size:18px}
+#fwD .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#fwD .fn small{font-size:13px;color:var(--mute);margin-left:8px}
+#fwD .r em{font-style:normal;color:var(--mute);font-size:15px;flex:none}
+#fwD .r.cur{font-weight:700}#fwD .r.cur em{color:var(--accTxt)}
+.fw .lens{position:absolute;left:12px;right:12px;max-width:456px;margin:-29px auto 0;top:var(--ly);height:58px;border-radius:16px;pointer-events:none;background:rgba(242,107,29,.07);box-shadow:inset 0 0 0 1.5px rgba(242,107,29,.26),0 2px 14px rgba(242,107,29,.1)}
+.fw .lens::before{content:'';position:absolute;left:0;top:15px;bottom:15px;width:3px;border-radius:0 2px 2px 0;background:var(--acc)}
+.fwh{position:absolute;left:0;right:0;top:calc(14px + env(safe-area-inset-top));margin:0;text-align:center;font-size:13px;color:var(--mute)}
+#fwX{position:absolute;right:calc(14px + (var(--pad) - 56px) / 2);bottom:calc(14px + env(safe-area-inset-bottom) + (var(--pad) - 56px) / 2);width:56px;height:56px;border-radius:50%;background:var(--plate);color:var(--sub);display:flex;align-items:center;justify-content:center}
+/* 몸무게 오도미터 (hero 숫자 자리 그대로) */
+.odo{display:inline-flex;align-items:center;height:68px;vertical-align:top}
+.dg{position:relative;width:.6em;height:68px;overflow:hidden}
+.dg .wp{perspective:700px}
+.dg .tr{left:0;right:0;top:50%}
+.dg .r{position:absolute;left:0;right:0;height:68px;margin-top:-34px;display:flex;align-items:center;justify-content:center}
+.odot{width:.26em;text-align:center}
+/* 양 가로 원통 */
+.hd{position:relative;height:52px;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;cursor:ew-resize;-webkit-mask-image:linear-gradient(to right,transparent,#000 24%,#000 76%,transparent);mask-image:linear-gradient(to right,transparent,#000 24%,#000 76%,transparent)}
+.hd .hl{position:absolute;top:6px;bottom:6px;left:50%;width:60px;margin-left:-30px;border-radius:12px;background:var(--plate);z-index:0}
+.hd .wp{perspective:600px;z-index:1}
+.hd .tr{top:0;bottom:0;left:50%}
+.hd .r{position:absolute;top:0;bottom:0;width:56px;margin-left:-28px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums}
+.hd .r.cur{color:var(--ink)}
+.hdl{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:2px;padding:0 4px}
 dialog.sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:480px;max-height:90dvh;border-radius:20px 20px 0 0;background:#fff;color:var(--ink);overflow:auto}
 dialog.sheet::backdrop{background:rgba(0,0,0,.3)}
 dialog.sheet[open]{animation:up .22s ease-out}
@@ -154,8 +179,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <button id="send" aria-label="기록"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 </form>
 <input type="file" id="file" accept="image/*" hidden>
-<div class="scrim" id="scrim" hidden></div>
-<div class="fav" id="fav" hidden></div>
+<div class="fw" id="fw" hidden><div id="fwD"><div class="wp"><div class="tr"></div></div></div><div class="lens"></div><p class="fwh" id="fwH"></p><button id="fwX" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 
 <dialog class="sheet" id="card"><div class="sh">
   <div class="grab"></div>
@@ -177,7 +201,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
     <label>탄수 g<input id="eC" type="number" inputmode="decimal"></label>
     <label>지방 g<input id="eF" type="number" inputmode="decimal"></label>
   </div>
-  <div class="seg" id="eSeg"><button data-v="0.5">×½</button><button data-v="0.75">×¾</button><button data-v="1.5">×1½</button><button data-v="2">×2</button></div>
+  <div id="eHdW"></div>
   <div class="row"><button class="bd" id="eDel">삭제</button><button class="b1" id="eOk">저장</button></div>
 </div></dialog>
 
@@ -282,6 +306,88 @@ function model() {
   return { W, tdee: Math.round(tdee / 10) * 10, prior, obs, n, conf, target, P, C, F, tr, wk };
 }
 
+/* ---------- 원통(드럼): 덤벨 앱 운동 바퀴와 같은 3D 원통. 렌즈는 제자리, 줄만 원통 둘레로 굴러감 ----------
+   el 안에 .wp > .tr > 줄(.r)들. o: h(칸 크기), step(칸당 각도), axis 'y'면 가로로 굴러감, loop, start, drag(직접 끌기), onPick(i, 확정?) */
+const vib = () => { try { navigator.vibrate && navigator.vibrate(4); } catch (e) {} };
+function Drum(el, o) {
+  const tr = el.querySelector('.tr'), rows = [...tr.children], h = o.h, step = o.step || 0.36, R = h / step, horiz = o.axis === 'y', n = rows.length;
+  let pos = o.start || 0, cur = -1, raf = 0;
+  rows.forEach((r, i) => { r.dataset.i = i; });
+  function draw() {
+    rows.forEach((r, i) => {
+      let d = i - pos;
+      if (o.loop) d = ((d % n) + n + n / 2) % n - n / 2;
+      const th = d * step;
+      if (Math.abs(th) > Math.PI / 2 + 0.2) { r.style.visibility = 'hidden'; return; }
+      r.style.visibility = '';
+      r.style.opacity = (1 - Math.min(1, Math.abs(th) / (Math.PI / 2)) * 0.8).toFixed(3);
+      r.style.transform = horiz
+        ? 'translateX(' + (R * Math.sin(th)).toFixed(2) + 'px) translateZ(' + (R * (Math.cos(th) - 1)).toFixed(2) + 'px) rotateY(' + (th * 180 / Math.PI).toFixed(2) + 'deg)'
+        : 'translateY(' + (R * Math.sin(th)).toFixed(2) + 'px) translateZ(' + (R * (Math.cos(th) - 1)).toFixed(2) + 'px) rotateX(' + (-th * 180 / Math.PI).toFixed(2) + 'deg)';
+    });
+    const c = o.loop ? ((Math.round(pos) % n) + n) % n : Math.max(0, Math.min(n - 1, Math.round(pos)));
+    if (c !== cur) { if (cur >= 0) rows[cur].classList.remove('cur'); rows[c].classList.add('cur'); const first = cur < 0; cur = c; if (!first && o.onPick) { vib(); o.onPick(c, false); } }
+  }
+  const api = {
+    get pos() { return pos; }, get cur() { return cur; },
+    set(p) { pos = o.loop ? p : Math.max(-0.45, Math.min(n - 0.55, p)); draw(); },
+    snap(to) {
+      cancelAnimationFrame(raf);
+      if (!o.loop) to = Math.max(0, Math.min(n - 1, to));
+      const from = pos, t0 = performance.now();
+      const tick = (t) => { const k = Math.min(1, (t - t0) / 300); api.set(from + (to - from) * (1 - Math.pow(1 - k, 3))); if (k < 1) raf = requestAnimationFrame(tick); else if (o.onPick) o.onPick(cur, true); };
+      raf = requestAnimationFrame(tick);
+    }
+  };
+  if (o.drag) {
+    let s = null, p0 = 0, v = 0, lt = 0, lp = 0, moved = false;
+    el.addEventListener('pointerdown', (e) => { cancelAnimationFrame(raf); try { el.setPointerCapture(e.pointerId); } catch (er) {} s = horiz ? e.clientX : e.clientY; p0 = pos; v = 0; lt = performance.now(); lp = pos; moved = false; });
+    el.addEventListener('pointermove', (e) => {
+      if (s == null) return;
+      const d = (horiz ? e.clientX : e.clientY) - s; if (Math.abs(d) > 6) moved = true; if (!moved) return;
+      api.set(p0 - d / h);
+      const t = performance.now(); if (t - lt > 16) { v = (pos - lp) / (t - lt); lt = t; lp = pos; }
+    });
+    const end = (e) => {
+      if (s == null) return; s = null;
+      if (!moved) { const hit = document.elementFromPoint(e.clientX, e.clientY), r = hit && hit.closest('.r'); if (r && el.contains(r)) api.snap(+r.dataset.i); else api.snap(Math.round(pos)); return; }
+      api.snap(Math.round(pos + v * 160));
+    };
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  }
+  draw();
+  return api;
+}
+const drumHtml = (cls, items) => '<div class="' + cls + '"><div class="wp"><div class="tr">' + items.map((s) => '<div class="r">' + s + '</div>').join('') + '</div></div>' + (cls.indexOf('hd') >= 0 ? '<div class="hl"></div>' : '') + '</div>';
+/* 양: ¼~3인분 가로 원통 */
+const PORT = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
+const plab = (v) => ({ 0.25: '¼', 0.5: '½', 0.75: '¾', 1: '1', 1.25: '1¼', 1.5: '1½', 2: '2', 2.5: '2½', 3: '3' }[v] || String(v));
+const portDrum = (el, m, onPick) => { const hd = el.querySelector('.hd'); return Drum(hd, { h: 56, step: 0.42, axis: 'y', drag: true, start: Math.max(0, PORT.indexOf(m)), onPick: (i, done) => onPick(PORT[i], done) }); };
+
+/* 몸무게 오도미터: 자릿수마다 0~9 원통. 소수 자리는 연속으로 돌고, 9→0 넘어갈 때만 앞자리가 따라 굴러감 */
+let odoD = null, odoV = 70, odoRaf = 0;
+function odoSet(v) {
+  v = Math.max(20, Math.min(299.9, v));
+  const nInt = String(Math.floor(v)).length;
+  if (!odoD || odoD.n !== nInt || !$('big').contains(odoD.el)) {
+    const dg = (c) => drumHtml('dg' + c, [...'0123456789']);
+    $('big').innerHTML = '<span class="odo num">' + Array(nInt).fill(dg('')).join('') + '<span class="odot">.</span>' + dg(' dec') + '</span><small>kg</small>';
+    const el = $('big').querySelector('.odo');
+    odoD = { n: nInt, el, dr: [...el.querySelectorAll('.dg')].map((d) => Drum(d, { h: 68, step: 0.55, loop: true })) };
+  }
+  odoV = v;
+  const t = v * 10, d = ((t % 10) + 10) % 10, ds = String(Math.floor(v));
+  let c = Math.max(0, d - 9);
+  for (let k = odoD.n - 1; k >= 0; k--) { const dig = +ds[k]; odoD.dr[k].set(dig + c); if (dig !== 9) c = 0; }
+  odoD.dr[odoD.n].set(d);
+}
+function odoTween(to) {
+  cancelAnimationFrame(odoRaf);
+  const from = odoV, t0 = performance.now();
+  const tick = (t) => { const k = Math.min(1, (t - t0) / 180); odoSet(from + (to - from) * (1 - Math.pow(1 - k, 3))); if (k < 1) odoRaf = requestAnimationFrame(tick); };
+  odoRaf = requestAnimationFrame(tick);
+}
+
 /* ---------- 화면 ---------- */
 const dayFoods = (d) => data.foods.filter((f) => f.date === d).sort((a, b) => a.ts - b.ts);
 const weightOn = (d) => data.weights.find((w) => w.date === d);
@@ -294,7 +400,7 @@ function render() {
   const left = M.target - t.k;
   hero.classList.toggle('wmode', mode === 'weight');
   if (mode === 'weight') {
-    $('big').innerHTML = wVal.toFixed(1) + '<small>kg</small>';
+    odoSet(wVal);
     const l = lastWeight(addDays(sel, -1)), tv = M.tr.get(addDays(sel, -1));
     $('lbl').textContent = (l ? '지난번 ' + l.kg.toFixed(1) : '첫 기록') + (tv ? ' · 추세 ' + tv.toFixed(1) : '') + ' · 패드를 위아래로 밀어 조절';
     hero.classList.remove('over');
@@ -350,7 +456,7 @@ function renderPad() {
   $('pad').innerHTML = K.map(([k, cls, inner, lab, dis, dot]) => '<button type="button" class="k ' + cls + '"' + (k ? ' data-k="' + k + '" aria-label="' + AL[k] + '"' : ' tabindex="-1" aria-hidden="true"') + (dis ? ' disabled' : '') + '>' +
     (inner || '') + (lab ? '<span>' + lab + '</span>' : '') + (dot ? '<i class="dot"></i>' : '') + '</button>').join('');
 }
-function stepW(d) { wVal = Math.max(20, Math.min(300, r1(wVal + d))); $('big').innerHTML = wVal.toFixed(1) + '<small>kg</small>'; try { navigator.vibrate && navigator.vibrate(4); } catch (e) {} }
+function stepW(d) { wVal = Math.max(20, Math.min(299.9, r1(wVal + d))); odoTween(wVal); vib(); }
 function act(k) {
   if (k === 'prev') { sel = addDays(sel, -1); render(); }
   else if (k === 'next') { if (sel < today()) { sel = addDays(sel, 1); render(); } }
@@ -377,28 +483,32 @@ let pdn = null, holdT = null, holdI = null, suppress = false;
 const stopHold = () => { clearTimeout(holdT); clearInterval(holdI); holdT = holdI = null; };
 pad.addEventListener('pointerdown', (e) => {
   const b = e.target.closest('.k[data-k]');
-  pdn = { k: b && !b.disabled ? b.dataset.k : null, b, y: e.clientY, last: e.clientY, moved: false };
+  pdn = { k: b && !b.disabled ? b.dataset.k : null, b, y: e.clientY, w0: wVal, p0: 0, moved: false };
   suppress = false;
   if (!pdn.k) return;
   b.classList.add('pressed');
   try { b.setPointerCapture(e.pointerId); } catch (er) {}   /* ★ 드래그·조그가 패드 밖(목록 위)으로 나가도 계속 받음 */
   if (WSTEP[pdn.k]) { const d = WSTEP[pdn.k]; stepW(d); holdT = setTimeout(() => { holdI = setInterval(() => stepW(d), 90); }, 400); }
-  if (pdn.k === 'fav') favOpen(b, e.clientY, true);
+  if (pdn.k === 'fav' && favOpen()) pdn.p0 = fav.api.pos;
 });
 pad.addEventListener('pointermove', (e) => {
   if (!pdn) return;
   if (!pdn.moved && Math.abs(e.clientY - pdn.y) > 10) { pdn.moved = true; suppress = true; stopHold(); }
   if (!pdn.moved) return;
-  if (pdn.k === 'fav' && fav.drag) { favPick(e.clientY); return; }
+  if (pdn.k === 'fav' && fav.open) { fav.api.set(pdn.p0 + (pdn.y - e.clientY) / FROWH); return; }
   if (mode === 'weight') {
-    const n = Math.trunc((pdn.last - e.clientY) / 14);
-    if (n) { pdn.last -= n * 14; stepW(n * 0.1); pad.classList.add('jog'); }
+    /* 조그: 14px = 0.1kg, 숫자 원통은 손가락 따라 연속으로 굴러감 */
+    cancelAnimationFrame(odoRaf);
+    const disp = Math.max(20, Math.min(299.9, pdn.w0 + (pdn.y - e.clientY) / 140)), q = r1(disp);
+    if (q !== wVal) { wVal = q; vib(); }
+    odoSet(disp); pad.classList.add('jog');
   }
 });
 const pend = (e, cancel) => {
   if (!pdn) return; const p = pdn; pdn = null; stopHold(); pad.classList.remove('jog');
   if (p.b) p.b.classList.remove('pressed');
-  if (p.k === 'fav') { if (cancel) favClose(); else if (p.moved) favCommit(); else favTap(); }
+  if (p.k === 'fav' && fav.open) { if (cancel) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
+  else if (mode === 'weight' && p.moved) odoTween(wVal);
 };
 pad.addEventListener('pointerup', (e) => pend(e, false));
 pad.addEventListener('pointercancel', (e) => pend(e, true));
@@ -424,30 +534,45 @@ function chipFoods(limit) {
   });
   return [...m.values()].sort((a, b) => (b.n + b.h * 2) - (a.n + a.h * 2) || b.last - a.last).slice(0, limit).map((o) => o.f);
 }
-const fav = { items: [], drag: false, idx: -1, y0: 0, base: 0 };
-const ROWH = 52;
-function favOpen(btn, y, drag) {
-  const r = btn.getBoundingClientRect(), room = Math.floor((r.top - 80) / ROWH);
-  fav.items = chipFoods(Math.max(3, Math.min(12, room))); if (!fav.items.length) return;
-  fav.drag = drag; fav.idx = -1; fav.y0 = y; fav.base = y - r.top + 14;
-  const f = $('fav'); f.style.bottom = (innerHeight - r.top + 8) + 'px';
-  f.innerHTML = fav.items.map((x, i) => '<button data-i="' + i + '"><span>' + esc(x.name) + (x.amt ? ' <small style="color:var(--mute)">' + esc(x.amt) + '</small>' : '') + '</span><em class="num">' + fmt(x.kcal) + '</em></button>').join('') +
-    '<div class="hint" id="favHint">위로 밀어서 고르고 손을 떼면 기록</div>';
-  f.hidden = false; $('scrim').hidden = false;
+/* ★ 자주 먹는 음식 원통: ★를 누른 채 위로 밀면 굴러가고 렌즈에 온 음식이 손 떼면 기록.
+   그냥 탭하면 원통이 열린 채로 — 끌어서 굴리고, 줄을 탭하면 기록, 빈 곳·닫기를 누르면 닫힘 */
+const fav = { items: [], api: null, open: false, tap: false, t: 0 };
+const FROWH = 58;
+function favOpen() {
+  fav.items = chipFoods(15); if (!fav.items.length) return false;
+  $('fwD').querySelector('.tr').innerHTML = fav.items.map((x) => '<div class="r"><span class="fn">' + esc(x.name) + (x.amt ? '<small>' + esc(x.amt) + '</small>' : '') + '</span><em class="num">' + fmt(x.kcal) + '</em></div>').join('');
+  fav.api = Drum($('fwD'), { h: FROWH, step: 0.3, onPick: () => {} });
+  fav.open = true; fav.tap = false;
+  $('fwH').textContent = '위로 밀어서 고르고, 손을 떼면 기록';
+  const w = $('fw'); w.hidden = false; w.classList.remove('out');
+  return true;
 }
-function favPick(y) {
-  let i = Math.floor((fav.y0 - y - fav.base) / ROWH);
-  i = i < 0 ? -1 : Math.min(i, fav.items.length - 1);
-  if (i === fav.idx) return; fav.idx = i;
-  $('fav').querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === i));
-  try { navigator.vibrate && i >= 0 && navigator.vibrate(4); } catch (e) {}
+function favClose() {
+  if (!fav.open) return; fav.open = false; fav.tap = false;
+  const w = $('fw'); w.classList.add('out'); setTimeout(() => { if (!fav.open) w.hidden = true; }, 160);
 }
 function favAdd(f) { const ids = addFoods([f], 'chip'); toast(f.name + ' · ' + fmt(f.kcal) + ' kcal', () => removeFoods(ids)); }
-function favCommit() { const f = fav.items[fav.idx]; favClose(); if (f) favAdd(f); }
-function favTap() { if ($('fav').hidden) return; fav.drag = false; fav.t = Date.now(); $('favHint').textContent = '탭해서 기록'; }
-function favClose() { $('fav').hidden = true; $('scrim').hidden = true; fav.idx = -1; }
-$('fav').addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (!b || fav.drag) return; const f = fav.items[+b.dataset.i]; favClose(); if (f) favAdd(f); });
-$('scrim').addEventListener('click', () => { if (Date.now() - (fav.t || 0) > 400) favClose(); });   /* 같은 탭의 click이 막 뜬 scrim에 떨어지는 것 무시 */
+function favCommit() { const f = fav.items[fav.api.cur]; favClose(); if (f) favAdd(f); }
+function favTapMode() { fav.tap = true; fav.t = Date.now(); $('fwH').textContent = '굴려서 고르고, 탭하면 기록'; }
+/* 탭 모드: 원통을 직접 끌기 */
+(() => {
+  const el = $('fw'); let s = null, p0 = 0, v = 0, lt = 0, lp = 0, moved = false;
+  el.addEventListener('pointerdown', (e) => { if (!fav.tap || e.target.closest('#fwX')) return; s = e.clientY; p0 = fav.api.pos; v = 0; lt = performance.now(); lp = p0; moved = false; try { el.setPointerCapture(e.pointerId); } catch (er) {} });
+  el.addEventListener('pointermove', (e) => {
+    if (s == null) return; const d = e.clientY - s; if (Math.abs(d) > 6) moved = true; if (!moved) return;
+    fav.api.set(p0 - d / FROWH); const t = performance.now(); if (t - lt > 16) { v = (fav.api.pos - lp) / (t - lt); lt = t; lp = fav.api.pos; }
+  });
+  el.addEventListener('pointerup', (e) => {
+    if (s == null) return; s = null;
+    if (moved) { fav.api.snap(Math.round(fav.api.pos + v * 160)); return; }
+    if (Date.now() - fav.t < 350) return;   /* 같은 탭에서 바로 닫히지 않게 */
+    const hit = document.elementFromPoint(e.clientX, e.clientY), r = hit && hit.closest('#fwD .r');
+    if (r) { const f = fav.items[+r.dataset.i]; favClose(); if (f) favAdd(f); } else favClose();
+  });
+  el.addEventListener('pointercancel', () => { s = null; });
+  $('fwX').addEventListener('click', favClose);
+})();
+
 
 /* ---------- 기록 추가·삭제 ---------- */
 function addFoods(items, src) {
@@ -462,7 +587,7 @@ function addFoods(items, src) {
   return ids;
 }
 function removeFoods(ids) { lastAdd = lastAdd.map((a) => a.filter((id) => !ids.includes(id))).filter((a) => a.length); data.foods = data.foods.filter((f) => !ids.includes(f.id)); ids.forEach(tomb); persist(); render(); }
-const scaleAmt = (amt, m) => m === 1 ? (amt || '') : ((amt ? amt + ' ' : '') + '×' + (m === 0.5 ? '½' : m === 1.5 ? '1½' : m === 0.75 ? '¾' : m));
+const scaleAmt = (amt, m) => m === 1 ? (amt || '') : ((amt ? amt + ' ' : '') + '×' + plab(m));
 
 let toastT = null;
 function toast(msg, undo) {
@@ -490,10 +615,14 @@ function renderCard() {
   $('cItems').innerHTML = card.rows.map((r, i) =>
     '<div class="cr" data-i="' + i + '"><div class="crh"><input data-k="name" value="' + esc(r.name) + '" placeholder="음식 이름" maxlength="60"><button class="x" data-act="rm" aria-label="빼기">×</button></div>' +
     '<button class="crm" data-act="tog">' + rowLine(r) + '</button>' +
-    '<div class="seg">' + [0.5, 1, 1.5, 2].map((v) => '<button data-act="m" data-v="' + v + '" class="' + (r.m === v ? 'on' : '') + '">' + (v === 0.5 ? '½' : v === 1.5 ? '1½' : v) + '</button>').join('') + '</div>' +
+    drumHtml('hd', PORT.map(plab)) +
     (r.open ? '<div class="ed"><label>kcal<input data-k="kcal" type="number" inputmode="decimal" value="' + (r.kcal || '') + '" placeholder="자동"></label><label>단백질 g<input data-k="p" type="number" inputmode="decimal" value="' + (r.p || '') + '"></label><label>탄수 g<input data-k="c" type="number" inputmode="decimal" value="' + (r.c || '') + '"></label><label>지방 g<input data-k="f" type="number" inputmode="decimal" value="' + (r.f || '') + '"></label></div>' +
       '<div style="font-size:11px;color:var(--mute);margin-top:4px">' + esc(r.amt || '1인분') + ' 기준 · kcal 비우면 단백질·탄수×4 + 지방×9</div>' : '') +
     '</div>').join('');
+  $('cItems').querySelectorAll('.cr').forEach((el) => {
+    const r = card.rows[+el.dataset.i];
+    portDrum(el, r.m, (m) => { r.m = m; el.querySelector('.crm').innerHTML = rowLine(r); renderTot(); });
+  });
   const qb = $('cQ');
   if (card.q && !card.busy) {
     qb.hidden = false;
@@ -512,7 +641,6 @@ $('cItems').addEventListener('click', (e) => {
   const i = +b.closest('.cr').dataset.i, r = card.rows[i]; if (!r) return;
   if (b.dataset.act === 'rm') card.rows.splice(i, 1);
   else if (b.dataset.act === 'tog') r.open = !r.open;
-  else if (b.dataset.act === 'm') r.m = +b.dataset.v;
   renderCard();
 });
 $('cItems').addEventListener('input', (e) => {
@@ -631,13 +759,14 @@ $('list').addEventListener('click', (e) => {
   editing = data.foods.find((f) => f.id === b.dataset.id); if (!editing) return;
   $('eN').value = editing.name; $('eA').value = editing.amt || '';
   ['K', 'P', 'C', 'F'].forEach((k) => { $('e' + k).value = r1(editing[k === 'K' ? 'kcal' : k.toLowerCase()]); });
+  /* 양 원통: 열 때 값이 ×1, 굴리면 그 배수로 */
+  eBase = { K: editing.kcal, P: editing.p, C: editing.c, F: editing.f, amt: editing.amt || '', m: 1 };
+  $('eHdW').innerHTML = drumHtml('hd', PORT.map(plab));
+  portDrum($('eHdW'), 1, (m) => { eBase.m = m; ['K', 'P', 'C', 'F'].forEach((k) => { $('e' + k).value = r1(eBase[k] * m); }); $('eA').value = scaleAmt(eBase.amt, m); });
   $('edit').showModal();
 });
-$('eSeg').addEventListener('click', (e) => {
-  const b = e.target.closest('button'); if (!b) return; const m = +b.dataset.v;
-  ['K', 'P', 'C', 'F'].forEach((k) => { $('e' + k).value = r1(nn($('e' + k).value) * m); });
-  $('eA').value = scaleAmt($('eA').value.trim(), m);
-});
+let eBase = null;
+['K', 'P', 'C', 'F'].forEach((k) => $('e' + k).addEventListener('input', () => { if (eBase) eBase[k] = nn($('e' + k).value) / eBase.m; }));
 $('eOk').addEventListener('click', () => {
   if (!editing) return;
   const name = $('eN').value.trim(); if (!name) { $('eN').focus(); return; }
