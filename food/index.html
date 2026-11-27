@@ -42,8 +42,14 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 .k2 small{font-size:15px;font-weight:600;letter-spacing:0;color:var(--mute);margin:0 0 3px 5px}
 .k2 .meta{font-size:14px;font-weight:500;letter-spacing:0;color:var(--sub);margin:0 0 3px 8px;white-space:nowrap}
 .k2 .meta b{color:var(--red);font-weight:600}
-.coach{font-size:13px;color:var(--sub);margin-top:8px;min-height:1.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.coach b{color:var(--accTxt);font-weight:700}
+.kbar{height:4px;border-radius:2px;background:var(--plate);overflow:hidden;margin-top:8px;max-width:260px}
+.kbar i{display:block;height:100%;width:0;border-radius:2px;background:var(--acc);transition:width .25s}
+.kbar i.over{background:var(--red)}
+.coach{display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:600;color:var(--ink);margin-top:10px;min-height:1.3em;white-space:nowrap}
+.coach::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--dot,var(--faint))}
+.hero.kover .k2 .roll{color:var(--red)}
+.coachd{margin:0 0 12px;font-size:13px;color:var(--sub);line-height:1.5}.coachd .coach{margin:0 0 2px}
+.coach.ok{--dot:#2E9E5B}.coach.lo{--dot:var(--acc)}.coach.hi{--dot:var(--red)}.coach:empty::before{display:none}
 /* 굴러가는 숫자 */
 .roll{display:inline-flex;align-items:center;height:var(--h);font-variant-numeric:tabular-nums}
 .big .roll{--h:68px}.k2 .roll{--h:34px}
@@ -94,6 +100,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .side{flex:1;display:flex;flex-direction:column;gap:12px;align-self:stretch;justify-content:flex-end;max-width:150px}
 .mh{display:flex;justify-content:space-between;gap:6px;font-size:12px;color:var(--sub);margin-bottom:5px}
 .mh b{color:var(--ink);font-weight:600}
+.mh{flex-wrap:wrap;column-gap:6px;row-gap:0}.mh b{white-space:nowrap}
 .bar{height:6px;border-radius:3px;background:var(--plate);overflow:hidden}
 .bar i{display:block;height:100%;width:0;border-radius:3px;transition:width .25s}
 #pB{background:var(--p)}#cB{background:var(--c)}#fB{background:var(--f)}
@@ -219,7 +226,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
     <a class="lnk" href="../">운동</a>
     <button id="setBtn" aria-label="설정"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
   </div>
-  <button class="hero" id="hero"><div class="big"><span class="roll" id="wRoll" data-dp="1"></span><small>kg</small></div><div class="lbl num" id="lbl"></div><div class="k2"><span class="roll" id="kRoll" data-comma="1"></span><small>kcal</small><span class="meta num" id="kMeta"></span></div><div class="coach num" id="coach"></div></button>
+  <button class="hero" id="hero"><div class="big"><span class="roll" id="wRoll" data-dp="1"></span><small>kg</small></div><div class="lbl num" id="lbl"></div><div class="k2"><span class="roll" id="kRoll" data-comma="1"></span><small>kcal</small><span class="meta num" id="kMeta"></span></div><div class="kbar"><i id="kB"></i></div><div class="coach" id="coach"></div></button>
   <div class="ch" id="ch"></div>
   <section id="list"></section>
   <section class="bottom">
@@ -515,16 +522,22 @@ const lastWeight = (d) => data.weights.filter((w) => w.date <= d).sort((a, b) =>
 const sgn = (v, d) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d);
 let mode = 'main', wVal = 70, lastAdd = [];
 /* 한 줄 코칭(어느 날을 보든 항상): 최근 7일 평균 섭취 vs 목표 → 너무 적게/많이 (50 단위, ±100 미만이면 잘 먹는 중).
-   기록 kcal과 몸무게가 150 kcal 넘게 다르거나 기록이 부족하면 몸무게를 믿음 — 빠뜨린 기록은 kcal를 적게 보이게 하지만 몸무게는 거짓말 안 함 */
-function coachLine(M) {
+   기록 kcal과 몸무게가 150 kcal 넘게 다르거나 기록이 부족하면 몸무게를 믿음 — 빠뜨린 기록은 kcal를 적게 보이게 하지만 몸무게는 거짓말 안 함.
+   화면엔 글자(c.word)만, 숫자 근거(c.why)는 탭하면 열리는 추세 시트에 */
+function coach(M) {
   const dK = M.avgK == null ? null : M.target - M.avgK;
-  const say = (d, dead, via) => Math.abs(d) < dead ? '<b>잘 먹고 있어요</b> · 지금처럼' + via :
-    '<b>너무 ' + (d > 0 ? '적게' : '많이') + ' 먹고 있어요</b> · 하루 ' + fmt(Math.abs(Math.round(d / 50) * 50)) + ' ' + (d > 0 ? '더' : '덜') + via;
+  const say = (d, dead, why) => {
+    const n = fmt(Math.abs(Math.round(d / 50) * 50));
+    return Math.abs(d) < dead ? { cls: 'ok', word: '잘 먹고 있어요', why: '지금처럼 드세요 · ' + why }
+      : d > 0 ? { cls: 'lo', word: '너무 적게 먹고 있어요', why: '하루 ' + n + ' kcal 더 · ' + why }
+      : { cls: 'hi', word: '너무 많이 먹고 있어요', why: '하루 ' + n + ' kcal 덜 · ' + why };
+  };
   if (M.dW != null && (dK == null || Math.abs(dK - M.dW) >= 150))   /* 둘이 150 kcal 넘게 다르면 몸무게 쪽 */
-    return say(M.dW, 150, ' · 몸무게 주 ' + sgn(M.r14, 2) + 'kg');
-  if (dK == null) return '하루 <b>' + fmt(M.target) + ' kcal</b> 목표로 드세요';
-  return say(dK, 100, ' · 7일 평균 ' + fmt(M.avgK));
+    return say(M.dW, 150, '몸무게 기준 (최근 2주 추세 ' + sgn(M.r14, 2) + ' kg/주, 목표 ' + sgn({ cut: -0.005, keep: 0, bulk: 0.0025 }[cfg.goal] * M.W, 2) + ')');
+  if (dK == null) return { cls: '', word: '남은 만큼 드세요', why: '최근 기록이 적어서 목표 kcal 기준이에요' };
+  return say(dK, 100, '최근 7일 평균 ' + fmt(M.avgK) + ' kcal 기준');
 }
+let kDet = false, macDet = false;   /* 탭하면 숨긴 숫자 보기 */
 function render() {
   const M = model(), isToday = sel === today(), fut = sel > today(), sm = fut ? M.sim.get(sel) : null, fs = dayFoods(sm ? sm.src : sel), hero = $('hero');
   const t = fs.reduce((a, f) => ({ k: a.k + f.kcal, p: a.p + f.p, c: a.c + f.c, f: a.f + f.f }), { k: 0, p: 0, c: 0, f: 0 });
@@ -541,14 +554,18 @@ function render() {
     const val = w ? w.kg : (tv != null ? r1(tv) : null);
     wRoll.to(val); hero.classList.toggle('est', !w && val != null);
     $('lbl').textContent = val == null ? (fut ? '⚖ 몸무게를 재야 앞날을 예상해요' : '⚖ 몸무게를 재면 여기에 크게 보여요') :
-      fut ? '예상 · 지난 1개월처럼 먹으면 ' + sgn(M.slope * 7, 2) + ' kg/주' :
-      (w ? (tv != null ? '추세 ' + tv.toFixed(1) : '') : (isToday ? '아직 안 잼 · 추세값' : '안 잰 날 · 추세값')) + (M.wk != null && isToday ? ' · ' + sgn(M.wk, 1) + ' kg/주' : '');
+      fut ? '예상' : w ? '' : (isToday ? '아직 안 잼 · 추정' : '안 잰 날 · 추정');
   }
-  if (fut) { kRoll.to(sm ? Math.round(sm.k) : null); $('kMeta').innerHTML = '/ ' + fmt(M.target) + ' · 예상'; }
-  else { kRoll.to(Math.round(t.k)); $('kMeta').innerHTML = '/ ' + fmt(M.target) + ' · ' + (left >= 0 ? fmt(left) + ' 남음' : '<b>' + fmt(-left) + ' 초과</b>'); }
-  $('coach').innerHTML = coachLine(M);
+  /* 큰 숫자 하나: 오늘 = 남은 kcal(넘으면 초과, 빨강), 다른 날 = 먹은 kcal. 탭하면 먹음 / 목표 */
+  const det = '먹음 ' + fmt(t.k) + ' / 목표 ' + fmt(M.target);
+  if (fut) { kRoll.to(sm ? Math.round(sm.k) : null); $('kMeta').innerHTML = kDet ? det : '먹을 예상'; }
+  else if (isToday) { kRoll.to(Math.round(Math.abs(left))); $('kMeta').innerHTML = kDet ? det : left >= 0 ? '남음' : '<b>초과</b>'; }
+  else { kRoll.to(Math.round(t.k)); $('kMeta').innerHTML = kDet ? det : '먹음'; }
+  hero.classList.toggle('kover', isToday && left < 0);
+  const kb = $('kB'); kb.style.width = Math.min(100, M.target ? t.k / M.target * 100 : 0) + '%'; kb.classList.toggle('over', left < 0);
+  const co = coach(M), ce = $('coach'); ce.className = 'coach ' + co.cls; ce.textContent = co.word;
   [['p', t.p, M.P], ['c', t.c, M.C], ['f', t.f, M.F]].forEach(([k, v, g]) => {
-    $(k + 'V').textContent = Math.round(v) + '/' + g + 'g';
+    $(k + 'V').textContent = macDet ? Math.round(v) + '/' + g + 'g' : k !== 'p' ? '' : v < g ? Math.round(g - v) + 'g 남음' : '채움';
     const b = $(k + 'B'); b.style.width = Math.min(100, g ? v / g * 100 : 0) + '%';
     b.classList.toggle('over', k !== 'p' && v > g * 1.1);
   });
@@ -648,11 +665,8 @@ function drawChart(M) {
   if (pp.length > 1) w += '<polyline class="wl2" points="' + pp.join(' ') + '"/>';
   if (pf.length > 1) w += '<polyline class="wl2 fu" points="' + pf.join(' ') + '"/>';
   days.forEach((d, i) => { if (ws.has(d)) w += '<circle class="wd" cx="' + chX(i).toFixed(1) + '" cy="' + wY(ws.get(d)).toFixed(1) + '" r="2.2"/>'; });
-  days.forEach((d, i) => {
-    const dd = +d.slice(8), lab = i === ti ? '오늘' : Math.abs(i - ti) > 2 && (dd === 1 || dd === 10 || dd === 20) ? +d.slice(5, 7) + '.' + dd : '';
-    if (i === ti) {   /* 오늘 = 주황 알약 */ b += '<rect class="tpill" x="' + (chX(i) - 15).toFixed(1) + '" y="' + (CH - 13) + '" width="30" height="13" rx="6.5"/><text class="tpt" x="' + chX(i).toFixed(1) + '" y="' + (CH - 3) + '" text-anchor="middle">오늘</text>'; return; }
-    if (lab) b += '<text x="' + chX(i).toFixed(1) + '" y="' + (CH - 2) + '" text-anchor="middle"' + (i === ti ? ' class="tt"' : '') + '>' + lab + '</text>';
-  });
+  /* 날짜 눈금은 숫자가 많아 뺌 — 날짜는 맨 위에, 그래프엔 '오늘' 알약만 */
+  if (ti >= 0) b += '<rect class="tpill" x="' + (chX(ti) - 15).toFixed(1) + '" y="' + (CH - 13) + '" width="30" height="13" rx="6.5"/><text class="tpt" x="' + chX(ti).toFixed(1) + '" y="' + (CH - 3) + '" text-anchor="middle">오늘</text>';
   /* 층마다 따로 된 <svg>: 움직이는 띠(막대·몸무게)는 HTML 요소째 transform → GPU 합성만, 다시 그리지 않음 */
   const vb = '<svg viewBox="0 0 ' + CW + ' ' + CH + '" class="cf"', SW = 3 * CN * CCW;
   let s = '<div class="cv" id="chS" role="img" aria-label="고른 날 앞뒤 30일 섭취 kcal와 몸무게">';
@@ -901,7 +915,13 @@ pad.addEventListener('click', (e) => {
   const k = b.dataset.k; if (WSTEP[k] || DSTEP[k] || k === 'fav') return;
   act(k);
 });
-$('hero').addEventListener('click', () => { if (mode === 'main') { chHide = !chHide; render(); } });   /* 숫자 탭 = 그래프 접기/펼치기 */
+$('hero').addEventListener('click', (e) => {
+  if (mode !== 'main') return;
+  if (e.target.closest('#coach')) openHist();               /* 코칭 탭 = 근거 숫자(추세 시트) */
+  else if (e.target.closest('.k2,.kbar')) { kDet = !kDet; render(); }   /* kcal 탭 = 먹음 / 목표 */
+  else { chHide = !chHide; render(); }                        /* 몸무게 탭 = 그래프 접기/펼치기 */
+});
+document.querySelector('.side').addEventListener('click', () => { macDet = !macDet; render(); });   /* 영양소 탭 = 탄수·지방 숫자 */   /* 숫자 탭 = 그래프 접기/펼치기 */
 $('dayLbl').addEventListener('click', () => { if (sel !== today()) { sel = today(); navAt = Date.now(); render(); } });
 
 /* ---------- ★ 자주 먹는 음식 (최근 60일 빈도 + 지금 시간대 ±2시간 ×2) ---------- */
@@ -1223,7 +1243,8 @@ function chartK(M) {
 }
 function openHist() {
   const M = model();
-  $('hBody').innerHTML = chartW(M) +
+  const co = coach(M);
+  $('hBody').innerHTML = '<p class="coachd"><b class="coach ' + co.cls + '">' + co.word + '</b><br>' + esc(co.why) + '</p>' + chartW(M) +
     '<div class="stat"><div>주간 변화(추세)<b class="num">' + (M.wk == null ? '—' : (M.wk >= 0 ? '+' : '') + M.wk.toFixed(2) + ' kg') + '</b></div>' +
     '<div>추정 소모량<b class="num">' + fmt(M.tdee) + ' kcal</b></div>' +
     '<div>기록 반영<b class="num">' + (M.obs == null ? '시작값 사용' : M.n + '일 · ' + Math.round(M.conf * 100) + '%') + '</b></div>' +
