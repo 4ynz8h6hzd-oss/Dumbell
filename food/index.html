@@ -63,9 +63,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .ch .cb.fu{fill:#F2F2F7}.ch .cb.fu.on{fill:#F9C9A8}.ch .wl2.fu{stroke:var(--mute);stroke-dasharray:4 3}
 .ch .cv{-webkit-mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent);mask-image:linear-gradient(90deg,transparent,#000 9%,#000 91%,transparent)}
 .ch .cl{stroke:var(--ink);stroke-opacity:.18;stroke-width:1.5}
-.ch .cs{transition:transform .22s cubic-bezier(.3,1.35,.5,1);will-change:transform}   /* 짧고 살짝 튕기는 경쾌한 멈춤 */
-.ch.drag .cs{transition:transform .07s linear}
-.ch.fast .cs{transition:none}   /* 길게 누르는 동안은 매 프레임 직접 움직임 (끝↔처음 넘어갈 때 튀지 않게) */
+.ch .cs{will-change:transform}   /* 움직임은 JS 물리(runStrip)로 매 프레임 — CSS 전환 없음 */
 .ch .cd{transition:transform .22s cubic-bezier(.3,1.35,.5,1),opacity .15s}
 .ch .sm{stroke:var(--faint);stroke-dasharray:2 3}
 .ch text.tt{fill:var(--ink);font-weight:600}
@@ -550,6 +548,7 @@ const ringI = (i) => ((i % CN) + CN) % CN;
 function drawChart(M) {
   const T = today(), start = addDays(T, -RPAST), key = T + '|' + dataVer + '|' + M.target;
   if (ch && ch.key === key) return;
+  if (ch && ch.raf) cancelAnimationFrame(ch.raf);
   const by = kcalByDay(), ws = new Map(data.weights.map((w) => [w.date, w.kg]));
   const days = []; for (let i = 0; i < CN; i++) days.push(addDays(start, i));
   let mk = M.target * 1.3; days.forEach((d) => { mk = Math.max(mk, by.get(d) || 0); });
@@ -609,30 +608,44 @@ function drawChart(M) {
   s += strip('cs', b) + vb + '><line class="cl" x1="' + CMID + '" x2="' + CMID + '" y1="2" y2="' + kB + '"/></svg>' + strip('cw', w, G);
   s += vb + '><rect id="cbx" class="cb on" x="' + (CMID - CCW * 0.36).toFixed(2) + '" width="' + (CCW * 0.72).toFixed(2) + '" y="0" height="0" rx="2"/><circle id="cd" class="cd" r="4.5" cx="' + CMID + '" cy="' + CY + '"/></svg></div>';
   $('ch').innerHTML = s;
-  ch = { key, start, lv, lineY, ws, bar, p: null, ty: 0, normT: null };
+  ch = { key, start, lv, lineY, ws, bar, pos: null, tgt: 0, ty: 0, raf: 0, tau: 0, drag: false, follow: false };
 }
-/* 띠 위치 p(풀린 인덱스). 고른 날까지 고리에서 가까운 쪽으로 움직이고, 멈추면 몰래 가운데 벌로 되돌림 */
-function stripTo(p, anim) {
+/* 띠 위치 ch.pos(풀린 인덱스, 소수). 덤벨 앱 바퀴와 같은 물리: 목표 ch.tgt로 지수 감속 추적(τ 0.1초 —
+   누르는 즉시 가장 빠르게 출발해 매끈하게 멈춤, 튕김 없음). CSS 전환 없이 매 프레임 직접 그림.
+   끌기 = 손가락 1:1, 놓으면 그 속도로 미끄러지다 가장 가까운 날에 멈춤 (지나가는 날마다 숫자도 바뀜) */
+const CH_TAU = 0.1;
+function lineYf(p) { const a = Math.floor(p), f = p - a, y0 = ch.lineY(a), y1 = ch.lineY(a + 1); return y0 == null ? y1 : y1 == null ? y0 : y0 + (y1 - y0) * f; }
+function paintStrip() {
   const g = $('cs'), gw = $('cw'); if (!g || !ch) return;
-  const y = ch.lineY(p); if (y != null) ch.ty = CY - y;
+  const y = lineYf(ch.pos); if (y != null) ch.ty = CY - y;
   /* 띠 요소 자신 크기 기준 % (너비 = 270일, 높이 = 그래프 높이) — 화면 크기를 잴 필요 없음 */
-  const SW = 3 * CN * CCW, x = ((CMID - chX(p) - CN * CCW) / SW * 100).toFixed(4) + '%', yy = (ch.ty / CH * 100).toFixed(3) + '%';
-  [[g, 'translate(' + x + ',0)'], [gw, 'translate(' + x + ',' + yy + ')']].forEach(([e, t]) => {
-    if (!anim) { e.style.transition = 'none'; e.getBoundingClientRect(); }
-    e.style.transform = t;
-    if (!anim) { e.getBoundingClientRect(); e.style.transition = ''; }
-  });
+  const SW = 3 * CN * CCW, x = ((CMID - chX(ch.pos) - CN * CCW) / SW * 100).toFixed(4) + '%', yy = (ch.ty / CH * 100).toFixed(3) + '%';
+  g.style.transform = 'translate(' + x + ',0)'; gw.style.transform = 'translate(' + x + ',' + yy + ')';
+}
+function runStrip() {
+  if (!ch || ch.raf) return;
+  let last = performance.now();
+  const step = (now) => {
+    const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+    if (ch.drag) ch.pos = ch.tgt;
+    else ch.pos += (ch.tgt - ch.pos) * (1 - Math.exp(-dt / (navFast ? 0.04 : ch.tau || CH_TAU)));   /* 길게 누르는 동안은 더 바짝 따라감 */
+    /* 세 벌 중 가운데 쪽으로 몰래 되돌림 (벌마다 똑같이 그려져 있어 보이는 건 그대로) */
+    if (ch.pos < -CN / 2 || ch.pos >= CN * 1.5) { const s = Math.floor(ch.pos / CN) * CN; ch.pos -= s; ch.tgt -= s; }
+    if (ch.follow) { const d = addDays(ch.start, ringI(Math.round(ch.pos))); if (d !== sel) { sel = d; navAt = Date.now(); vib(); render(); } }
+    const done = !ch.drag && Math.abs(ch.tgt - ch.pos) < 0.003;
+    if (done) { ch.pos = ch.tgt; ch.follow = false; ch.tau = 0; }
+    paintStrip();
+    ch.raf = done ? 0 : requestAnimationFrame(step);
+  };
+  ch.raf = requestAnimationFrame(step);
 }
 function placeCursor() {
   if (!ch) return;
   const i = dayDiff(ch.start, sel); if (i < 0 || i >= CN) return;
-  clearTimeout(ch.normT);
-  if (ch.p == null) { ch.p = i; stripTo(i, false); }
-  else {
-    if (ch.p < -45 || ch.p >= CN + 45) { ch.p = ringI(ch.p); stripTo(ch.p, false); }
-    const d = ringI(i - ringI(ch.p) + CN / 2) - CN / 2;
-    if (d) { ch.p += d; stripTo(ch.p, true); }
-    if (ch.p < 0 || ch.p >= CN) ch.normT = setTimeout(() => { ch.p = ringI(ch.p); stripTo(ch.p, false); }, 450);
+  if (ch.pos == null) { ch.pos = ch.tgt = i; paintStrip(); }
+  else if (!ch.follow && !ch.drag) {
+    const t = Math.round(ch.tgt), d = ringI(i - ringI(t) + CN / 2) - CN / 2;   /* 고리에서 가까운 쪽으로 */
+    if (d) { ch.tgt = t + d; ch.tau = 0; runStrip(); }
   }
   /* 고른 날 막대 강조는 가운데 고정 막대 하나로 (띠 전체를 다시 그리지 않게) */
   const [by, bh, bf] = ch.bar[i], cb = $('cbx'); cb.setAttribute('y', by.toFixed(1)); cb.setAttribute('height', bh.toFixed(1)); cb.classList.toggle('fu', bf);
@@ -649,25 +662,43 @@ function updChart(M) {
 function stepDay(d) {
   const t = today(); let nd = addDays(sel, d); const o = dayDiff(t, nd);
   if (o > RFUT) nd = addDays(t, -RPAST); else if (o < -RPAST) nd = addDays(t, RFUT);
+  if (ch) ch.follow = false;
   sel = nd; navAt = Date.now(); vib(); render(); return true;
 }
 (() => {
-  /* 띠를 끌면 손가락을 따라 날짜가 넘어가고, 그냥 탭하면 그 자리 날짜로 */
+  /* 띠를 끌면 손가락 그대로 따라오고(날짜도 같이), 놓으면 그 속도로 미끄러져 멈춤. 그냥 탭하면 그 자리 날짜로 */
   const el = $('ch'); let dn = null;
-  const unit = (e) => { const r = el.querySelector('.cv').getBoundingClientRect(); return { r, k: CW / r.width }; };
-  const go = (i) => { const d = addDays(ch.start, ringI(i)); navAt = Date.now(); if (d !== sel) { sel = d; vib(); render(); } };
+  const unit = () => { const r = el.querySelector('.cv').getBoundingClientRect(); return { r, k: CW / r.width }; };
   el.addEventListener('pointerdown', (e) => {
-    if (!ch) return; try { el.setPointerCapture(e.pointerId); } catch (er) {}
-    dn = { x: e.clientX, i: dayDiff(ch.start, sel), moved: false }; el.classList.add('drag');
+    if (!ch || ch.pos == null) return; try { el.setPointerCapture(e.pointerId); } catch (er) {}
+    const t = performance.now();
+    dn = { x: e.clientX, p0: ch.pos, moved: false, s: [[t, ch.pos]] };
+    ch.tgt = ch.pos; ch.drag = true; ch.follow = true; ch.tau = 0; runStrip();
   });
   el.addEventListener('pointermove', (e) => {
-    if (!dn) return; const dx = (e.clientX - dn.x) * unit(e).k;
+    if (!dn) return; const dx = (e.clientX - dn.x) * unit().k;
     if (Math.abs(dx) > 4) dn.moved = true;
-    if (dn.moved) go(dn.i - Math.round(dx / CCW));
+    if (!dn.moved) return;
+    const t = performance.now(); ch.tgt = dn.p0 - dx / CCW;
+    dn.s.push([t, ch.tgt]); while (dn.s.length > 2 && t - dn.s[0][0] > 60) dn.s.shift();
   });
   const end = (e, tap) => {
-    if (!dn) return; el.classList.remove('drag');
-    if (tap && !dn.moved) { const { r, k } = unit(e); go(dn.i + Math.round(((e.clientX - r.left) * k - CMID) / CCW)); }
+    if (!dn || !ch) { dn = null; return; }
+    ch.drag = false;
+    if (tap && !dn.moved) {
+      /* 탭: 누른 자리 날짜로 */
+      const { r, k } = unit(); ch.follow = false;
+      const i = Math.round(dn.p0) + Math.round(((e.clientX - r.left) * k - CMID) / CCW), d = addDays(ch.start, ringI(i));
+      ch.tgt = Math.round(dn.p0); navAt = Date.now(); if (d !== sel) { sel = d; vib(); render(); } else runStrip();
+    } else {
+      /* 놓기: 마지막 60ms 속도(일/초)로 미끄러질 곳을 정하고, 그 날에 지수 감속으로 멈춤 */
+      const a = dn.s[0], b = dn.s[dn.s.length - 1], t = performance.now();
+      let v = b[0] > a[0] && t - b[0] < 80 ? (b[1] - a[1]) / (b[0] - a[0]) * 1000 : 0;
+      v = Math.sign(v) * Math.min(400, Math.max(0, Math.abs(v) - 4));
+      ch.tgt = Math.round(ch.pos + v * 0.25);
+      const rem = ch.tgt - ch.pos; ch.tau = v && rem * v > 0 ? Math.max(0.08, Math.min(0.25, rem / v)) : CH_TAU;
+      runStrip();
+    }
     dn = null;
   };
   el.addEventListener('pointerup', (e) => end(e, true)); el.addEventListener('pointercancel', (e) => end(e, false));
@@ -693,7 +724,7 @@ const bez = (x1, y1, x2, y2) => (x) => {   /* CSS cubic-bezier(x1,y1,x2,y2): x �
   let lo = 0, hi = 1, t = x; for (let k = 0; k < 20; k++) { t = (lo + hi) / 2; if (f(t, x1, x2) < x) lo = t; else hi = t; }
   return f(t, y1, y2);
 };
-const NAV_EASE = bez(0.3, 0, 0.2, 1), NAV_V0 = 15, NAV_VMAX = 360, NAV_RAMP = 500;   /* 일/초 · 0.5초 만에 최고 = 90일 한 바퀴 0.25초 */
+const NAV_EASE = bez(0.2, 0.6, 0.3, 1), NAV_V0 = 40, NAV_VMAX = 300, NAV_RAMP = 300;   /* 일/초 · 덤벨 앱처럼 거의 바로 최고 속도 (0.3초) */
 const WSTEP = { 'w+.1': 0.1, 'w-.1': -0.1, 'w+1': 1, 'w-1': -1 };
 function renderPad() {
   const isToday = sel === today(), fut = sel > today(), big = (s) => '<b style="font-size:19px;letter-spacing:-.02em">' + s + '</b>';
@@ -760,7 +791,7 @@ pad.addEventListener('pointerdown', (e) => {
       const n = Math.floor(acc); if (n) { acc -= n; stepDay(d * n); }
       navBlur(v); holdR = requestAnimationFrame(loop);
     };
-    holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, 130);
+    holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, 150);
   }
   if (pdn.k === 'fav' && favOpen()) pdn.p0 = fav.api.pos;
 });
