@@ -134,6 +134,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 @keyframes phbar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 #phb.alb{background:#FDF0E8;color:var(--accTxt)}
 #phb.alb i{display:none}
+#phb.tap{pointer-events:auto;cursor:pointer;padding:13px 20px;font-size:16px;-webkit-tap-highlight-color:transparent}
+#phb.tap:active{transform:translate(-50%,-100%) scale(.96)}
 .k.tdk{color:var(--accTxt)}
 .k .dot{position:absolute;top:9px;right:11px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
 .pad.jog{background:#FDF0E8}
@@ -277,7 +279,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <input id="q" placeholder="뭐 먹었어요? 예: 김치찌개, 밥 반공기" enterkeyhint="send">
   <button id="send" aria-label="기록"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 </form>
-<input type="file" id="file" accept="image/*" capture="environment" hidden><input type="file" id="file2" accept="image/*" hidden><div id="phb" hidden></div>
+<input type="file" id="file" accept="image/*" capture="environment" hidden><input type="file" id="file2" accept="image/*" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0"><label id="phb" for="file2" hidden></label>
 <div class="fw" id="fw" hidden><div id="fwD"><div class="wp"><div class="tr"></div></div></div><div class="lens"><div id="fwM"></div></div><div id="fwR"></div><button id="fwOk" aria-label="렌즈 음식 기록"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><p class="fwh" id="fwH"></p><button id="fwX" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 
 <dialog class="sheet" id="card"><div class="sh">
@@ -1067,7 +1069,6 @@ function stepW(d) {
 function act(k) {
   if (k === 'today') { if (sel !== today()) { if (ch) ch.follow = false; sel = today(); navAt = Date.now(); vib(); sfx('tick'); render(); } }
   else if (k === 'photo') $('file').click();   /* 바로 카메라 */
-  else if (k === 'album') { $('file2').click(); if (!lsGet(ALBK)) { lsSet(ALBK, '1'); padHTML = ''; renderPad(); } }
   else if (k === 'write') { $('bar').hidden = false; $('q').focus(); }
   else if (k === 'manual') openMan();
   else if (k === 'plan') confirmPlan();
@@ -1121,7 +1122,7 @@ pad.addEventListener('pointerdown', (e) => {
     const r = b.getBoundingClientRect(), ph = $('phb');
     ph.className = ''; ph.innerHTML = ic(I.cam) + '카메라<i></i>';
     ph.style.left = Math.max(70, Math.min(innerWidth - 70, r.left + r.width / 2)) + 'px'; ph.style.top = Math.max(60, r.top - 54) + 'px'; ph.hidden = false;
-    holdT = setTimeout(() => { if (!pdn || pdn.k !== 'photo') return; pdn.alb = true; b.classList.add('alb'); b.innerHTML = ic(I.pic) + '<span>앨범</span>'; ph.className = 'alb'; ph.innerHTML = ic(I.pic) + '앨범에서 고르기'; vib(); sfx('tick'); }, 450);
+    holdT = setTimeout(() => { if (!pdn || pdn.k !== 'photo') return; pdn.alb = true; b.classList.add('alb'); b.innerHTML = ic(I.pic) + '<span>앨범</span>'; ph.className = 'alb'; ph.innerHTML = ic(I.pic) + '떼고 한 번 더 탭'; vib(); sfx('tick'); }, 450);
   }
   if (pdn.k === 'fav' && favOpen()) { fav.g.lx = fav.g.x = e.clientX; fav.g.ly = fav.g.ay = e.clientY; }
 });
@@ -1144,25 +1145,31 @@ const pend = (e, cancel) => {
   if (p.k === 'fav' && fav.open) { if (cancel || p.cx) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
   else if (mode === 'weight' && p.moved) wRoll.to(wVal, 160);
   else if (p.k === 'photo') {   /* 사진: 손 떼는 순간 — 짧게 = 바로 카메라(capture), 길게(0.45초) = 앨범 */
-    $('phb').hidden = true;
-    /* iOS: 길게 누른 뒤의 pointerup은 '사용자 동작'으로 안 쳐서 file.click()이 막힘 → 터치는 touchend에서 엶.
-       길게 누르면 iOS가 pointercancel을 보내기도 해서, 앨범이 이미 정해졌으면 cancel이어도 엶 */
-    if (!p.moved && (!cancel || p.alb) && p.b && !p.b.disabled) {
-      suppress = false; const k = p.alb ? 'album' : 'photo';
-      if (e.pointerType === 'mouse' || k === 'photo') act(k);   /* 짧은 탭 = pointerup에서 바로 (예전처럼, 늦지 않게) */
-      else { photoPend = k; clearTimeout(photoPendT); photoPendT = setTimeout(() => { if (photoPend) { const q = photoPend; photoPend = null; act(q); } }, 350); }
+    /* iOS는 길게 누른 뒤 앱이 file.click()으로 앨범을 여는 걸 막음 → 길게 = 말풍선이 "앨범 열기" 버튼(label for=file2)으로 남고,
+       사용자가 그걸 직접 탭하면 열림(진짜 탭이라 안 막힘). 길게 누르는 중 iOS가 pointercancel을 보내도 앨범이 정해졌으면 남김 */
+    if (p.alb && !p.moved) albTap();
+    else {
+      $('phb').hidden = true;
+      if (!cancel && !p.moved && p.b && !p.b.disabled) { suppress = false; act('photo'); }   /* 짧은 탭 = 손 떼면 바로 카메라 */
     }
     padHTML = ''; padLater = true;   /* 바꾼 아이콘·테두리 되돌림 */
   }
   if (padLater) { padLater = false; renderPad(); }
 };
 pad.addEventListener('pointerup', (e) => pend(e, false));
-let photoPend = null, photoPendT = 0;
-/* touchend는 pointerup 다음에 옴 — 여기서 열면 iOS도 사진·앨범 창을 띄움 */
-window.addEventListener('touchend', (e) => {
-  if (pdn && pdn.k === 'photo') pend(e, false);
-  if (photoPend) { const k = photoPend; photoPend = null; clearTimeout(photoPendT); e.preventDefault(); act(k); }
-}, { capture: true, passive: false });
+/* 앨범 열기 말풍선: 3초 동안 탭할 수 있게 남음. 다른 곳을 누르면 닫힘 */
+let albT = 0;
+function albTap() {
+  const ph = $('phb'); clearTimeout(albT);
+  ph.className = 'alb tap'; ph.innerHTML = ic(I.pic) + '앨범 열기'; ph.hidden = false;
+  albT = setTimeout(albHide, 3000);
+}
+function albHide() { clearTimeout(albT); const ph = $('phb'); ph.hidden = true; ph.className = ''; }
+window.addEventListener('pointerdown', (e) => { if (!$('phb').hidden && !e.target.closest('#phb')) albHide(); }, true);
+$('phb').addEventListener('click', () => {   /* label이 file2를 직접 엶 — 여기선 정리만 */
+  setTimeout(albHide, 0);
+  if (!lsGet(ALBK)) { lsSet(ALBK, '1'); padHTML = ''; renderPad(); }
+});
 pad.addEventListener('pointercancel', (e) => pend(e, true));
 /* 손 뗀 신호가 패드에 안 와도(덮개·다시 그리기) 놓친 채 멈추지 않게 */
 window.addEventListener('pointerup', (e) => { if (pdn) pend(e, false); });
