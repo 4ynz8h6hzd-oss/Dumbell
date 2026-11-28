@@ -124,6 +124,16 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .k.phold::after{content:'';position:absolute;inset:2px;border-radius:20px;border:2.5px solid var(--acc);animation:phr .45s linear forwards;pointer-events:none}
 @keyframes phr{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
 .k.alb{background:#FDF0E8;color:var(--accTxt)}
+/* 사진 누르는 동안 엄지 위에 뜨는 말풍선 (엄지가 버튼을 가리니까): 카메라 → 0.45초 뒤 앨범, 아래 막대가 차오름 */
+#phb{position:fixed;z-index:60;transform:translate(-50%,-100%);display:flex;align-items:center;gap:6px;padding:9px 14px 11px;border-radius:16px;background:#fff;color:var(--ink);font-size:15px;font-weight:700;box-shadow:0 6px 22px rgba(0,0,0,.18);pointer-events:none;white-space:nowrap}
+#phb[hidden]{display:none}
+#phb svg{width:20px;height:20px}
+#phb::after{content:'';position:absolute;left:50%;bottom:-6px;width:12px;height:12px;background:inherit;transform:translateX(-50%) rotate(45deg)}
+#phb i{position:absolute;left:12px;right:12px;bottom:5px;height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+#phb i::before{content:'';position:absolute;inset:0;background:var(--acc);transform-origin:left;animation:phbar .45s linear forwards}
+@keyframes phbar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+#phb.alb{background:#FDF0E8;color:var(--accTxt)}
+#phb.alb i{display:none}
 .k.tdk{color:var(--accTxt)}
 .k .dot{position:absolute;top:9px;right:11px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
 .pad.jog{background:#FDF0E8}
@@ -267,7 +277,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <input id="q" placeholder="뭐 먹었어요? 예: 김치찌개, 밥 반공기" enterkeyhint="send">
   <button id="send" aria-label="기록"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 </form>
-<input type="file" id="file" accept="image/*" capture="environment" hidden><input type="file" id="file2" accept="image/*" hidden>
+<input type="file" id="file" accept="image/*" capture="environment" hidden><input type="file" id="file2" accept="image/*" hidden><div id="phb" hidden></div>
 <div class="fw" id="fw" hidden><div id="fwD"><div class="wp"><div class="tr"></div></div></div><div class="lens"><div id="fwM"></div></div><div id="fwR"></div><button id="fwOk" aria-label="렌즈 음식 기록"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><p class="fwh" id="fwH"></p><button id="fwX" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 
 <dialog class="sheet" id="card"><div class="sh">
@@ -1108,13 +1118,16 @@ pad.addEventListener('pointerdown', (e) => {
   }
   if (pdn.k === 'photo') {
     b.classList.add('phold');
-    holdT = setTimeout(() => { if (!pdn || pdn.k !== 'photo') return; pdn.alb = true; b.classList.add('alb'); b.innerHTML = ic(I.pic) + '<span>앨범</span>'; vib(); sfx('tick'); }, 450);
+    const r = b.getBoundingClientRect(), ph = $('phb');
+    ph.className = ''; ph.innerHTML = ic(I.cam) + '카메라<i></i>';
+    ph.style.left = Math.max(70, Math.min(innerWidth - 70, r.left + r.width / 2)) + 'px'; ph.style.top = Math.max(60, r.top - 54) + 'px'; ph.hidden = false;
+    holdT = setTimeout(() => { if (!pdn || pdn.k !== 'photo') return; pdn.alb = true; b.classList.add('alb'); b.innerHTML = ic(I.pic) + '<span>앨범</span>'; ph.className = 'alb'; ph.innerHTML = ic(I.pic) + '앨범에서 고르기'; vib(); sfx('tick'); }, 450);
   }
   if (pdn.k === 'fav' && favOpen()) { fav.g.lx = fav.g.x = e.clientX; fav.g.ly = fav.g.ay = e.clientY; }
 });
 pad.addEventListener('pointermove', (e) => {
   if (!pdn) return;
-  if (!pdn.moved && (Math.abs(e.clientY - pdn.y) > 10 || (pdn.k === 'fav' && Math.abs(e.clientX - pdn.x) > 10))) { pdn.moved = true; suppress = true; stopHold(); if (pdn.b) pdn.b.classList.remove('phold'); }
+  if (!pdn.moved && (Math.abs(e.clientY - pdn.y) > 10 || (pdn.k === 'fav' && Math.abs(e.clientX - pdn.x) > 10))) { pdn.moved = true; suppress = true; stopHold(); if (pdn.b) pdn.b.classList.remove('phold'); $('phb').hidden = true; }
   if (!pdn.moved) return;
   if (pdn.k === 'fav' && fav.open) { favMove(e); return; }
   if (mode === 'weight') {
@@ -1131,6 +1144,7 @@ const pend = (e, cancel) => {
   if (p.k === 'fav' && fav.open) { if (cancel || p.cx) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
   else if (mode === 'weight' && p.moved) wRoll.to(wVal, 160);
   else if (p.k === 'photo') {   /* 사진: 손 떼는 순간 — 짧게 = 바로 카메라(capture), 길게(0.45초) = 앨범 */
+    $('phb').hidden = true;
     if (!cancel && !p.moved && e.type === 'pointerup' && p.b && !p.b.disabled) { suppress = false; act(p.alb ? 'album' : 'photo'); }
     padHTML = ''; padLater = true;   /* 바꾼 아이콘·테두리 되돌림 */
   }
