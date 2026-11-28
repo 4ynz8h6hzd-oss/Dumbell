@@ -262,7 +262,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <input id="q" placeholder="뭐 먹었어요? 예: 김치찌개, 밥 반공기" enterkeyhint="send">
   <button id="send" aria-label="기록"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 </form>
-<input type="file" id="file" accept="image/*" hidden>
+<input type="file" id="file" accept="image/*" capture="environment" hidden>
 <div class="fw" id="fw" hidden><div id="fwD"><div class="wp"><div class="tr"></div></div></div><div class="lens"><div id="fwM"></div></div><div id="fwR"></div><button id="fwOk" aria-label="렌즈 음식 기록"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><p class="fwh" id="fwH"></p><button id="fwX" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 
 <dialog class="sheet" id="card"><div class="sh">
@@ -1118,6 +1118,7 @@ const pend = (e, cancel) => {
   if (p.b) p.b.classList.remove('pressed');
   if (p.k === 'fav' && fav.open) { if (cancel || p.cx) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
   else if (mode === 'weight' && p.moved) wRoll.to(wVal, 160);
+  else if (p.k === 'photo' && !cancel && !p.moved && e.type === 'pointerup' && p.b && !p.b.disabled) { suppress = false; act('photo'); }   /* 사진: 손 떼는 순간 바로 카메라(파일 선택 메뉴 없이 capture) */
   if (padLater) { padLater = false; renderPad(); }
 };
 pad.addEventListener('pointerup', (e) => pend(e, false));
@@ -1129,7 +1130,7 @@ pad.addEventListener('contextmenu', (e) => e.preventDefault());
 pad.addEventListener('click', (e) => {
   const b = e.target.closest('.k[data-k]'); if (!b || b.disabled) return;
   if (suppress) { suppress = false; return; }
-  const k = b.dataset.k; if (WSTEP[k] || DSTEP[k] || k === 'fav') return;
+  const k = b.dataset.k; if (WSTEP[k] || DSTEP[k] || k === 'fav' || k === 'photo') return;
   act(k);
 });
 $('hero').addEventListener('click', (e) => {
