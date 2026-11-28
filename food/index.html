@@ -119,23 +119,6 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .k.go{border-radius:50%;background:var(--acc);color:#fff;box-shadow:0 6px 14px rgba(242,107,29,.3)}
 .k.go:active{transform:scale(.93)}
 .k.blank{visibility:hidden}
-/* 사진 길게 누르기 = 앨범: 누르는 동안 테두리가 0.45초에 걸쳐 차오르고, 다 차면 아이콘·글자가 '앨범'으로 바뀜 */
-.k .hint{font-size:9px;font-weight:600;color:var(--mute);margin-top:-1px}
-.k.phold::after{content:'';position:absolute;inset:2px;border-radius:20px;border:2.5px solid var(--acc);animation:phr .45s linear forwards;pointer-events:none}
-@keyframes phr{from{clip-path:inset(100% 0 0 0)}to{clip-path:inset(0 0 0 0)}}
-.k.alb{background:#FDF0E8;color:var(--accTxt)}
-/* 사진 누르는 동안 엄지 위에 뜨는 말풍선 (엄지가 버튼을 가리니까): 카메라 → 0.45초 뒤 앨범, 아래 막대가 차오름 */
-#phb{position:fixed;z-index:60;transform:translate(-50%,-100%);display:flex;align-items:center;gap:6px;padding:9px 14px 11px;border-radius:16px;background:#fff;color:var(--ink);font-size:15px;font-weight:700;box-shadow:0 6px 22px rgba(0,0,0,.18);pointer-events:none;white-space:nowrap}
-#phb[hidden]{display:none}
-#phb svg{width:20px;height:20px}
-#phb::after{content:'';position:absolute;left:50%;bottom:-6px;width:12px;height:12px;background:inherit;transform:translateX(-50%) rotate(45deg)}
-#phb i{position:absolute;left:12px;right:12px;bottom:5px;height:3px;border-radius:2px;background:var(--line);overflow:hidden}
-#phb i::before{content:'';position:absolute;inset:0;background:var(--acc);transform-origin:left;animation:phbar .45s linear forwards}
-@keyframes phbar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
-#phb.alb{background:#FDF0E8;color:var(--accTxt)}
-#phb.alb i{display:none}
-#phb.tap{pointer-events:auto;cursor:pointer;padding:13px 20px;font-size:16px;-webkit-tap-highlight-color:transparent}
-#phb.tap:active{transform:translate(-50%,-100%) scale(.96)}
 .k.tdk{color:var(--accTxt)}
 .k .dot{position:absolute;top:9px;right:11px;width:7px;height:7px;border-radius:50%;background:var(--acc)}
 .pad.jog{background:#FDF0E8}
@@ -279,7 +262,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <input id="q" placeholder="뭐 먹었어요? 예: 김치찌개, 밥 반공기" enterkeyhint="send">
   <button id="send" aria-label="기록"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 </form>
-<input type="file" id="file" accept="image/*" capture="environment" hidden><input type="file" id="file2" accept="image/*" style="position:fixed;left:-9999px;top:0;width:1px;height:1px;opacity:0"><label id="phb" for="file2" hidden></label>
+<input type="file" id="file" accept="image/*" hidden>
 <div class="fw" id="fw" hidden><div id="fwD"><div class="wp"><div class="tr"></div></div></div><div class="lens"><div id="fwM"></div></div><div id="fwR"></div><button id="fwOk" aria-label="렌즈 음식 기록"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button><p class="fwh" id="fwH"></p><button id="fwX" aria-label="닫기"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
 
 <dialog class="sheet" id="card"><div class="sh">
@@ -357,7 +340,6 @@ dialog.sheet[open]{animation:up .22s ease-out}
 (() => {
 'use strict';
 const $ = (id) => document.getElementById(id);
-const ALBK = 'food-album-used';   /* 앨범을 한 번 쓰면 '길게: 앨범' 안내를 숨김 */
 const KEY = 'food-log', CFGK = 'food-cfg', AIK = 'food-claude-key', TOKK = 'dumbbell-gh-token', SYNCK = 'food-gh-sync';
 const MODEL = 'claude-haiku-5-5';
 const GMODELS = ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-flash-latest']; // 무료 Gemini 키 — 혼잡(503·429)이면 다음 모델
@@ -1020,7 +1002,6 @@ const ic = (d, s) => '<svg width="' + (s || 22) + '" height="' + (s || 22) + '" 
 const I = {
   left: '<path d="M15 6l-6 6 6 6"/>', right: '<path d="M9 6l6 6-6 6"/>', up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
   today: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/>',
-  pic: '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M20 16l-5-5-8 8"/>',
   cam: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   scale: '<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 10.5a3 3 0 0 1 6 0"/><path d="M12 10.5l1.4-1.8"/>',
   pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',
@@ -1048,7 +1029,7 @@ function renderPad() {
     ['w-1', 'arm', big('−1'), 'kg'], ['wok', 'go', ic(I.check, 30), ''], ['w+1', 'arm', big('+1'), 'kg'],
     ['', 'blank'], ['w-.1', 'arm', ic(I.down), '0.1'], ['', 'blank']
   ] : [
-    ['prev', 'cor', ic(I.left), '전날'], ['photo', 'arm', ic(I.cam), '사진' + (lsGet(ALBK) ? '' : '</span><span class="hint">길게: 앨범')], ['next', 'cor', ic(I.right), '다음날'],
+    ['prev', 'cor', ic(I.left), '전날'], ['photo', 'arm', ic(I.cam), '사진'], ['next', 'cor', ic(I.right), '다음날'],
     ['weight', 'arm', ic(I.scale), '몸무게', false, isToday && !weightOn(sel)], ['write', 'go', ic(I.pen, 28), ''], ['fav', 'arm', ic(I.star), '자주', !data.foods.length],
     /* 오늘(기록 없으면) = 예상대로 · 오늘이 아닌 날: 오른쪽 아래 = 오늘 (추세는 코칭 글자를 탭해도 열림). 예상대로가 그 자리를 쓰면 오늘은 왼쪽 아래 */
     planOK && !isToday ? ['today', 'arm tdk', ic(I.today), '오늘'] : ['undo', 'cor', ic(I.undo, 20), '되돌리기', !lastAdd.length], ['manual', 'arm', ic(I.plus), '직접'],
@@ -1068,7 +1049,7 @@ function stepW(d) {
 }
 function act(k) {
   if (k === 'today') { if (sel !== today()) { if (ch) ch.follow = false; sel = today(); navAt = Date.now(); vib(); sfx('tick'); render(); } }
-  else if (k === 'photo') $('file').click();   /* 바로 카메라 */
+  else if (k === 'photo') $('file').click();
   else if (k === 'write') { $('bar').hidden = false; $('q').focus(); }
   else if (k === 'manual') openMan();
   else if (k === 'plan') confirmPlan();
@@ -1117,18 +1098,11 @@ pad.addEventListener('pointerdown', (e) => {
     };
     holdT = setTimeout(() => { t0 = last = performance.now(); $('ch').classList.add('fast'); navFast = true; holdR = requestAnimationFrame(loop); }, MAG.delay);
   }
-  if (pdn.k === 'photo') {
-    b.classList.add('phold');
-    const r = b.getBoundingClientRect(), ph = $('phb');
-    ph.className = ''; ph.innerHTML = ic(I.cam) + '카메라<i></i>';
-    ph.style.left = Math.max(70, Math.min(innerWidth - 70, r.left + r.width / 2)) + 'px'; ph.style.top = Math.max(60, r.top - 54) + 'px'; ph.hidden = false;
-    holdT = setTimeout(() => { if (!pdn || pdn.k !== 'photo') return; pdn.alb = true; b.classList.add('alb'); b.innerHTML = ic(I.pic) + '<span>앨범</span>'; ph.className = 'alb'; ph.innerHTML = ic(I.pic) + '떼고 한 번 더 탭'; vib(); sfx('tick'); }, 450);
-  }
   if (pdn.k === 'fav' && favOpen()) { fav.g.lx = fav.g.x = e.clientX; fav.g.ly = fav.g.ay = e.clientY; }
 });
 pad.addEventListener('pointermove', (e) => {
   if (!pdn) return;
-  if (!pdn.moved && (Math.abs(e.clientY - pdn.y) > 10 || (pdn.k === 'fav' && Math.abs(e.clientX - pdn.x) > 10))) { pdn.moved = true; suppress = true; stopHold(); if (pdn.b) pdn.b.classList.remove('phold'); $('phb').hidden = true; }
+  if (!pdn.moved && (Math.abs(e.clientY - pdn.y) > 10 || (pdn.k === 'fav' && Math.abs(e.clientX - pdn.x) > 10))) { pdn.moved = true; suppress = true; stopHold(); }
   if (!pdn.moved) return;
   if (pdn.k === 'fav' && fav.open) { favMove(e); return; }
   if (mode === 'weight') {
@@ -1144,32 +1118,9 @@ const pend = (e, cancel) => {
   if (p.b) p.b.classList.remove('pressed');
   if (p.k === 'fav' && fav.open) { if (cancel || p.cx) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
   else if (mode === 'weight' && p.moved) wRoll.to(wVal, 160);
-  else if (p.k === 'photo') {   /* 사진: 손 떼는 순간 — 짧게 = 바로 카메라(capture), 길게(0.45초) = 앨범 */
-    /* iOS는 길게 누른 뒤 앱이 file.click()으로 앨범을 여는 걸 막음 → 길게 = 말풍선이 "앨범 열기" 버튼(label for=file2)으로 남고,
-       사용자가 그걸 직접 탭하면 열림(진짜 탭이라 안 막힘). 길게 누르는 중 iOS가 pointercancel을 보내도 앨범이 정해졌으면 남김 */
-    if (p.alb && !p.moved) albTap();
-    else {
-      $('phb').hidden = true;
-      if (!cancel && !p.moved && p.b && !p.b.disabled) { suppress = false; act('photo'); }   /* 짧은 탭 = 손 떼면 바로 카메라 */
-    }
-    padHTML = ''; padLater = true;   /* 바꾼 아이콘·테두리 되돌림 */
-  }
   if (padLater) { padLater = false; renderPad(); }
 };
 pad.addEventListener('pointerup', (e) => pend(e, false));
-/* 앨범 열기 말풍선: 3초 동안 탭할 수 있게 남음. 다른 곳을 누르면 닫힘 */
-let albT = 0;
-function albTap() {
-  const ph = $('phb'); clearTimeout(albT);
-  ph.className = 'alb tap'; ph.innerHTML = ic(I.pic) + '앨범 열기'; ph.hidden = false;
-  albT = setTimeout(albHide, 3000);
-}
-function albHide() { clearTimeout(albT); const ph = $('phb'); ph.hidden = true; ph.className = ''; }
-window.addEventListener('pointerdown', (e) => { if (!$('phb').hidden && !e.target.closest('#phb')) albHide(); }, true);
-$('phb').addEventListener('click', () => {   /* label이 file2를 직접 엶 — 여기선 정리만 */
-  setTimeout(albHide, 0);
-  if (!lsGet(ALBK)) { lsSet(ALBK, '1'); padHTML = ''; renderPad(); }
-});
 pad.addEventListener('pointercancel', (e) => pend(e, true));
 /* 손 뗀 신호가 패드에 안 와도(덮개·다시 그리기) 놓친 채 멈추지 않게 */
 window.addEventListener('pointerup', (e) => { if (pdn) pend(e, false); });
@@ -1178,7 +1129,7 @@ pad.addEventListener('contextmenu', (e) => e.preventDefault());
 pad.addEventListener('click', (e) => {
   const b = e.target.closest('.k[data-k]'); if (!b || b.disabled) return;
   if (suppress) { suppress = false; return; }
-  const k = b.dataset.k; if (WSTEP[k] || DSTEP[k] || k === 'fav' || k === 'photo') return;
+  const k = b.dataset.k; if (WSTEP[k] || DSTEP[k] || k === 'fav') return;
   act(k);
 });
 $('hero').addEventListener('click', (e) => {
@@ -1549,16 +1500,14 @@ function shrink(f) {
     im.src = u;
   });
 }
-const onPhoto = async (e) => {
+$('file').addEventListener('change', async (e) => {
   const f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
   try {
     const img = await shrink(f);
     if (!lsGet(AIK)) { openCard([rowFrom({}, true)], '사진 추정에는 AI 키가 필요해요 · 설정에서 넣어요', 'manual', img); return; }
     ask('', img);
   } catch (er) { toast('사진을 읽지 못했어요'); }
-};
-$('file').addEventListener('change', onPhoto);
-$('file2').addEventListener('change', onPhoto);
+});
 
 /* ---------- 기록 수정 ---------- */
 let editing = null;
