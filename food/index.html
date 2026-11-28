@@ -1149,7 +1149,7 @@ const pend = (e, cancel) => {
        길게 누르면 iOS가 pointercancel을 보내기도 해서, 앨범이 이미 정해졌으면 cancel이어도 엶 */
     if (!p.moved && (!cancel || p.alb) && p.b && !p.b.disabled) {
       suppress = false; const k = p.alb ? 'album' : 'photo';
-      if (e.pointerType === 'mouse') act(k);
+      if (e.pointerType === 'mouse' || k === 'photo') act(k);   /* 짧은 탭 = pointerup에서 바로 (예전처럼, 늦지 않게) */
       else { photoPend = k; clearTimeout(photoPendT); photoPendT = setTimeout(() => { if (photoPend) { const q = photoPend; photoPend = null; act(q); } }, 350); }
     }
     padHTML = ''; padLater = true;   /* 바꾼 아이콘·테두리 되돌림 */
