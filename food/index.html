@@ -326,7 +326,6 @@ dialog.sheet[open]{animation:up .22s ease-out}
   <div class="row" style="margin-top:0"><button class="b2" id="smpBtn"></button></div>
   <h3>효과음 (운동 앱과 같은 설정)</h3>
   <div class="row" style="margin-top:0"><button class="b2" id="sndTog" aria-pressed="true">켜짐</button></div>
-  <label class="fld">소리 질감 <span id="sndMixV"></span><input type="range" id="sndMix" min="0" max="100" step="5" value="70" style="accent-color:var(--acc,#F26B1D)"></label>
   <h3>GitHub 자동 저장 (운동 앱과 같은 토큰)</h3>
   <p class="st" id="ghSt"></p>
   <label class="fld" id="tokF"><input id="sTok" type="password" placeholder="github_pat_…" autocomplete="off"></label>
@@ -478,7 +477,7 @@ function model0() {
 /* ---------- 원통(드럼): 덤벨 앱 운동 바퀴와 같은 3D 원통. 렌즈는 제자리, 줄만 원통 둘레로 굴러감 ----------
    el 안에 .wp > .tr > 줄(.r)들. o: h(칸 크기), step(칸당 각도), axis 'y'면 가로로 굴러감, loop, start, drag(직접 끌기), onPick(i, 확정?) */
 /* ---------- 효과음: 덤벨 앱과 같은 합성 소리 (Web Audio, 파일 없음) ----------
-   설정(켜기·질감)은 덤벨 앱과 같은 localStorage 키를 같이 씀(같은 출처). 덤벨에서 바꾸면 여기도 바뀜.
+   설정(켜기)은 덤벨 앱과 같은 localStorage 키를 같이 씀(같은 출처). 덤벨에서 바꾸면 여기도 바뀜.
    날짜·원통 한 칸 = tick, 전날·다음날 한 번 = nav, 몸무게 ±1 = wup/wdn, ±0.1 = rep, 몸무게 저장 = set1,
    음식 기록 = set2, 예상대로 = ex, 되돌리기·지우기 = undo, 몸무게 끝 = edge */
 function audio() {
@@ -546,22 +545,22 @@ function stone(t, f, g, d, out) {     /* organic: 둔한 돌·나무 몸통 */
   s.buffer = sNoise(0.06); fl.type = 'lowpass'; fl.frequency.value = 600; sEnv(n, t, g * 0.4, 0.004, 0.05);
   s.connect(fl); fl.connect(n); n.connect(out); s.start(t); s.stop(t + 0.08);
 }
+/* tick과 같은 결: 짧고 둥근 사인파 "톡". 잔향·저음·잡음 없음 (tick만 예전 그대로) */
+const tok = (t, f, to, g, d, o) => sOsc(t, f, to, g, 0.004, d, o, d * 0.6);
+const notes = (t, fs, gap, g, d, o) => fs.forEach((f, i) => tok(t + i * gap, f, 0, g, d, o));
 const SFX = {
-  rep: (t) => { const o = sfxBus(0.25); metal(t, 1180, 0.035 * fg(), 0.35, o); stone(t, 300, 0.05 * og(), 0.05, o); },
-  wup: (t) => { const o = sfxBus(0.3); sub(t, 62, 50, 0.3 * fg(), 0.35, o); metal(t, 330, 0.035 * fg(), 0.5, o); stone(t, 90, 0.14 * og(), 0.1, o); },   /* 무거워질수록 낮게 */
-  wdn: (t) => { const o = sfxBus(0.3); sub(t, 82, 92, 0.26 * fg(), 0.3, o); metal(t, 440, 0.035 * fg(), 0.45, o); stone(t, 120, 0.12 * og(), 0.1, o); },
-  edge: (t) => { const o = sfxBus(0.2); cavity(t, 46, 0.5 * fg(), 0.5, o); stone(t, 60, 0.25 * og(), 0.14, o); },
+  rep: (t) => tok(t, 1300, 1000, 0.035, 0.03, sfxBus(0)),
+  wup: (t) => tok(t, 640, 500, 0.05, 0.05, sfxBus(0)),   /* 무거워질수록 낮게 */
+  wdn: (t) => tok(t, 900, 760, 0.045, 0.05, sfxBus(0)),
+  edge: (t) => { const o = sfxBus(0); tok(t, 260, 220, 0.07, 0.05, o); tok(t + 0.07, 220, 190, 0.07, 0.06, o); },
   tick: (t) => { const o = sfxBus(0); sOsc(t, 2100, 1500, 0.014, 0.005, 0.026, o, 0.02); stone(t, 420, 0.02 * og(), 0.02, o); },   /* 어택 약하게: 클릭 작고 살짝 늦게 차오름 */
-  nav: (t) => { const o = sfxBus(0.4); hum(t, 73, 0.1 * fg(), 0.5, o, 0.03); breath(t, 0.07 * og(), 0.35, o, 380, 900, 0.06); metal(t, 587, 0.02 * fg(), 0.6, o, 0.02); },
-  set1: (t) => { const o = sfxBus(0.5, 0.18); sub(t, 55, 46, 0.42 * fg(), 0.7, o); cavity(t, 110, 0.35 * fg(), 1.2, o); metal(t, 220, 0.05 * fg(), 1.6, o); stone(t, 70, 0.3 * og(), 0.18, o); breath(t, 0.05 * og(), 0.5, o, 500, 1200, 0.01); },
-  set2: (t) => { const o = sfxBus(0.5, 0.18); sub(t, 62, 52, 0.42 * fg(), 0.7, o); cavity(t, 123, 0.35 * fg(), 1.2, o); metal(t, 247, 0.05 * fg(), 1.6, o); stone(t, 78, 0.3 * og(), 0.18, o); breath(t, 0.05 * og(), 0.5, o, 520, 1250, 0.01); },
-  ex: (t) => { const o = sfxBus(0.6, 0.25); sub(t, 49, 41, 0.45 * fg(), 1.4, o); hum(t, 82.4, 0.09 * fg(), 2.2, o, 0.15); hum(t, 123.5, 0.05 * fg(), 2.2, o, 0.2);
-    metal(t, 165, 0.06 * fg(), 2.4, o); stone(t, 62, 0.32 * og(), 0.22, o); breath(t, 0.06 * og(), 1.4, o, 600, 1000, 0.25); },
-  all: (t) => { const o = sfxBus(0.7, 0.3); sub(t, 41, 36, 0.5 * fg(), 2.6, o); cavity(t, 55, 0.4 * fg(), 2.5, o);
-    [55, 82.4, 110, 164.8].forEach((f, i) => hum(t, f, (0.08 - i * 0.012) * fg(), 3.2, o, 0.4)); metal(t, 110, 0.06 * fg(), 3.5, o); metal(t, 165, 0.04 * fg(), 3, o);
-    stone(t, 55, 0.35 * og(), 0.3, o); breath(t, 0.07 * og(), 2.6, o, 700, 1150, 0.6); },
-  undo: (t) => { const o = sfxBus(0.35); sub(t, 98, 58, 0.25 * fg(), 0.4, o); metal(t, 392, 0.03 * fg(), 0.5, o); breath(t, 0.05 * og(), 0.25, o, 900, 400, 0.02); },
-  rest: (t, o) => { o = o || sfxBus(0.55, 0.5); sub(t, 55, 55, 0.4 * fg(), 0.9, o); metal(t, 330, 0.09 * fg(), 2.2, o); metal(t, 495, 0.05 * fg(), 1.8, o); stone(t, 70, 0.3 * og(), 0.2, o); },
+  nav: (t) => tok(t, 820, 580, 0.045, 0.045, sfxBus(0)),
+  set1: (t) => notes(t, [880, 1320], 0.07, 0.05, 0.12, sfxBus(0)),
+  set2: (t) => notes(t, [988, 1480], 0.07, 0.05, 0.12, sfxBus(0)),
+  ex: (t) => notes(t, [880, 1109, 1319], 0.075, 0.055, 0.14, sfxBus(0)),
+  all: (t) => notes(t, [784, 988, 1175, 1568], 0.085, 0.06, 0.22, sfxBus(0)),
+  undo: (t) => notes(t, [990, 740], 0.07, 0.045, 0.08, sfxBus(0)),
+  rest: (t, o) => { o = o || sfxBus(0); [0, 0.55].forEach((dt) => notes(t + dt, [1047, 1319, 1568], 0.09, 0.12, 0.25, o)); },   /* 휴식 끝: 올라가는 세 음 두 번 */
 };
 function sfx(k) {
   const a = actx;
@@ -1596,10 +1595,8 @@ function renderSet() {
 }
 $('smpBtn').addEventListener('click', () => { const hs = hasSample(); if (hs) clearSample(); else seedSample(); ch = null; renderSet(); render(); toast(hs ? '샘플을 지웠어요' : '샘플 60일을 넣었어요'); });
 $('setBtn').addEventListener('click', () => { renderSet(); $('set').showModal(); });
-const showSnd = () => { const b = $('sndTog'); b.textContent = '효과음 ' + (soundOn ? '켜짐' : '꺼짐'); b.setAttribute('aria-pressed', String(soundOn)); $('sndMix').value = sMixF; $('sndMixV').textContent = 'organic ' + (100 - sMixF) + ' : ' + sMixF + ' futuristic'; };
+const showSnd = () => { const b = $('sndTog'); b.textContent = '효과음 ' + (soundOn ? '켜짐' : '꺼짐'); b.setAttribute('aria-pressed', String(soundOn)); };
 $('sndTog').addEventListener('click', () => { soundOn = !soundOn; lsSet(SNDK, soundOn ? '' : 'off'); showSnd(); sfx('set1'); });
-$('sndMix').addEventListener('input', () => { sMixF = +$('sndMix').value; showSnd(); });
-$('sndMix').addEventListener('change', () => { lsSet(SMIXK, String(sMixF)); sfx('set1'); });
 showSnd();
 function showGoal() {
   const M = model(), W = M.W, k = goalKg(W);
