@@ -1,10 +1,12 @@
 {
   "app": "food-log",
-  "updated": "2026-11-27T17:55:20.397Z",
+  "updated": "2026-11-28T11:54:30.946Z",
   "timeZone": "Asia/Seoul",
   "note": "음식 1개 = 1줄. date=먹은 날, ts=기록 시각(epoch ms), name=음식, amt=양, kcal, p=단백질 g, c=탄수화물 g, f=지방 g, src=ai|photo|manual|chip|plan(어떻게 기록했는지, plan=예상대로 1탭), u=수정 시각. weights: 날짜별 몸무게 kg(하루 1개). deleted=삭제된 id.",
   "settings": {"goal":"cut","wk":-1,"gpk":1.8,"tdee0":0},
-  "foods": [],
+  "foods": [
+    {"id":"mx0crkk0zhyrs","date":"2026-11-28","ts":1795866868944,"name":"초코 타르트/휘낭시에","amt":"2개","kcal":520,"p":8,"c":56,"f":30,"src":"photo","u":1795866868944}
+  ],
   "weights": [],
-  "deleted": ["mwz52jeoyyjkz","mwz53fzx71sss","mwz56n9oe7kt8","mwz56n9oja8b3","mwz56n9oad0ha","mwz56n9ov4ae3","mwz5n5uqciatm","mwz5ndywykxej","mwz5oixplx1xx","mwz5ovs71auf7","mwz60ylf64jvt","mwz6n2soublu4","mwz6mpo1mg97g","mwz6nf4qm0tic","mwz7d3scpiaad","mwz7d3sc77hoz","mwz7d3scykib6","mwz7d3sc75i23","mwz7yb5tc1oyi"]
+  "deleted": ["mwz52jeoyyjkz","mwz53fzx71sss","mwz56n9oad0ha","mwz56n9oe7kt8","mwz56n9oja8b3","mwz56n9ov4ae3","mwz5n5uqciatm","mwz5ndywykxej","mwz5oixplx1xx","mwz5ovs71auf7","mwz60ylf64jvt","mwz6mpo1mg97g","mwz6n2soublu4","mwz6nf4qm0tic","mwz7d3sc75i23","mwz7d3sc77hoz","mwz7d3scpiaad","mwz7d3scykib6","mwz7yb5tc1oyi"]
 }
