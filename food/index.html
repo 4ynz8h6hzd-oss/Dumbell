@@ -27,18 +27,18 @@ input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appear
 #dayLbl{font-weight:600;font-size:13px;color:var(--sub);padding:8px 0}
 /* 오늘 표시: 상단 주황 배지·며칠 전/뒤, 그래프 오늘 칸 띠·알약 */
 #dayLbl .tdy{display:inline-block;background:var(--acc);color:#fff;border-radius:999px;padding:2px 9px;margin-right:6px;font-size:12px}
-#dayLbl .rel{color:var(--ink);font-weight:700;margin-right:2px}
+#dayLbl .rel{color:var(--ink);font-weight:600;margin-right:2px}
 .ch .tband{fill:var(--acc);fill-opacity:.1}
-.ch .tpill{fill:var(--acc)}.ch text.tpt{fill:#fff;font-weight:700}
+.ch .tpill{fill:var(--acc)}.ch text.tpt{fill:#fff;font-weight:600}
 .sp{flex:1}
 .lnk{color:var(--mute);font-size:13px;font-weight:600;text-decoration:none;padding:10px 8px}
 #setBtn{width:40px;height:40px;color:var(--mute);display:flex;align-items:center;justify-content:center}
 .hero{flex:none;padding:2px 24px 10px;text-align:left;display:block;width:100%}
-.big{display:flex;align-items:flex-end;height:68px;font-size:68px;font-weight:700;letter-spacing:-.04em;line-height:1}
+.big{display:flex;align-items:flex-end;height:68px;font-size:68px;font-weight:600;letter-spacing:-.04em;line-height:1}
 .big small{font-size:20px;font-weight:600;letter-spacing:0;color:var(--mute);margin:0 0 8px 6px}
 .hero.est .big .roll,.hero.fut .k2 .roll{color:#AEAEB2}
 .lbl{color:var(--sub);font-size:13px;margin-top:6px;min-height:1.3em}
-.k2{display:flex;align-items:flex-end;height:34px;margin-top:10px;font-size:32px;font-weight:700;letter-spacing:-.03em;line-height:1}
+.k2{display:flex;align-items:flex-end;height:34px;margin-top:10px;font-size:32px;font-weight:600;letter-spacing:-.03em;line-height:1}
 .k2 small{font-size:15px;font-weight:600;letter-spacing:0;color:var(--mute);margin:0 0 3px 5px}
 .k2 .meta{font-size:14px;font-weight:500;letter-spacing:0;color:var(--sub);margin:0 0 3px 8px;white-space:nowrap}
 .k2 .meta b{color:var(--red);font-weight:600}
@@ -97,7 +97,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .sum.fu{opacity:.45}
 @media (max-height:780px){.sum{padding:8px 0}.sum .sn{-webkit-line-clamp:1}}   /* 낮은 화면: 대표 음식 한 줄 — 안 잘리게 */
 .empty{color:var(--mute);font-size:14px;padding:12px 0;line-height:1.5}
-.planb{display:block;width:100%;margin:10px 0;padding:10px 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:0;border-radius:14px;background:var(--acc);color:#fff;font:inherit;font-size:16px;font-weight:700}
+.planb{display:block;width:100%;margin:10px 0;padding:10px 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:0;border-radius:14px;background:var(--acc);color:#fff;font:inherit;font-size:16px;font-weight:600}
 .planb small{margin-left:8px;font-size:13px;font-weight:400;opacity:.85}
 .planb:active{transform:scale(.98)}
 .bottom{flex:none;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:14px 14px 0 24px}
@@ -110,13 +110,13 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 #pB{background:var(--p)}#cB{background:var(--c)}#fB{background:var(--f)}
 .bar i.over{background:var(--red)!important}
 .pad{flex:none;width:var(--pad);height:var(--pad);padding:8px;border-radius:34px;background:var(--plate);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:6px;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
-.k{border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:700;position:relative;transition:background .1s,transform .1s}
+.k{border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;font-weight:600;position:relative;transition:background .1s,transform .1s}
 .k.arm{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.06)}
 .k.arm:active,.k.arm.pressed{background:#FDF0E8;color:var(--accTxt);transform:scale(.96)}
 .k.cor{color:var(--mute)}
 .k.cor:active{background:rgba(0,0,0,.05);color:var(--ink)}
 .k:disabled{opacity:.3}
-.k.go{border-radius:50%;background:var(--acc);color:#fff;box-shadow:0 6px 14px rgba(242,107,29,.3)}
+.k.go{border-radius:50%;background:var(--acc);color:#fff;box-shadow:0 6px 14px rgba(20,20,24,.12)}
 .k.go:active{transform:scale(.93)}
 .k.blank{visibility:hidden}
 .k.tdk{color:var(--accTxt)}
@@ -140,7 +140,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 #fwD .fn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #fwD .fn small{font-size:13px;color:var(--mute);margin-left:8px}
 #fwD .r em{font-style:normal;color:var(--mute);font-size:15px;flex:none}
-#fwD .r.cur{font-weight:700}#fwD .r.cur em{visibility:hidden}   /* 렌즈 오른쪽 양·kcal 상자가 대신 보여줌 — 겹쳐 비치지 않게 */
+#fwD .r.cur{font-weight:600}#fwD .r.cur em{visibility:hidden}   /* 렌즈 오른쪽 양·kcal 상자가 대신 보여줌 — 겹쳐 비치지 않게 */
 .fw .lens{position:absolute;left:var(--fx);width:var(--fwW);margin-top:-29px;top:var(--ly);height:58px;border-radius:16px;pointer-events:none;background:rgba(242,107,29,.07);box-shadow:inset 0 0 0 1.5px rgba(242,107,29,.26),0 2px 14px rgba(242,107,29,.1)}
 /* 양 눈금자: 렌즈 바로 아래, 옆으로 밀 때만 */
 #fwR{position:absolute;left:var(--fx);width:var(--fwW);top:calc(var(--ly) + 32px);height:40px;padding-top:4px;background:#fff;pointer-events:none;opacity:0;transition:opacity .12s;-webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
@@ -155,8 +155,8 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .fw.mx #fwM b{color:var(--accTxt)}
 .fw .lens::before{content:'';position:absolute;left:0;top:15px;bottom:15px;width:3px;border-radius:0 2px 2px 0;background:var(--acc)}
 .fwh{position:absolute;left:calc(var(--fx) + 6px);right:12px;top:calc(14px + env(safe-area-inset-top));margin:0;text-align:left;font-size:13px;color:var(--mute)}
-.fw.cx .lens{opacity:.25}.fw.cx #fwD{opacity:.35}.fw.cx #fwX{background:var(--ink);color:#fff;transform:scale(1.12)}.fw.cx .fwh{color:var(--ink);font-weight:700}
-#fwOk{position:absolute;right:calc(14px + var(--pad) / 2 - 34px);bottom:calc(14px + env(safe-area-inset-bottom) + var(--pad) / 2 - 34px);width:68px;height:68px;border-radius:50%;background:var(--acc);color:#fff;display:none;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(242,107,29,.3)}
+.fw.cx .lens{opacity:.25}.fw.cx #fwD{opacity:.35}.fw.cx #fwX{background:var(--ink);color:#fff;transform:scale(1.12)}.fw.cx .fwh{color:var(--ink);font-weight:600}
+#fwOk{position:absolute;right:calc(14px + var(--pad) / 2 - 34px);bottom:calc(14px + env(safe-area-inset-bottom) + var(--pad) / 2 - 34px);width:68px;height:68px;border-radius:50%;background:var(--acc);color:#fff;display:none;align-items:center;justify-content:center;box-shadow:0 6px 14px rgba(20,20,24,.12)}
 .fw.tp #fwOk{display:flex}
 #fwX{transition:transform .12s,background .12s;position:absolute;right:calc(14px + var(--pad) - 8px - (var(--pad) - 16px) / 6 - 28px);   /* 패드 왼쪽 아래 칸 */bottom:calc(14px + env(safe-area-inset-bottom) + 8px + (var(--pad) - 16px) / 6 - 28px);width:56px;height:56px;border-radius:50%;background:var(--plate);color:var(--sub);display:flex;align-items:center;justify-content:center}
 /* 양 가로 원통 */
@@ -164,7 +164,7 @@ input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:tex
 .hd .hl{position:absolute;top:6px;bottom:6px;left:50%;width:60px;margin-left:-30px;border-radius:12px;background:var(--plate);z-index:0}
 .hd .wp{perspective:600px;z-index:1}
 .hd .tr{top:0;bottom:0;left:50%}
-.hd .r{position:absolute;top:0;bottom:0;width:56px;margin-left:-28px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums}
+.hd .r{position:absolute;top:0;bottom:0;width:56px;margin-left:-28px;display:flex;align-items:center;justify-content:center;font-size:19px;font-weight:600;color:var(--faint);font-variant-numeric:tabular-nums}
 .hd .r.cur{color:var(--ink)}
 .hdl{display:flex;justify-content:space-between;font-size:11px;color:var(--mute);margin-top:2px;padding:0 4px}
 dialog.sheet{border:0;padding:0;margin:auto auto 0;width:100%;max-width:480px;max-height:90dvh;border-radius:20px 20px 0 0;background:#fff;color:var(--ink);overflow:auto}
@@ -234,7 +234,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
 }
 #toast{position:fixed;left:50%;bottom:calc(var(--pad) + 40px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:12px 16px;border-radius:14px;font-size:14px;opacity:0;pointer-events:none;transition:.2s;z-index:10;display:flex;gap:14px;align-items:center;max-width:calc(100% - 32px)}
 #toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
-#toast button{color:#FFB27F;font-weight:700;white-space:nowrap}
+#toast button{color:#FFB27F;font-weight:600;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -278,7 +278,7 @@ dialog.sheet[open]{animation:up .22s ease-out}
 
 <dialog class="sheet" id="man"><form class="sh" id="manF" autocomplete="off">
   <div class="grab"></div>
-  <label class="fld">kcal<input id="mK" type="number" inputmode="decimal" enterkeyhint="next" required style="height:56px;font-size:24px;font-weight:700;color:var(--ink)"></label>
+  <label class="fld">kcal<input id="mK" type="number" inputmode="decimal" enterkeyhint="next" required style="height:56px;font-size:24px;font-weight:600;color:var(--ink)"></label>
   <label class="fld">단백질 g (몰라도 돼요)<input id="mP" type="number" inputmode="decimal" enterkeyhint="next"></label>
   <label class="fld">음식 이름 (몰라도 돼요)<input id="mN" maxlength="60" enterkeyhint="done"></label>
   <div class="row"><button type="button" class="b2" id="mNo">취소</button><button class="b1" id="mOk">기록</button></div>
@@ -917,7 +917,7 @@ function updChart(M) {
   const draw = () => {
     w.innerHTML = '<div style="display:flex;gap:8px;align-items:center"><b id="magT" style="flex:1">🧲 자석 ▾</b>' +
       '</div><div id="magLog" style="color:var(--sub);font-size:12px;margin-top:2px">그래프를 끌어 튕겨 보세요 (꾹 누르기엔 자석 없음)</div>' +
-      '<div id="magB" hidden><div style="display:flex;gap:4px;margin-top:6px"><button data-a="def">기본값</button><button data-a="copy">복사</button><button data-a="off">끄기</button></div>' + SL.map(([k, l, a, b, st, u]) => !l ? '<div style="margin-top:10px;font-weight:700">' + k + '</div>' : '<label style="display:block;margin-top:6px">' + l + ' <b id="mv_' + k + '">' + MAG[k] + '</b> ' + u +
+      '<div id="magB" hidden><div style="display:flex;gap:4px;margin-top:6px"><button data-a="def">기본값</button><button data-a="copy">복사</button><button data-a="off">끄기</button></div>' + SL.map(([k, l, a, b, st, u]) => !l ? '<div style="margin-top:10px;font-weight:600">' + k + '</div>' : '<label style="display:block;margin-top:6px">' + l + ' <b id="mv_' + k + '">' + MAG[k] + '</b> ' + u +
         '<input type="range" data-k="' + k + '" min="' + a + '" max="' + b + '" step="' + st + '" value="' + MAG[k] + '" style="width:100%"></label>').join('') +
       '</div>';
   };
