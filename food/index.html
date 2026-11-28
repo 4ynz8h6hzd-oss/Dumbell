@@ -1118,6 +1118,7 @@ const pend = (e, cancel) => {
   if (p.b) p.b.classList.remove('pressed');
   if (p.k === 'fav' && fav.open) { if (cancel || p.cx) favClose(); else if (p.moved) favCommit(); else favTapMode(); }
   else if (mode === 'weight' && p.moved) wRoll.to(wVal, 160);
+  else if (p.k === 'photo' && !cancel && !p.moved && e.type === 'pointerup') { suppress = false; act('photo'); }   /* 사진: click을 기다리지 않고 손 떼는 순간 바로 메뉴 */
   if (padLater) { padLater = false; renderPad(); }
 };
 pad.addEventListener('pointerup', (e) => pend(e, false));
@@ -1129,7 +1130,7 @@ pad.addEventListener('contextmenu', (e) => e.preventDefault());
 pad.addEventListener('click', (e) => {
   const b = e.target.closest('.k[data-k]'); if (!b || b.disabled) return;
   if (suppress) { suppress = false; return; }
-  const k = b.dataset.k; if (WSTEP[k] || DSTEP[k] || k === 'fav') return;
+  const k = b.dataset.k; if (WSTEP[k] || DSTEP[k] || k === 'fav' || k === 'photo') return;
   act(k);
 });
 $('hero').addEventListener('click', (e) => {
